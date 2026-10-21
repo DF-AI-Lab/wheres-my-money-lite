@@ -34,7 +34,7 @@ test('TEMPLATE: a new person starts with the agreed bills and pots, amounts blan
   assert.deepStrictEqual(s.pots.map(p => [p.name, p.cat, p.amount]),
     [['Shopping', 'Shopping', null], ['Fuel', 'Fuel', null], ['Going out', 'Going out', null]]);
   assert.strictEqual(s.pay, 0); assert.deepStrictEqual(s.spends, []); assert.deepStrictEqual(s.history, []);
-  assert.strictEqual(s.v, 2);
+  assert.strictEqual(s.v, 3);                                       // v3 since step 5 (several cards)
   const r = M.compute(s, '2024-11-08');
   near(r.billsTotal, 0, 'blank bills count 0'); near(r.spare, 0, 'spare');
 });
@@ -62,7 +62,7 @@ test('migrate: an old step-2 state (avg/last/change) becomes the new shape and k
     spends: [{id: 1, date: '2024-10-25', amount: 12.5, name: 'Costa', cat: 'Unsorted'}],
     card: {limit: 500, carry: 0, next: 1, items: []}};
   const s = M.migrate(old);
-  assert.strictEqual(s.v, 2);
+  assert.strictEqual(s.v, 3);                                       // v3 since step 5 (several cards)
   assert.deepStrictEqual(s.bills.map(b => [b.key, b.amount]), [['Rent', 550], ['Sky', 50]]);
   assert.ok(Array.isArray(s.pots) && Array.isArray(s.history));
   assert.strictEqual(M.migrate(s), s);                              // already new: left alone
@@ -313,7 +313,7 @@ test('6 months, 12 months, year so far: sums of saved months (pay, bills, spendi
 
 test('FAKE (the ?demo=1 page): new shape, a saved month, pots set, numbers that add up', () => {
   const s = M.FAKE();
-  assert.strictEqual(s.v, 2);
+  assert.strictEqual(s.v, 3);                                       // v3 since step 5 (several cards)
   assert.ok(s.history.length >= 2, 'at least two saved months');
   assert.ok(s.pots.some(p => p.amount > 0), 'a pot with an amount');
   assert.ok(s.bills.every(b => b.due >= 1 && b.due <= 31), 'every fake bill has a due day');

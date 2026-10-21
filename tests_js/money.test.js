@@ -29,5 +29,5 @@ test('Used box adds a Correction line so used matches what you typed', () => {
   const s = Money.FAKE();
   Money.setUsed(s, '2024-10-25', 100);
   near(Money.compute(s).card.used, 100, 'used after correction');
-  assert.strictEqual(s.card.items.at(-1).name, 'Correction');
+  assert.strictEqual(s.cards[0].items.at(-1).name, 'Correction');   // step 5: state v3 keeps a list of cards
 });
