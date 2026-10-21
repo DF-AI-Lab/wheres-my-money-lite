@@ -89,7 +89,7 @@ html.lockon .wrap { display: none; }
 
 /* views (Go B step 7): ?view=ideas / ?view=invite replace the home page parts; the header stays */
 body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[data-view] .footer, body[data-view] #quicktab { display: none; }
-#ideas[hidden], #invite[hidden] { display: none; }
+#ideas[hidden], #invite[hidden], #installbtn[hidden] { display: none; }
 
 /* 💡 Ideas & feedback: live's ideas.html styles, all under #ideas so the home page is not touched */
 #ideas { margin-bottom: 18px; }

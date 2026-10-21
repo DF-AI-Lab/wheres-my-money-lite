@@ -15,11 +15,11 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.12"></script>
-<script src="render.js?v=0.12"></script>
-<script src="lite.js?v=0.12"></script>
-<script src="lock.js?v=0.12"></script>
-<script src="lockui.js?v=0.12"></script>
+<script src="money.js?v=0.13"></script>
+<script src="render.js?v=0.13"></script>
+<script src="lite.js?v=0.13"></script>
+<script src="lock.js?v=0.13"></script>
+<script src="lockui.js?v=0.13"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -176,8 +176,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.12">
-<link rel="stylesheet" href="lite.css?v=0.12">
+<link rel="stylesheet" href="look.css?v=0.13">
+<link rel="stylesheet" href="lite.css?v=0.13">
 </head>
 <body class="demo">
 
@@ -252,14 +252,15 @@
       <div class="setmenu" id="setmenu" hidden>
         <div class="v3links">
           <div class="grp"><a class="small" href="?view=ideas" data-view="ideas">💡 Ideas &amp; feedback</a><a class="small" href="?view=invite" data-view="invite">📱 Invite</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
-          <div class="grp"><button type="button" class="small" id="savebackup">💾 Save backup</button>
+          <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button>
+          <button type="button" class="small" id="savebackup">💾 Save backup</button>
           <button type="button" class="small" id="loadbackup">📂 Load backup</button>
           <button type="button" class="small" id="newcodes">🔑 New backup codes</button>
           <button type="button" class="small" id="fingerprint">👆 Fingerprint</button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="appver">v0.12</div></div>
+      <div class="appver">v0.13</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -556,6 +557,27 @@
 </div>
 
 <script>Lite.start();</script>
+<script>
+  // Step 8: works with no internet (service worker) + the 📲 Install button (Android offers it through beforeinstallprompt)
+  (function () {
+    const btn = document.getElementById('installbtn');
+    let offer = null;
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); offer = e; if (btn) btn.hidden = false; });
+    window.addEventListener('appinstalled', () => { offer = null; if (btn) btn.hidden = true; });
+    if (btn) btn.addEventListener('click', () => {
+      const e = offer; offer = null; btn.hidden = true;     // asked once, whatever the answer
+      if (e) e.prompt();
+    });
+    if (!('serviceWorker' in navigator)) return;
+    const hadWorker = !!navigator.serviceWorker.controller;   // a first visit gets no surprise reload
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadWorker || reloaded) return;
+      reloaded = true; location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').catch(() => { /* no worker: the app still works online */ });
+  })();
+</script>
 <script>
   // Fold cards: toggle folded class and save/load from localStorage (user, 5 Oct 2026)
   var folded = [];
@@ -858,7 +880,14 @@
     updBtn.textContent = '✅ Updated! Restarting...';
     try {                                       // a service worker (step 8) fetches the new files first
       const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-      if (reg) await reg.update();
+      if (reg) {
+        await reg.update();
+        const w = reg.installing || reg.waiting;            // wait (max 5 s) until the new worker has taken over
+        if (w && w.state !== 'activated') await new Promise(done => {
+          const t = setTimeout(done, 5000);
+          w.addEventListener('statechange', () => { if (w.state === 'activated') { clearTimeout(t); done(); } });
+        });
+      }
     } catch (e) { /* no worker: a plain reload is enough */ }
     location.reload();
   });

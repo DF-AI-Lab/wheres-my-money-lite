@@ -5,6 +5,7 @@
    Every other server path still does nothing (the step 1 shim in index.html answers /stamp and swallows the rest).
    Saving: a person's own data lives in localStorage ('lite_state_v1'); ?demo=1 uses the fake data in this tab's
    sessionStorage only and never touches localStorage. Settings has Save backup / Load backup (a JSON file).
+   Bump docs/sw.js VERSION with every app version (the tests check that the cache name = the page version).
    Backup file: with the lock (lock.js) it is scrambled ({scrambled: ...}, opened with the passcode or a backup code);
    the demo has no lock, so its file is the plain one. A plain old file still loads. */
 (function (root) {
