@@ -198,20 +198,42 @@ def test_grey_line_shows_avg_and_due_day(page, base):
     assert "avg £" in sub and "due " in sub
 
 
-def test_paid_tick_after_the_due_day(page, base):
-    page.goto(base + DEMO)                                        # 8 Nov: Rent (due 1st) has gone, never ticked
+def test_due_day_gone_shows_info_not_a_tick_box(page, base):
+    page.goto(base + DEMO)                                        # 8 Nov: Rent (due 1st) has gone
     rent = 'tr.bill[data-key="Rent"]'
-    assert page.locator(f"{rent} .bpaid").inner_text().strip().startswith("Paid")
-    assert page.locator(f"{rent} input.paidbox").is_checked() is False
-    page.click(f"{rent} button.info")                             # ⓘ = short help
-    assert page.locator(".infotip").is_visible()
-    with page.expect_navigation():
-        page.click(f"{rent} input.paidbox")
-    page.wait_for_load_state()
-    assert "✓ Paid" in page.locator(f"{rent} .bpaid").inner_text()
-    # a bill not due yet has no tick box
-    assert page.locator('tr.bill[data-key="Phone Co"] input.paidbox').count() == 0
+    assert page.locator("input.paidbox").count() == 0             # no tick boxes at all
+    page.click(f"{rent} button.info")                             # ⓘ = check your bank app
+    assert "bank" in page.locator(".infotip").inner_text().lower()
+    assert page.locator('tr.bill[data-key="Phone Co"] button.info').count() == 0   # not due yet
 
+
+def test_bill_shows_and_changes_its_category(page, base):
+    page.goto(base + DEMO)
+    gym = 'tr.bill[data-key="Gym Club"]'
+    assert page.locator(f"{gym} .bsub").inner_text().startswith("Subscriptions")
+    page.once("dialog", lambda d: d.accept("Car"))
+    page.click(f"{gym} .more")
+    with page.expect_navigation():
+        page.click(".bmenu [role=menuitem]:has-text('Category')")
+    page.wait_for_load_state()
+    assert page.locator(f"{gym} .bsub").inner_text().startswith("Car")
+
+
+def test_last_month_rows_have_avg_diff_and_shops(page, base):
+    page.goto(base + DEMO)
+    card = '[data-card="lastmonth"]'
+    assert "avg £" in page.locator(f"{card} tr.lbills .bsub").inner_text()
+    food = page.locator(f'{card} tr[data-id="cat:Food shopping"]')
+    assert "avg £" in food.locator(".bsub").inner_text()
+    assert food.locator("td.diff").inner_text().strip() != ""
+    items = page.locator(f'{card} tr.item[data-cat="cat:Food shopping"]')
+    assert items.count() == 2 and not items.first.is_visible()
+    food.locator(".chev").click()
+    assert items.first.is_visible()
+    with page.expect_navigation():                                # → Bill makes it a bill
+        items.first.locator("button.tobill").click()
+    page.wait_for_load_state()
+    assert page.locator('tr.bill[data-key="Tesco"]').count() == 1
 
 def test_stop_counting_greys_it_and_takes_it_off_the_total(page, base):
     page.goto(base + DEMO)

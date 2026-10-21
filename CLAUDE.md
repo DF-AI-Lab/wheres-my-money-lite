@@ -29,6 +29,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   (plain JSON for now; scrambled in step 6). New CSS only in docs/lite.css (pots orange). Tests: `node --test
   tests_js/*.test.js` (18) + `python3 -m pytest -q tests_browser` (20, playwright). tools/lite_compare.py now differs
   on purpose (pots, due days). Next = step 5 (several cards + Zopa question).
+- **21 Oct REVIEW FIXES (v0.09, by me):** no Paid tick box (only ⓘ 'check your bank app' once the due day has gone);
+  a category on every bill (grey line + ⋯ → 🏷 Category, POST /bill/cat); Last month's spending rows have avg + diff
+  pills, every category opens to its shops with → Bill (adds a bill). Tests 20 node + 22 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

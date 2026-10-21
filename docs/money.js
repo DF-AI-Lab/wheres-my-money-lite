@@ -47,6 +47,8 @@
   // The "0 / 0.00 / £0" test that /bill and /card/balance use: nothing but zeros and dots (after a leading £).
   const isZeroText = text => String(text).replace(/^£+/, '').replace(/\./g, '').replace(/^0+|0+$/g, '') === '';
 
+  const CATEGORIES = ['Household', 'Car', 'Fuel', 'Subscriptions', 'Food shopping', 'Takeaways', 'Going out',
+                      'Shopping', 'Savings/Transfers', 'Unsorted'];
   // categories.guess_category (the name only; first keyword group that matches whole words wins)
   const KEYWORDS = [
     ['Household', ['RENT', 'WATER', 'COUNCIL', 'CITY OF', 'E.ON', 'ENERGY', 'ELECTRIC', 'GAS', 'OCTOPUS', 'SKY',
@@ -268,9 +270,12 @@
     let lastMonth = null;
     if (history.length) {
       const m = history[history.length - 1], b = monthBills(m);
+      const catAvg = cat => sum(history.map(h => sum(h.spends.filter(x => (x.cat || 'Unsorted') === cat).map(x => x.amount)))) / cycles;
       const cats = group(m.spends, x => x.cat || 'Unsorted').map(g => ({cat: g.key, total: g.total,
+        avg: catAvg(g.key), diff: g.total - catAvg(g.key),
         items: group(m.spends.filter(x => (x.cat || 'Unsorted') === g.key), x => x.name).map(i => ({name: i.key, total: i.total}))}));
-      lastMonth = {start: m.start, end: m.end, bills: b, cats, total: b + monthSpends(m)};
+      const billsAvg = sum(history.map(monthBills)) / cycles;
+      lastMonth = {start: m.start, end: m.end, bills: b, billsAvg, billsDiff: b - billsAvg, cats, total: b + monthSpends(m)};
     }
     const nowBy = new Map(), pastBy = new Map();
     spends.forEach(x => nowBy.set(x.cat || 'Unsorted', (nowBy.get(x.cat || 'Unsorted') || 0) + x.amount));
@@ -324,7 +329,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.08';
+  const APP = 'wheres-my-money-lite', VERSION = '0.09';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -421,6 +426,13 @@
     const b = findBill(s, key);
     if (!b) return 'unknown';
     b.paid = !!on;
+    return null;
+  }
+  function setBillCat(s, key, text) {                            // POST /bill/cat
+    const b = findBill(s, key), cat = String(text == null ? '' : text).trim().slice(0, 30);
+    if (!b) return 'unknown';
+    if (!cat) return 'bill';
+    b.cat = cat;
     return null;
   }
   function deleteBill(s, key) {                                  // POST /bill/delete
@@ -526,9 +538,9 @@
       b('Council Tax', 'Household', 161, 1),
       b('Energy Co', 'Household', 157.12, 5),
       b('Bills', 'Household', 150, 3),
-      b('Gym Club', 'Unsorted', 50, 10),
+      b('Gym Club', 'Subscriptions', 50, 10),
       b('Sky Digital', 'Household', 46.5, 15),
-      b('Phone Co', 'Unsorted', 40.11, 18),
+      b('Phone Co', 'Household', 40.11, 18),
       b('Water Board', 'Household', 15.75, 20),
       b('Tv Licence', 'Household', 13.25, 28),
     ];
@@ -555,16 +567,16 @@
       history: [
         month('2024-07-25', '2024-08-24', 148.4, [[210, 'Tesco', 'Food shopping'], [70, 'Shell', 'Fuel'], [85, 'Amazon', 'Shopping'], [32, 'Odeon', 'Going out']]),
         month('2024-08-25', '2024-09-24', 152.9, [[225, 'Tesco', 'Food shopping'], [64, 'Shell', 'Fuel'], [120, 'Amazon', 'Shopping'], [45, 'The Red Lion pub', 'Going out'], [9.5, 'Costa', 'Unsorted']]),
-        month('2024-09-25', '2024-10-24', 157.12, [[238, 'Tesco', 'Food shopping'], [81, 'Shell', 'Fuel'], [60, 'Amazon', 'Shopping'], [28, 'Nandos', 'Going out'], [12.5, 'Costa', 'Unsorted'], [14, 'Costa', 'Unsorted']]),
+        month('2024-09-25', '2024-10-24', 157.12, [[216, 'Tesco', 'Food shopping'], [22, 'Aldi', 'Food shopping'], [81, 'Shell', 'Fuel'], [60, 'Amazon', 'Shopping'], [28, 'Nandos', 'Going out'], [12.5, 'Costa', 'Unsorted'], [14, 'Costa', 'Unsorted']]),
       ],
       card: {limit: 500, carry: 0, next: 2,
              items: [{id: 1, date: '2024-10-25', amount: 45, name: 'Amazon', kind: 'spend'}]},
     };
   }
 
-  const Money = {FAKE, TEMPLATE, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
+  const Money = {FAKE, TEMPLATE, CATEGORIES, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
-    addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, deleteBill,
+    addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     fmt: {money, diff, day, tagsplit, pyfloat, r0}};
   if (typeof module !== 'undefined' && module.exports) module.exports = Money;

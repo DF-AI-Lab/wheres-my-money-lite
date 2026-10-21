@@ -15,9 +15,9 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.08"></script>
-<script src="render.js?v=0.08"></script>
-<script src="lite.js?v=0.08"></script>
+<script src="money.js?v=0.09"></script>
+<script src="render.js?v=0.09"></script>
+<script src="lite.js?v=0.09"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -174,8 +174,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.08">
-<link rel="stylesheet" href="lite.css?v=0.08">
+<link rel="stylesheet" href="look.css?v=0.09">
+<link rel="stylesheet" href="lite.css?v=0.09">
 </head>
 <body class="demo">
 
@@ -193,7 +193,7 @@
           <button type="button" class="small" id="loadbackup">📂 Load backup</button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
         </div></div>
-      <div class="appver">v0.08</div></div>
+      <div class="appver">v0.09</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -407,15 +407,14 @@
       if (row.dataset.changed === '1') items.push(['↩ Put back', '', () => row.querySelector('button.x').click()]);
       items.push(['✏️ Change name', '', () => {
         const name = prompt('Name of the bill', row.dataset.name); if (name !== null) send('/bill/name', {key, name}); }]);
+      items.push(['🏷 Category', '', () => {
+        const cat = prompt('Category, e.g. ' + Money.CATEGORIES.slice(0, 4).join(', '), row.dataset.cat); if (cat !== null) send('/bill/cat', {key, cat}); }]);
       items.push(['📅 Due day', '', () => {
         const day = prompt('Due day (1-31), empty = none', row.dataset.due); if (day !== null) send('/bill/due', {key, day}); }]);
       items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
       items.push(['🗑 Delete', 'stop', () => { if (confirm('Delete ' + row.dataset.name + '?')) send('/bill/delete', {key}); }]);
       menu(btn, items);
     }));
-    // Paid ticks
-    document.querySelectorAll('input.paidbox').forEach(box => box.addEventListener('change', () =>
-      send('/bill/paid', {key: box.closest('tr.bill').dataset.key, paid: box.checked ? '1' : '0'})));
 
     // pots
     const askPot = (pot, what) => {
@@ -448,6 +447,10 @@
       const id = btn.closest('tr').dataset.id, open = btn.getAttribute('aria-expanded') !== 'true';
       document.querySelectorAll('.dlast tr.item[data-cat="' + id + '"]').forEach(r => r.hidden = !open);
       btn.setAttribute('aria-expanded', open);
+    }));
+    // → Bill: a shop from last month becomes a bill at that amount
+    document.querySelectorAll('.dlast .tobill').forEach(btn => btn.addEventListener('click', () => {
+      const r = btn.closest('tr'); send('/bill/add', {amount: r.dataset.amount, name: r.dataset.name});
     }));
   });
 </script>

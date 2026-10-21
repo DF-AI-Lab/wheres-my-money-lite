@@ -272,6 +272,26 @@ test('Last month\'s spending: the newest saved month, bills then categories (big
   assert.strictEqual(M.compute(small(), '2024-11-08').lastMonth, null);  // nothing saved yet
 });
 
+test('Last month\'s spending: each row has the average of the saved months and a diff', () => {
+  const lm = M.compute(withHistory(), '2024-11-08').lastMonth;
+  near(lm.billsAvg, (610 + 610 + 620 + 630) / 4, 'bills avg (4 saved months)');
+  near(lm.billsDiff, 630 - lm.billsAvg, 'bills diff');
+  const food = lm.cats.find(c => c.cat === 'Food shopping');
+  near(food.avg, (100 + 200 + 220 + 240) / 4, 'food avg'); near(food.diff, 50, 'food diff 240 - 190');
+  near(lm.cats.find(c => c.cat === 'Fuel').avg, (60 + 80) / 4, 'a month with none counts as 0');
+});
+
+test('bills: a category each, changed by hand', () => {
+  const s = small();
+  assert.ok(M.CATEGORIES.includes('Household') && M.CATEGORIES.includes('Car') && M.CATEGORIES.includes('Subscriptions'));
+  assert.strictEqual(M.setBillCat(s, 'Gym', ' Subscriptions '), null);
+  assert.strictEqual(s.bills.find(b => b.key === 'Gym').cat, 'Subscriptions');
+  assert.strictEqual(M.compute(s, '2024-11-08').bills.find(b => b.key === 'Gym').cat, 'Subscriptions');
+  assert.strictEqual(M.setBillCat(s, 'Gym', '  '), 'bill');          // empty = refused
+  assert.strictEqual(M.setBillCat(s, 'Nope', 'Car'), 'unknown');
+  assert.ok(M.FAKE().bills.every(b => b.cat !== 'Unsorted'));       // the demo shows a category on every bill
+});
+
 test('Spending by category: this month vs the average of saved months', () => {
   const r = M.compute(withHistory(), '2024-11-08');
   const food = r.cats.find(c => c.cat === 'Food shopping'), shop = r.cats.find(c => c.cat === 'Shopping');

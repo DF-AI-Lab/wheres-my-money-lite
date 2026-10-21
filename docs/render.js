@@ -118,20 +118,19 @@
   }
 
   const INFO = {
-    paid: 'Check your bank app. If it came out, tick the box.',
+    due: 'The due day has gone. Check your bank app that it came out.',
     stopped: 'Not counted until you choose Count it again in ⋯.',
     left: 'Check your bank app for what is really left. Please check this each month.',
   };
   const infoBtn = tip => `<button type="button" class="info" aria-label="What is this?" data-tip="${esc(tip)}">ⓘ</button>`;
 
-  // grey line under a bill: avg, due day, then Paid ⓘ ☐ once the due day has gone (ticked by the person, never by itself)
+  // grey line under a bill: category, avg, due day, then ⓘ once the due day has gone
   function billSub(b) {
-    const nm = F.tagsplit(b.name), tags = nm[1].map(t => `${esc(t)} · `).join('');
+    const nm = F.tagsplit(b.name), tags = [b.cat || 'Unsorted', ...nm[1]].map(t => `${esc(t)} · `).join('');
     let line = b.blank ? `${tags}no amount yet` : `${tags}avg ${money(b.avg)}`;
     if (b.dueText) line += ` · due ${b.dueText}`;
     if (b.stopped) line += ` · <span class="bstop">Stopped ${infoBtn(INFO.stopped)}</span>`;
-    else if (b.duePassed && b.paid) line += ` · <span class="bpaid done">✓ Paid <input type="checkbox" class="paidbox" aria-label="Paid: ${esc(b.name)}" checked></span>`;
-    else if (b.duePassed) line += ` · <span class="bpaid">Paid ${infoBtn(INFO.paid)} <input type="checkbox" class="paidbox" aria-label="Paid: ${esc(b.name)}"></span>`;
+    else if (b.duePassed) line += ` ${infoBtn(INFO.due)}`;
     return line;
   }
 
@@ -140,7 +139,7 @@
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-due="${b.due || ''}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span><b class="bbase">${esc(nm[0])}</b>
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
@@ -216,20 +215,21 @@
     if (!m) return `<div class="card" data-id="lastmonth" data-card="lastmonth">${head('lastmonth', "Last month's spending")}${FIRST}</div>`;
     const rows = m.cats.map(c => `
       <tr data-id="cat:${esc(c.cat)}"><td><b class="bbase">${esc(c.cat)}</b>
-          <span class="bsub">${c.items.slice(0, 3).map(i => esc(i.name)).join(', ')}${c.items.length > 3 ? ' …' : ''}</span></td>
+          <span class="bsub">${c.items.slice(0, 3).map(i => esc(i.name)).join(', ')}${c.items.length > 3 ? ' …' : ''} · avg ${money(c.avg)}</span></td>
         <td class="n lamt">${money(c.total)}</td>
-        <td class="n diff"></td>
-        <td class="lchev">${c.items.length > 1 ? chev(c.items.length) : ''}</td></tr>
-      ${c.items.length > 1 ? c.items.map(i => `<tr class="item" data-cat="cat:${esc(c.cat)}" hidden><td>${esc(i.name)}</td><td class="n">${money(i.total)}</td><td class="n"></td><td></td></tr>`).join('') : ''}
+        <td class="n diff ${pill(c.diff)}">${Math.abs(c.diff) < 0.005 ? '' : F.diff(c.diff)}</td>
+        <td class="lchev">${chev(c.items.length)}</td></tr>
+      ${c.items.map(i => `<tr class="item" data-cat="cat:${esc(c.cat)}" data-name="${esc(i.name)}" data-amount="${f2(i.total)}" hidden><td>${esc(i.name)}</td><td class="n">${money(i.total)}</td>
+        <td class="n"><button type="button" class="small tobill" title="Make it a bill">→ Bill</button></td><td></td></tr>`).join('')}
     `).join('');
     return `<div class="card" data-id="lastmonth" data-card="lastmonth">
   ${head('lastmonth', "Last month's spending")}
   <div class="sub">${F.day(m.start)} to ${F.day(m.end)}</div>
   <table class="dlast">
     <tbody>
-      <tr class="lbills"><td><b class="bbase"><i class="dot bill"></i>Bills</b><span class="bsub">In the Bills card</span></td>
+      <tr class="lbills"><td><b class="bbase"><i class="dot bill"></i>Bills</b><span class="bsub">In the Bills card · avg ${money(m.billsAvg)}</span></td>
         <td class="n lamt k-bill">${money(m.bills)}</td>
-        <td class="n diff"></td><td></td></tr>
+        <td class="n diff ${pill(m.billsDiff)}">${Math.abs(m.billsDiff) < 0.005 ? '' : F.diff(m.billsDiff)}</td><td></td></tr>
     </tbody>
     <tbody data-sort="lastmonth">${rows}</tbody>
     <tbody><tr class="total"><td><b class="bbase">Total</b></td><td class="n lamt">${money(m.total)}</td>
