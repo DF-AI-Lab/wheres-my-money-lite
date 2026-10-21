@@ -139,11 +139,13 @@ def test_a_bad_payday_is_not_saved(page, base):
 
 # ---------- 5. 🔔 reminders ----------
 
-def test_the_bell_sits_left_of_settings_with_a_count(page, base):
+def test_the_bell_sits_by_settings_with_a_count_and_never_covers_the_name(page, base):
     page.goto(base + DEMO)
-    bell, cog = box(page, "#bellbtn"), box(page, "#setbtn")
-    assert bell["x"] + bell["width"] <= cog["x"] + 1
-    assert abs(bell["y"] - cog["y"]) < 12
+    bell, cog, name = box(page, "#bellbtn"), box(page, "#setbtn"), box(page, ".brand h1")
+    assert bell["x"] + bell["width"] <= cog["x"] + cog["width"] + 1   # under Settings (no room beside the name)
+    assert bell["y"] >= cog["y"] + cog["height"] - 1
+    assert bell["x"] >= name["x"] + name["width"] or bell["y"] >= name["y"] + name["height"]   # no overlap
+    assert bell["x"] + bell["width"] <= 390
     assert page.locator("#bellcount").inner_text() == "5"             # Rent, Council Tax, Energy Co, Bills, Tv Licence
 
 
@@ -209,10 +211,13 @@ def test_tap_the_heading_folds_and_opens(page, base):
     page.goto(base + DEMO)
     card = page.locator('#cards > [data-card="bills"]')
     was = "folded" in card.get_attribute("class")
+    page.locator('#cards > [data-card="bills"] h2').scroll_into_view_if_needed()
     h = box(page, '#cards > [data-card="bills"] h2')
     page.mouse.click(h["x"] + h["width"] / 2, h["y"] + h["height"] / 2)   # the middle, not the arrow
     page.wait_for_timeout(500)
     assert ("folded" in card.get_attribute("class")) != was
+    page.locator('#cards > [data-card="bills"] h2').scroll_into_view_if_needed()
+    h = box(page, '#cards > [data-card="bills"] h2')
     page.mouse.click(h["x"] + h["width"] / 2, h["y"] + h["height"] / 2)
     page.wait_for_timeout(500)
     assert ("folded" in card.get_attribute("class")) == was
@@ -223,6 +228,7 @@ def test_heading_tap_does_not_fold_while_moving(page, base):
     card = page.locator('#cards > [data-card="pots"]')
     was = "folded" in card.get_attribute("class")
     page.click("#setbtn"); page.click("#editbtn")
+    page.locator('#cards > [data-card="pots"] h2').scroll_into_view_if_needed()
     h = box(page, '#cards > [data-card="pots"] h2')
     page.mouse.click(h["x"] + h["width"] / 2, h["y"] + h["height"] / 2)
     page.wait_for_timeout(400)

@@ -84,7 +84,7 @@ holds the link only, never any data. Added by Darren 21 Oct).
 7. ✏️ Move & rename + Update + Ideas + 📱 Invite QR code ✅ (v0.12)
 8. 📲 Install + works offline ✅ (v0.13)
 9. ☁️ Google Drive (optional) ✅ (v0.14; Darren does DRIVE_SETUP.md once, then it is switched on)
-10. Darren's 21 Oct feedback round (back button, pots in Bills, start vs actual spare, payday date, 🔔 reminders, tap card tops, category pick list, backup box, ⓘ bubbles) ⬅️ NEXT
+10. Darren's 21 Oct feedback round (back button, pots in Bills, start vs actual spare, payday date, 🔔 reminders, tap card tops, category pick list, backup box, ⓘ bubbles) ✅ (v0.15; the bell sits under ⚙ Settings next to the version: no room beside the name at phone width)
 Then the rest of the map (Lite issue #1); Bill details (#2) is mostly covered by step 2.
 
 ## GitHub Pages (Darren does once)

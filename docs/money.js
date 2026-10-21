@@ -3,7 +3,8 @@
    saved months (history) and the backup file. Pure functions: no page, no storage, no network.
    Works in the browser (window.Money) and in node (module.exports). Fake data only.
 
-   State v3: {v:3, pay, left, payday (ISO start of this pay month, may be missing),
+   State v3: {v:3, pay, left, payday (ISO start of this pay month, may be missing), payDay (1-31 = paid on this day each month, or null),
+              cats (the person's own extra categories), lastBackup (ISO day of the last saved backup, or missing),
               bills:[{key,name,cat,amount (number|null), due (1-31|null), paid, stopped,
                       card (a card key | '' = none | missing = linked by name), asked (pay month start the card question was answered)}],
               pots:[{key,name,cat,amount (number|null)}],
@@ -327,7 +328,7 @@
     const periods = {six: sums(history.slice(-6)), twelve: sums(history.slice(-12)),
                      ytd: sums(history.filter(m => m.start.slice(0, 4) === year)), year};
 
-    return {pay, left, bills, billsTotal, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
+    return {pay, left, startSpare: moneyForSpending, bills, billsTotal, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
             pots, potsSet, potsOver, potsTotal, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
             anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
@@ -346,7 +347,7 @@
 
   function TEMPLATE() {                                          // a new person: the usual bills, amounts blank, no fake numbers
     return {v: 3, pay: 0, left: 0, bills: TEMPLATE_BILLS.map(n => newBill(n, null)), pots: TEMPLATE_POTS.map(n => newPot(n, null)),
-            spends: [], history: [], cards: [templateCard()], ideas: []};
+            spends: [], history: [], cards: [templateCard()], ideas: [], payDay: null, cats: []};
   }
 
   // v1 / v2 -> v3 (v2: one "card", now cards:[...]; the old card is the Zopa card). A v3 state comes back untouched.
@@ -370,7 +371,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.14';
+  const APP = 'wheres-my-money-lite', VERSION = '0.15';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -469,11 +470,15 @@
     b.paid = !!on;
     return null;
   }
-  function setBillCat(s, key, text) {                            // POST /bill/cat
+  // the fixed list, then the person's own new ones
+  const categories = s => CATEGORIES.concat(Array.isArray(s.cats) ? s.cats : []);
+  function setBillCat(s, key, text) {                            // POST /bill/cat (a known name keeps its spelling, a new one joins the list)
     const b = findBill(s, key), cat = String(text == null ? '' : text).trim().slice(0, 30);
     if (!b) return 'unknown';
     if (!cat) return 'bill';
-    b.cat = cat;
+    const known = categories(s).find(c => c.toLowerCase() === cat.toLowerCase());
+    if (!known) { s.cats = Array.isArray(s.cats) ? s.cats : []; s.cats.push(cat); }
+    b.cat = known || cat;
     return null;
   }
   function deleteBill(s, key) {                                  // POST /bill/delete
@@ -538,6 +543,64 @@
     (s.bills || []).forEach(b => { b.paid = false; delete b.asked; });
     return null;
   }
+  // ---------- payday date: the same day each month, a weekend moves it to the Friday before ----------
+  const daysBetween = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
+  function payDate(y, m, day) {                                   // the payday of month m (1..12): short month = last day, Sat/Sun = Friday before
+    const d = iso(y, m, Math.min(day, daysIn(y, m)));
+    const wd = new Date(d + 'T00:00:00Z').getUTCDay();
+    return wd === 6 ? dayBefore(d) : (wd === 0 ? dayBefore(dayBefore(d)) : d);
+  }
+  const monthStep = (y, m, n) => { const k = y * 12 + (m - 1) + n; return [Math.floor(k / 12), k % 12 + 1]; };
+  function nextPayday(day, todayIso) {                            // the first payday on or after today (null when no day is set)
+    if (!day) return null;
+    const y = Number(todayIso.slice(0, 4)), m = Number(todayIso.slice(5, 7)), here = payDate(y, m, day);
+    if (here >= todayIso) return here;
+    const [ny, nm] = monthStep(y, m, 1);
+    return payDate(ny, nm, day);
+  }
+  function paydayText(isoDay, todayIso) {                         // '25 Nov · in 17 days'
+    const n = daysBetween(todayIso, isoDay), when = n <= 0 ? 'today' : (n === 1 ? 'tomorrow' : `in ${n} days`);
+    return `${Number(isoDay.slice(8, 10))} ${MONTHS[Number(isoDay.slice(5, 7)) - 1]} · ${when}`;
+  }
+  function setPayDay(s, text) {                                   // POST /payday/day ('' = none; "25", "25th" are fine)
+    text = String(text == null ? '' : text).trim();
+    if (text === '') { s.payDay = null; return null; }
+    const m = /^(\d{1,2})(?:st|nd|rd|th)?$/i.exec(text);
+    if (!m || Number(m[1]) < 1 || Number(m[1]) > 31) return 'pay';
+    s.payDay = Number(m[1]);
+    return null;
+  }
+  // payday has come (the newest one on or before today) and no new pay was typed within a week of it
+  function paydayDue(s, todayIso) {
+    if (!s.payDay) return false;
+    const y = Number(todayIso.slice(0, 4)), m = Number(todayIso.slice(5, 7));
+    let last = payDate(y, m, s.payDay);
+    if (last > todayIso) { const [py, pm] = monthStep(y, m, -1); last = payDate(py, pm, s.payDay); }
+    return !s.payday || daysBetween(s.payday, last) > 7;
+  }
+
+  // ---------- the last backup ----------
+  function setBackupDay(s, day) { s.lastBackup = day; return null; }       // POST /backup/saved
+  function backupText(day, todayIso) {
+    if (!day) return 'Not saved yet';
+    const n = daysBetween(day, todayIso);
+    return `Last saved ${Number(day.slice(8, 10))} ${MONTHS[Number(day.slice(5, 7)) - 1]} · ${n <= 0 ? 'today' : (n === 1 ? 'yesterday' : n + ' days ago')}`;
+  }
+
+  // ---------- reminders (the 🔔 bell): [{kind, key?, text, go}] ----------
+  function reminders(s, todayIso) {
+    const r = compute(s, todayIso), list = [];
+    r.bills.filter(b => !b.stopped && !b.paid && b.duePassed).forEach(b => list.push({kind: 'bill', key: b.key,
+      text: `${b.name} was due on the ${b.dueText}. Check your bank app.`, go: `tr.bill[data-key="${b.key}"]`}));
+    if (paydayDue(s, todayIso)) list.push({kind: 'payday', text: 'Payday is here. Put in your new pay.', go: '#quicktab'});
+    r.cards.forEach(c => c.asks.forEach(a => list.push({kind: 'card', key: a.key,
+      text: `${a.name} ${money(a.amount)}: take it off the ${c.name} card?`, go: `.cardask[data-bill="${a.key}"]`})));
+    const days = s.lastBackup ? daysBetween(s.lastBackup, todayIso) : null;
+    if (s.lastBackup ? days >= 30 : (r.pay > 0 || r.hasHistory)) list.push({kind: 'backup',
+      text: s.lastBackup ? `No backup for ${days} days.` : 'No backup saved yet.', go: '#qsave'});
+    return list;
+  }
+
   function cardAdd(s, iso, amountText, nameText, paid, cardKey) {   // POST /card/add
     const c = cardOf(s, cardKey);
     if (!c) return 'unknown';
@@ -652,7 +715,7 @@
               bills: bl, spends: sp, pots: pl};
     };
     return {
-      v: 3, pay: 2500, left: 0, payday: '2024-10-25',
+      v: 3, pay: 2500, left: 0, payday: '2024-10-25', payDay: 25, lastBackup: '2024-11-03', cats: [],
       bills: bills(), pots: pots(),
       spends: [
         {id: 1, date: '2024-10-25', amount: 12.5, name: 'Costa', cat: 'Unsorted'},
@@ -717,9 +780,10 @@
     return lines.join('\n').replace(/\n+$/, '');
   }
 
-  const Money = {FAKE, TEMPLATE, CATEGORIES, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
+  const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
+    nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,
     setLayout, resetLayout, order, renameRow, IDEA_TAGS, IDEA_BUTTONS, addIdea, toggleIdea, removeIdea, ideasCopy, VERSION,

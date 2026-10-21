@@ -75,6 +75,8 @@
     '/pot/amount': (s, get) => quiet(M.setPotAmount(s, get('key'), get('amount'))),
     '/pot/name': (s, get) => quiet(M.renamePot(s, get('key'), get('name'))),
     '/pot/delete': (s, get) => quiet(M.deletePot(s, get('key'))),
+    '/payday/day': (s, get) => M.setPayDay(s, get('day')),
+    '/backup/saved': (s, get) => M.setBackupDay(s, today()),
     '/payday': (s, get) => M.newPayday(s, today(), get('pay'), get('left')),
     '/card/add': (s, get) => quiet(M.cardAdd(s, today(), get('amount'), get('name'), get('paid') === '1', get('card'))),
     '/card/remove': (s, get) => quiet(M.cardRemove(s, get('id'), get('card'))),
@@ -134,12 +136,17 @@
     return rec ? {app: plain.app, version: plain.version, saved: plain.saved, scrambled: await root.Lock.seal(rec, plain.state)} : plain;
   }
   async function saveBackup() {
-    const day = today(), file = await backupFile();
+    const day = today();
+    M.setBackupDay(state, day); Store.save(state);                 // remember the day (it is in the file too)
+    const file = await backupFile();
     const blob = new Blob([JSON.stringify(file, null, 1)], {type: 'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = M.backupName(day);
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    const saved = document.getElementById('lastsaved');
+    if (saved) saved.textContent = M.backupText(day, day);
+    if (root.refreshBell) root.refreshBell();
   }
   async function loadBackup(text) {                                // the text of a backup file (from a file or from Drive)
     let obj = null;
@@ -297,6 +304,7 @@
     }
     const quiet = opts.headers && (opts.headers['X-Requested-With'] === 'fetch');
     const r = run(path, data);
+    if (path === '/payday/day') return Promise.resolve(new Response(null, {status: r && r.error ? 400 : 204}));   // quiet: no reload
     if (path === '/bill' && quiet) {                 // live: 400 for a bad amount, 204 saved, no reload
       const bad = r && r.error;
       return Promise.resolve(bad ? new Response('', {status: 400}) : (r && r.unknown ? new Response('', {status: 200}) : new Response(null, {status: 204})));

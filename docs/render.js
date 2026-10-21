@@ -28,9 +28,11 @@
       <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">${money(r.pay)}</button></div>
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">${left}</button></div>
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">${money(r.billsTotal)}</span></div>
-      <div class="r"><span><i class="dot pot"></i>− Pots${r.potsOver > 0.004 ? ` <span class="labels k-pot">(${money(r.potsOver)} over)</span>` : ''}</span><span class="k-pot" id="st-pots">${money(r.potsTotal)}</span></div>
+      <div class="r"><span><i class="dot pot"></i>− Pots</span><span class="k-pot" id="st-pots">${money(r.potsSet)}</span></div>
+      <div class="r start"><span>Starting spare</span><span id="st-start">${money(r.startSpare)}</span></div>
       <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
-      <div class="r tot"><span>Spare</span><span id="st-spare">${money(r.leftNow)}</span></div>
+      ${r.potsOver > 0.004 ? `<div class="r"><span><i class="dot pot"></i>− Pots over</span><span class="k-pot" id="st-over">${money(r.potsOver)}</span></div>` : ''}
+      <div class="r tot"><span>Actual spare</span><span id="st-spare">${money(r.leftNow)}</span></div>
     `;
   }
 
@@ -186,6 +188,17 @@
     `;
   }
 
+  // a pot is also a row in Bills (not tr.bill: the page's bill maths ignores it); tap the amount to change the pot
+  function potBill(p) {
+    return `
+      <tr class="potbill" data-pot="${esc(p.key)}" data-name="${esc(p.name)}" data-amount="${p.blank ? '' : f2(p.amount)}">
+        <td><b class="bbase">${esc(p.name)}</b><span class="bsub">Pots · monthly amount</span></td>
+        <td class="n bavg">${p.blank ? '' : money(p.amount)}</td>
+        <td class="n bamt"><button type="button" class="link ${p.blank ? 'muted' : ''}" title="Change the pot amount">${p.blank ? 'Add' : money(p.amount)}</button></td>
+        <td colspan="2"></td></tr>
+    `;
+  }
+
   function billsCard(r, err) {
     const bd = r.billsDiff, tone = bd < -0.005 ? 'good' : (bd > 0.005 ? 'bad' : '');
     return `<div class="card" data-id="bills" data-card="bills">
@@ -197,7 +210,9 @@
     ${r.bills.map(billRow).join('')}
     </tbody>
 
-    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg ${money(r.billsAvg)}</span></td><td class="n bavg">${money(r.billsAvg)}</td><td class="n bamt" id="btotal">${money(r.billsTotal)}</td>
+    <tbody>${r.pots.map(potBill).join('')}</tbody>
+
+    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg ${money(r.billsAvg + r.potsSet)}</span></td><td class="n bavg">${money(r.billsAvg + r.potsSet)}</td><td class="n bamt" id="btotal">${money(r.billsTotal + r.potsSet)}</td>
       <td class="n diff ${tone}" id="bdiff">${F.diff(bd)}</td><td></td></tr></tbody>
   </table>
   <form class="inline" method="post" action="/bill/add" style="margin-top:12px">
@@ -416,6 +431,17 @@
       const lh = document.getElementById('lhval');
       if (lh) lh.textContent = money(spare);
     }
+
+    // payday date (the pill and the box) and the last backup
+    const day = document.getElementById('qday'), pillEl = document.getElementById('paypill');
+    if (day) day.setAttribute('value', state.payDay ? M.ordinal(state.payDay) : '');
+    if (pillEl) {
+      const next = M.nextPayday(state.payDay, today);
+      pillEl.hidden = !next;
+      if (next) pillEl.textContent = '📅 ' + M.paydayText(next, today);
+    }
+    const saved = document.getElementById('lastsaved');
+    if (saved) saved.textContent = M.backupText(state.lastBackup, today);
 
     // spare cash statement
     document.getElementById('spare-big').textContent = money(r.leftNow);

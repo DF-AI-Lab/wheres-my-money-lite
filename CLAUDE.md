@@ -39,6 +39,11 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   (?view=ideas) / Invite (?view=invite, docs/invite-qr.svg), 8 sw.js offline + install (bump sw.js VERSION every
   version), 9 Google Drive (docs/config.js googleClientId empty until Darren does DRIVE_SETUP.md). Tests 43 node + 67 browser.
   NEXT: Darren's feedback round (PLAN.md step 10).
+- **21 Oct STEP 10 BUILT (v0.15, Opus wrote tests, Sonnet built, Opus checked):** Darren's 9 feedback changes. State adds
+  payDay (1-31), cats (own categories), lastBackup. Money: startSpare, nextPayday/paydayText/setPayDay/paydayDue,
+  categories, reminders, setBackupDay/backupText. Routes /payday/day, /backup/saved. Bell = #bellbtn under ⚙ Settings
+  (beside the version: no room next to the name at 390 px). Pots = tr.potbill rows in Bills (not tr.bill; Total includes
+  them, spare counts them once). Tests 57 node + 93 browser. NEXT: Darren tries v0.15 on the phone.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

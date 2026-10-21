@@ -15,12 +15,12 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.14"></script>
-<script src="money.js?v=0.14"></script>
-<script src="render.js?v=0.14"></script>
-<script src="lite.js?v=0.14"></script>
-<script src="lock.js?v=0.14"></script>
-<script src="lockui.js?v=0.14"></script>
+<script src="config.js?v=0.15"></script>
+<script src="money.js?v=0.15"></script>
+<script src="render.js?v=0.15"></script>
+<script src="lite.js?v=0.15"></script>
+<script src="lock.js?v=0.15"></script>
+<script src="lockui.js?v=0.15"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -177,8 +177,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.14">
-<link rel="stylesheet" href="lite.css?v=0.14">
+<link rel="stylesheet" href="look.css?v=0.15">
+<link rel="stylesheet" href="lite.css?v=0.15">
 </head>
 <body class="demo">
 
@@ -249,8 +249,9 @@
   <header class="demohead">
     <a class="brand" href="./" title="Back to the top"><img src="icon-192.png" alt=""><div><h1>Where's My Money?</h1><div class="tagline">Payday to payday · Lite</div></div></a>
     <div class="settings"><button type="button" class="small" id="setbtn" aria-expanded="false" aria-controls="setmenu">⚙ Settings</button>
-      
+      <div class="bellmenu" id="bellmenu" hidden></div>
       <div class="setmenu" id="setmenu" hidden>
+        <button type="button" class="small" id="setback">⬅️ Back</button>
         <div class="v3links">
           <div class="grp"><a class="small" href="?view=ideas" data-view="ideas">💡 Ideas &amp; feedback</a><a class="small" href="?view=invite" data-view="invite">📱 Invite</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button>
@@ -262,7 +263,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="appver">v0.14</div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.15</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -280,7 +281,13 @@
       if (!btn) return;
       const bar = document.querySelector('.editbar');
       if (bar) menu.prepend(bar); else btn.hidden = true;     // Update + Move & rename first, Sign out last
+      const back = document.getElementById('setback');
+      menu.prepend(back);                                      // ⬅️ Back is the very first thing
       const show = on => { menu.hidden = !on; btn.setAttribute('aria-expanded', on); };
+      back.addEventListener('click', () => {
+        if (document.body.classList.contains('editing')) document.getElementById('editbtn').click();   // leave Move & rename
+        show(false);
+      });
       btn.addEventListener('click', e => { e.stopPropagation(); show(menu.hidden); });
       document.addEventListener('click', e => { if (!menu.contains(e.target) && !document.body.classList.contains('editing')) show(false); });
       document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.body.classList.contains('editing')) show(false); });
@@ -332,12 +339,13 @@
 
 <div class="card quick" id="quick" hidden>
   <div class="q-pay">
-    <div class="q-title">New payday?</div>
+    <div class="q-head"><div class="q-title">New payday?</div><span class="q-pill" id="paypill" hidden></span></div>
     <form method="post" action="/pay" id="payform" data-pay="0.00" data-left="">
       <div class="q-fields">
         <label>Pay<input class="amount" type="text" name="pay" id="qpay" inputmode="decimal" value="0.00" autocomplete="off"></label>
         <label>Left from last month<span class="lx"><input class="amount" type="text" name="left" id="qleft" inputmode="decimal" placeholder="0.00" value="" autocomplete="off">
           <button type="button" class="small" id="qleftx" title="Remove what was left">✖</button></span></label>
+        <label class="q-dayl">Payday<input class="amount" type="text" id="qday" inputmode="numeric" placeholder="25th" value="" autocomplete="off" aria-label="Payday, the day of the month"></label>
       </div>
       <div class="labels" id="lefthint">💡 Last month's spare was <b id="lhval"></b>. Not right? Type what's really left.
         <button type="button" class="info" aria-label="What is this?" data-tip="Check your bank app for what is really left.">ⓘ</button>
@@ -345,7 +353,10 @@
       <button type="submit" class="q-go">Work it out</button>
     </form>
   </div>
-  <div class="q-drop" id="qdrop"><div id="qbackup">💾 <b>Save a backup?</b> <span>Goes to your phone's Downloads</span> <button type="button" class="small" id="qsave">Save backup</button></div></div>
+  <div class="q-drop" id="qdrop">
+    <button type="button" class="q-big" id="qsave">💾 Save a backup</button>
+    <div class="q-last" id="lastsaved"></div>
+  </div>
 </div>
 <div class="st-grid">
   <div class="card st-sum">
@@ -369,8 +380,9 @@
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">Add</button></div>
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">£1,183.73</span></div>
       <div class="r"><span><i class="dot pot"></i>− Pots</span><span class="k-pot" id="st-pots">£0.00</span></div>
+      <div class="r start"><span>Starting spare</span><span id="st-start">£1,316.27</span></div>
       <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">£46.70</span></div>
-      <div class="r tot"><span>Spare</span><span id="st-spare">£1,269.57</span></div>
+      <div class="r tot"><span>Actual spare</span><span id="st-spare">£1,269.57</span></div>
     </div>
     <div id="spare-how" hidden></div>
   </div>
@@ -412,7 +424,7 @@
     document.getElementById('st-key').innerHTML = '<span><i class="dot bill"></i>Bills ' + pc(bills) + '</span> · <span><i class="dot pot"></i>Pots ' + pc(pots) + '</span> · <span><i class="dot spend"></i>Spends ' +
       pc(spends) + '</span> · <span><i class="dot spare"></i>Spare ' + pc(spare) + '</span>';
     const set = (id, x) => { const el = document.getElementById(id); if (el) el.textContent = money(x); };
-    set('st-bills', bills); set('st-spare', total - bills - pots - spends);
+    set('st-bills', bills); set('st-start', total - bills - PAGE.potsSet); set('st-spare', total - bills - pots - spends);
   };
   document.addEventListener('DOMContentLoaded', () => {
     demoTop();
@@ -442,6 +454,20 @@
     document.querySelectorAll('.tap').forEach(b => b.addEventListener('click', () => {
       openQuick(true); const i = document.getElementById(b.dataset.edit); i.focus(); i.select();
     }));
+    // Payday box: saved quietly when it changes; the pill shows the next payday. A bad day is marked and not saved.
+    const dayBox = document.getElementById('qday'), pill = document.getElementById('paypill');
+    dayBox.addEventListener('change', async () => {
+      let ok = false;
+      try { ok = (await fetch('/payday/day', {method: 'POST', headers: {'X-Requested-With': 'fetch', 'Content-Type': 'application/x-www-form-urlencoded'},
+                                              body: new URLSearchParams({day: dayBox.value})})).ok; } catch (e) { /* offline: not saved */ }
+      dayBox.classList.toggle('badval', !ok);
+      if (!ok) return;
+      const d = Lite.state().payDay, next = Money.nextPayday(d, Lite.today());
+      dayBox.value = d ? Money.ordinal(d) : '';
+      pill.hidden = !next;
+      if (next) pill.textContent = '📅 ' + Money.paydayText(next, Lite.today());
+      if (window.refreshBell) refreshBell();
+    });
     document.getElementById('qleftx').addEventListener('click', () => { document.getElementById('qleft').value = ''; });
     // Work it out: a new month (save this one, start the next) or just a change to this month's pay
     const payForm = document.getElementById('payform');
@@ -483,9 +509,9 @@
       document.body.appendChild(f); f.submit();
     };
     // a ⋯ button opens a menu of [text, class, action] items under it
-    const menu = (btn, items) => {
+    const menu = (btn, items, extra) => {
       const open = btn.parentElement.querySelector('.bmenu'); close(); if (open) return;
-      const m = document.createElement('div'); m.className = 'bmenu'; m.setAttribute('role', 'menu');
+      const m = document.createElement('div'); m.className = 'bmenu' + (extra ? ' ' + extra : ''); m.setAttribute('role', 'menu');
       items.forEach(([text, cls, fn]) => {
         const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (cls) b.className = cls;
         b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); m.appendChild(b);
@@ -501,8 +527,10 @@
       if (row.dataset.changed === '1') items.push(['↩ Put back', '', () => row.querySelector('button.x').click()]);
       items.push(['✏️ Change name', '', () => {
         const name = prompt('Name of the bill', row.dataset.name); if (name !== null) send('/bill/name', {key, name}); }]);
-      items.push(['🏷 Category', '', () => {
-        const cat = prompt('Category, e.g. ' + Money.CATEGORIES.slice(0, 4).join(', '), row.dataset.cat); if (cat !== null) send('/bill/cat', {key, cat}); }]);
+      items.push(['🏷 Category', '', () => {                // a pick list of the categories, then ＋ New category
+        const pick = Money.categories(Lite.state()).map(c => [(c === row.dataset.cat ? '✓ ' : '') + c, '', () => send('/bill/cat', {key, cat: c})]);
+        pick.push(['＋ New category', '', () => { const cat = prompt('Name of the new category'); if (cat !== null) send('/bill/cat', {key, cat}); }]);
+        menu(btn, pick, 'catmenu'); }]);
       items.push(['📅 Due day', '', () => {
         const day = prompt('Due day (1-31), empty = none', row.dataset.due); if (day !== null) send('/bill/due', {key, day}); }]);
       items.push(['💳 Pays a credit card', '', () => {
@@ -512,6 +540,12 @@
       items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
       items.push(['🗑 Delete', 'stop', () => { if (confirm('Delete ' + row.dataset.name + '?')) send('/bill/delete', {key}); }]);
       menu(btn, items);
+    }));
+
+    // pots: the amount in a Bills pot row changes the pot
+    document.querySelectorAll('tr.potbill button.link').forEach(btn => btn.addEventListener('click', () => {
+      const row = btn.closest('tr'), v = prompt('Monthly amount for ' + row.dataset.name + ' (empty = none)', row.dataset.amount);
+      if (v !== null) send('/pot/amount', {key: row.dataset.pot, amount: v});
     }));
 
     // pots
@@ -542,7 +576,7 @@
       const amount = prompt('How much did you pay off the card?'); if (amount !== null) send('/card/ask', {bill: btn.closest('.cardask').dataset.bill, answer: 'other', amount});
     }));
 
-    // ⓘ: a small bubble under the line, closed by the next tap
+    // ⓘ: a bubble that floats under the button (takes no space); any tap anywhere closes it
     document.addEventListener('click', e => {
       const btn = e.target.closest && e.target.closest('button.info'), had = btn && btn.classList.contains('tipon');
       close();
@@ -550,7 +584,10 @@
       if (!btn || had) return;
       btn.classList.add('tipon');
       const tip = document.createElement('div'); tip.className = 'infotip'; tip.setAttribute('role', 'note'); tip.textContent = btn.dataset.tip;
-      (btn.closest('.bsub') || btn.closest('.labels') || btn.parentElement).insertAdjacentElement('afterend', tip);
+      document.body.appendChild(tip);
+      const r = btn.getBoundingClientRect(), w = document.documentElement.clientWidth;
+      tip.style.top = (r.bottom + window.scrollY + 6) + 'px';
+      tip.style.left = Math.max(8, Math.min(r.left + window.scrollX - 8, w - tip.offsetWidth - 8)) + 'px';
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
 
@@ -675,16 +712,25 @@
     })();
   }
 
-  // Handle fold button clicks
+  // Fold or open a card (the arrow, or a tap anywhere on its top row)
+  function toggleCard(card) {
+    var fold = !card.classList.contains('folded');
+    slideFold(card, fold);
+    keepToMax(fold ? null : card.dataset.id);
+  }
   document.querySelectorAll('.card h2 .fold').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       e.stopPropagation();
       var card = btn.closest('.card');
-      if (!card) return;
-      var fold = !card.classList.contains('folded');
-      slideFold(card, fold);
-      keepToMax(fold ? null : card.dataset.id);
+      if (card) toggleCard(card);
+    });
+  });
+  document.querySelectorAll('.card h2').forEach(function (h) {
+    h.addEventListener('click', function (e) {
+      var card = h.closest('.card');
+      if (!card || !h.querySelector('.fold') || document.body.classList.contains('editing') || (e.target.closest && e.target.closest('.handle'))) return;
+      toggleCard(card);
     });
   });
 
@@ -765,7 +811,7 @@
     let bills = 0, avg = 0;
     document.querySelectorAll('tr.bill').forEach(r => { bills += parseFloat(r.dataset.used); avg += parseFloat(r.dataset.avg); });
     const spare = PAGE.wage + PAGE.left - bills - PAGE.potsSet, leftNow = spare - PAGE.potsOver - PAGE.typed;
-    document.getElementById('btotal').textContent = money(bills);
+    document.getElementById('btotal').textContent = money(bills + PAGE.potsSet);
     const bd = document.getElementById('bdiff'); bd.textContent = diff(bills - avg); tone(bd, bills - avg); bd.classList.remove('muted');
     document.getElementById('spare-big').textContent = money(leftNow);
     document.getElementById('spare-how').textContent = 'Pay ' + money(PAGE.wage) + (PAGE.left ? ' + left ' + money(PAGE.left) : '') +
@@ -932,6 +978,60 @@
   })();
 </script>
 
+
+<script>
+  // 🔔 Reminders: bills whose due day has gone, payday, a card question, an old backup. Tap one to jump to it.
+  (function () {
+    const bell = document.getElementById('bellbtn'), menu = document.getElementById('bellmenu'), count = document.getElementById('bellcount');
+    if (!bell) return;
+    const show = on => { menu.hidden = !on; bell.setAttribute('aria-expanded', on); };
+    const quick = document.getElementById('quick'), tab = document.getElementById('quicktab');
+    const openPanel = () => { if (quick.hidden) tab.click(); };
+    function jump(go) {
+      show(false);
+      if (go === '#quicktab') { openPanel(); return; }
+      if (go === '#qsave') {
+        openPanel();
+        setTimeout(() => document.getElementById('qsave').scrollIntoView({behavior: 'smooth', block: 'center'}), 400);
+        return;
+      }
+      let el = null;
+      try { el = document.querySelector(go); } catch (e) { /* an odd name: stay put */ }
+      const card = el && el.closest('.card');
+      if (!el) return;
+      if (card && card.classList.contains('folded')) { slideFold(card, false); keepToMax(card.dataset.id); }   // open a folded card first
+      setTimeout(() => el.scrollIntoView({behavior: 'smooth', block: 'center'}), card && card.classList.contains('folded') ? 350 : 0);
+    }
+    window.refreshBell = function () {
+      const list = Money.reminders(Lite.state(), Lite.today());
+      count.textContent = list.length || ''; count.hidden = !list.length;
+      menu.innerHTML = '';
+      if (!list.length) { menu.innerHTML = '<div class="remempty">Nothing to check 👍</div>'; return; }
+      list.forEach(r => {
+        const row = document.createElement('div'); row.className = 'remind'; row.dataset.kind = r.kind; row.dataset.key = r.key || '';
+        const text = document.createElement('span'); text.className = 'remtext'; text.textContent = r.text; row.appendChild(text);
+        const go = document.createElement('button'); go.type = 'button'; go.className = 'small remgo'; go.textContent = 'Show';
+        go.addEventListener('click', () => jump(r.go)); row.appendChild(go);
+        if (r.kind === 'bill') {
+          const done = document.createElement('button'); done.type = 'button'; done.className = 'small remdone'; done.textContent = '✓';
+          done.title = 'Checked in my bank app'; done.setAttribute('aria-label', 'Checked ' + r.key);
+          done.addEventListener('click', () => {
+            const f = document.createElement('form'); f.method = 'post'; f.action = '/bill/paid';
+            [['key', r.key], ['paid', '1']].forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
+            document.body.appendChild(f); f.submit();
+          });
+          row.appendChild(done);
+        }
+        menu.appendChild(row);
+      });
+    };
+    refreshBell();
+    bell.addEventListener('click', () => show(menu.hidden));
+    document.getElementById('setbtn').addEventListener('click', () => show(false));
+    document.addEventListener('click', e => { if (!menu.contains(e.target) && !bell.contains(e.target)) show(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') show(false); });
+  })();
+</script>
 
 <script>
   // v3 (15 Oct 2026): keep up to date with the other devices. Check when the page is opened or shown again and every
