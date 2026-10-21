@@ -23,6 +23,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   live pixel compare: all OK). Darren's real numbers (21 Oct: spare 53.66, card 293.36) checked PRIVATELY in scratch:
   all match. REPO + PAGES ARE PUBLIC: never commit real data. Bills sort by avg (no Move & rename order yet).
 - **21 Oct GRILL AGREED: no statements/PDFs, all typed by hand; new design + build order 1-9 in PLAN.md.** Next = step 1 saving.
+- **21 Oct GO A BUILT (v0.07, Opus wrote tests, Sonnet built, Opus checked):** PLAN steps 1-4. State v2 in money.js
+  (bills amount/due/paid, pots, history = months saved at payday). Real data = localStorage 'lite_state_v1' from
+  TEMPLATE(); `?demo=1` = FAKE() in sessionStorage 'lite_demo_v1' (never touches real data). Settings: Save / Load backup
+  (plain JSON for now; scrambled in step 6). New CSS only in docs/lite.css (pots orange). Tests: `node --test
+  tests_js/*.test.js` (18) + `python3 -m pytest -q tests_browser` (20, playwright). tools/lite_compare.py now differs
+  on purpose (pots, due days). Next = step 5 (several cards + Zopa question).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

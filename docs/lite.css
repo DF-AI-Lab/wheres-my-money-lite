@@ -1,0 +1,48 @@
+/* Lite's own additions (Go A). look.css never changes; this file only adds the parts that are new:
+   pots (the one new colour: orange), the Paid / ⓘ line on bills, the backup box in the New payday panel. */
+:root { --pot: #e0701b; --on-pot: #1f0e00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pot: #f59a4a; } }
+:root[data-theme="dark"] { --pot: #f59a4a; }
+
+/* pots: ring slice, dot, key line, the "− Pots" line */
+.demo .dot.pot { background: var(--pot); }
+#ring .seg-pot { stroke: var(--pot); }
+.k-pot { color: var(--pot); font-weight: 800; }
+.st-rows .labels { font-size: 13px; }
+.labels .dot { width: 8px; height: 8px; margin: 0 4px 0 0; }
+
+/* Monthly pots card */
+.demo [data-card="pots"] h2 { color: var(--pot); }
+div.pot { padding: 12px 0; border-top: 1px solid var(--border); }
+div.pot:first-of-type { border-top: 0; padding-top: 4px; }
+.potrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.potrow > b { min-width: 0; overflow-wrap: anywhere; }
+.potside { display: flex; align-items: center; gap: 6px; flex: none; font-weight: 700; }
+.potmore { position: relative; }
+.potmore .more { width: 32px; height: 32px; padding: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; }
+.potmore .more:hover, .potmore .more:focus-visible { background: var(--row); color: var(--text); }
+.potbar { height: 8px; border-radius: 99px; background: var(--row); margin: 6px 0 4px; overflow: hidden; }
+.potbar i { display: block; height: 100%; border-radius: 99px; background: var(--pot); }
+.potbar i.over { background: var(--bad); }
+.demo button.potset { font-weight: 600; font-size: 14px; }
+.demo [data-card="pots"] form.inline button[type=submit] { background: var(--pot); color: var(--on-pot); }
+
+/* bills: Paid ⓘ ☐ after the due day, Stopped ⓘ */
+.bsub .bpaid { color: var(--good); font-weight: 700; white-space: nowrap; }
+.bsub .bpaid .paidbox { width: 20px; height: 20px; margin: 0 0 0 2px; vertical-align: -5px; accent-color: var(--good); }
+.demo button.info { background: none; color: var(--muted); border: 0; padding: 2px 4px; margin: 0; font-size: 15px; line-height: 1; font-weight: 600; }
+.demo button.info:hover, .demo button.info:focus-visible { color: var(--text); }
+.infotip { margin: 6px 0 2px; padding: 8px 10px; border-radius: 10px; background: var(--row); border: 1px solid var(--border);
+           color: var(--text); font-size: 13px; font-weight: 500; line-height: 1.4; }
+body.demo [data-card="bills"] table.dbills td:first-child .infotip { grid-column: 1; }
+body.demo [data-card="bills"] table.dbills .bsub { overflow-wrap: anywhere; }
+
+/* New payday panel: the hint under Left, and the backup box (like mock-up 3) */
+#lefthint { margin: 2px 0 4px; font-size: 13px; }
+#lefthint span { display: block; }
+#qbackup { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 2px; }
+#qbackup b { font-size: 16px; }
+#qbackup span { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+
+/* Last month's spending has no diff: no empty grey pills */
+body.demo [data-card="lastmonth"] td.diff:empty { display: none; }

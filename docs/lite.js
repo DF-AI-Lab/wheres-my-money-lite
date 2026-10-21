@@ -1,27 +1,44 @@
-/* Where's My Money? Lite - step 2: the in-browser "server".
-   Live's Flask routes (/add /remove /pay /left /bill /stopped /card/...) become functions on a state object that is
-   kept in the browser. A form post or the page script's fetch() to one of those routes changes the state, saves it,
-   and (for a form) reloads the page, exactly like live's redirect after a POST. Every other server path still does
-   nothing (the step 1 shim in index.html answers /stamp and swallows the rest).
-   STEP 3 will move the saving from sessionStorage to localStorage: that is this file's Store, nothing else. */
+/* Where's My Money? Lite - the in-browser "server".
+   Live's Flask routes (/add /remove /pay /left /bill /stopped /card/... and Go A's /bill/... /pot/... /payday) become
+   functions on a state object that is kept in the browser. A form post or the page script's fetch() to one of those
+   routes changes the state, saves it, and (for a form) reloads the page, exactly like live's redirect after a POST.
+   Every other server path still does nothing (the step 1 shim in index.html answers /stamp and swallows the rest).
+   Saving: a person's own data lives in localStorage ('lite_state_v1'); ?demo=1 uses the fake data in this tab's
+   sessionStorage only and never touches localStorage. Settings has Save backup / Load backup (a JSON file). */
 (function (root) {
   'use strict';
   const M = root.Money;
 
   // ---------- where the state lives (one place) ----------
-  const KEY = 'lite_state_v1', TODAY_KEY = 'lite_today';
+  const KEY = 'lite_state_v1', DEMO_KEY = 'lite_demo_v1', DEMO_FLAG = 'lite_demo_on', TODAY_KEY = 'lite_today';
+  // ?demo=1 = demo for this tab. The tab remembers it for a reload (the address can lose its ?demo=1 after an error),
+  // but opening the page again without ?demo=1 is the person's own data.
+  function isDemo() {
+    try {
+      if (new URLSearchParams(location.search).get('demo') === '1') { root.sessionStorage.setItem(DEMO_FLAG, '1'); return true; }
+      const nav = (root.performance.getEntriesByType('navigation')[0] || {}).type;
+      if (root.sessionStorage.getItem(DEMO_FLAG) === '1' && (nav === 'reload' || nav === 'back_forward')) return true;
+      root.sessionStorage.removeItem(DEMO_FLAG);
+    } catch (e) { /* no storage */ }
+    return false;
+  }
+  const demo = isDemo();
   const Store = {
-    area() { return root.sessionStorage; },            // step 3: root.localStorage
+    demo,
+    key: demo ? DEMO_KEY : KEY,
+    area() { return demo ? root.sessionStorage : root.localStorage; },
     load() {
       try {
-        const raw = Store.area().getItem(KEY);
-        if (raw) { const s = JSON.parse(raw); if (s && typeof s === 'object' && Array.isArray(s.bills)) return s; }
-      } catch (e) { /* no storage: start from the fake data */ }
+        const raw = Store.area().getItem(Store.key);
+        if (raw) { const s = JSON.parse(raw); if (s && typeof s === 'object' && Array.isArray(s.bills)) return M.migrate(s); }
+      } catch (e) { /* no storage: start from the template / fake data */ }
       return null;
     },
-    save(s) { try { Store.area().setItem(KEY, JSON.stringify(s)); } catch (e) { /* private window: not saved */ } },
+    save(s) { try { Store.area().setItem(Store.key, JSON.stringify(s)); } catch (e) { /* private window: not saved */ } },
   };
-  let state = Store.load() || M.FAKE();
+  let state = Store.load() || (demo ? M.FAKE() : M.TEMPLATE());
+  // ask the browser not to clear the saved data (it may say no; that is fine)
+  if (!demo) { try { const p = root.navigator.storage && root.navigator.storage.persist && root.navigator.storage.persist(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
 
   // today: ?today=YYYY-MM-DD (kept for the tab), else the computer's date
   function today() {
@@ -37,13 +54,24 @@
 
   // ---------- the routes ----------
   // Each takes (state, get) where get(name) reads a posted field; returns null (worked) or an error code.
+  const quiet = r => r === 'unknown' ? null : r;                 // a bill or pot that is gone: nothing happens
   const ROUTES = {
     '/add': (s, get) => M.addSpend(s, today(), get('amount'), get('name')),
     '/remove': (s, get) => M.removeSpend(s, get('id')),
     '/pay': (s, get) => M.setPay(s, get('pay'), get('clear') === '1'),
     '/left': (s, get) => M.setLeft(s, get('amount')),
-    '/bill': (s, get) => { const r = M.setBill(s, get('key'), get('amount')); return r === 'unknown' ? null : r; },
-    '/stopped': (s, get) => { const r = M.setStopped(s, get('key'), get('stopped') === '1'); return r === 'unknown' ? null : r; },
+    '/bill': (s, get) => quiet(M.setBill(s, get('key'), get('amount'))),
+    '/stopped': (s, get) => quiet(M.setStopped(s, get('key'), get('stopped') === '1')),
+    '/bill/add': (s, get) => M.addBill(s, get('amount'), get('name')),
+    '/bill/name': (s, get) => quiet(M.renameBill(s, get('key'), get('name'))),
+    '/bill/due': (s, get) => quiet(M.setDue(s, get('key'), get('day'))),
+    '/bill/paid': (s, get) => quiet(M.setPaid(s, get('key'), get('paid') === '1')),
+    '/bill/delete': (s, get) => quiet(M.deleteBill(s, get('key'))),
+    '/pot/add': (s, get) => M.addPot(s, get('amount'), get('name')),
+    '/pot/amount': (s, get) => quiet(M.setPotAmount(s, get('key'), get('amount'))),
+    '/pot/name': (s, get) => quiet(M.renamePot(s, get('key'), get('name'))),
+    '/pot/delete': (s, get) => quiet(M.deletePot(s, get('key'))),
+    '/payday': (s, get) => M.newPayday(s, today(), get('pay'), get('left')),
     '/card/add': (s, get) => M.cardAdd(s, today(), get('amount'), get('name'), get('paid') === '1'),
     '/card/remove': (s, get) => M.cardRemove(s, get('id')),
     '/card/limit': (s, get) => M.cardLimit(s, get('amount')),
@@ -75,6 +103,32 @@
       location.replace(location.href);              // a fresh load at the top, like live's redirect after a POST
     }
   }
+
+  // ---------- the backup file (Settings, and the New payday panel) ----------
+  function saveBackup() {
+    const day = today(), file = M.exportBackup(state, day);
+    const blob = new Blob([JSON.stringify(file, null, 1)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = M.backupName(day);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+  async function loadBackup(file) {
+    let obj = null;
+    try { obj = JSON.parse(await file.text()); } catch (e) { /* not JSON */ }
+    const s = M.importBackup(obj);
+    if (!s) { alert("That is not a Where's My Money backup file."); return; }
+    if (!confirm('Replace everything on this phone with the backup from ' + M.fmt.day(obj.saved) + '?')) return;
+    Store.save(s);
+    location.reload();
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('savebackup', 'click', saveBackup);
+    on('qsave', 'click', saveBackup);
+    on('loadbackup', 'click', () => document.getElementById('loadfile').click());
+    on('loadfile', 'change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadBackup(f); });
+  });
   function handleForm(form, submitter) {
     const path = pathOf(form.action);
     if (!ROUTES[path]) return;
@@ -128,8 +182,8 @@
     let err = null;
     try { err = new URLSearchParams(location.search).get('error'); } catch (e) { /* ignore */ }
     Store.save(state);
-    return root.LiteRender.render(state, err);
+    return root.LiteRender.render(state, err, today());
   }
 
-  root.Lite = {start, Store, today, state: () => state, run};
+  root.Lite = {start, Store, today, state: () => state, run, leave, saveBackup};
 })(window);

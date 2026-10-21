@@ -1,12 +1,16 @@
-/* Where's My Money? Lite - step 2: the maths (a port of live v3.62: spare.pay_block, creditcard.py, typed.py,
-   categories.py, left.parse_money and the routes in web.py). Pure functions: no page, no storage, no network.
+/* Where's My Money? Lite - the maths (a port of live v3.62: spare.pay_block, creditcard.py, typed.py,
+   categories.py, left.parse_money and the routes in web.py) plus Go A: bills with due days, monthly pots, the
+   saved months (history) and the backup file. Pure functions: no page, no storage, no network.
    Works in the browser (window.Money) and in node (module.exports). Fake data only.
 
-   State: {pay, left, cycles, bills:[{key,name,cat,type,avg,last,new,stopped,change}],
-           spends:[{id,date,amount,name,cat}],
-           card:{limit,carry,next,items:[{id,date,amount,name,kind}]}}
+   State v2: {v:2, pay, left, payday (ISO start of this pay month, may be missing),
+              bills:[{key,name,cat,amount (number|null), due (1-31|null), paid, stopped}],
+              pots:[{key,name,cat,amount (number|null)}],
+              spends:[{id,date,amount,name,cat}], history:[saved months],
+              card:{limit,carry,next,items:[{id,date,amount,name,kind}]}}
+   A saved month: {start,end,pay,left,spare,bills:[{key,name,cat,amount,stopped}],spends:[...],pots:[{key,name,cat,amount,spent}]}
    Dates are ISO text (YYYY-MM-DD). Every mutator changes the state it is given and returns null when it worked,
-   or an error code ('pay' | 'spend' | 'card') exactly where live redirects to /?error=CODE. */
+   or an error code ('pay' | 'spend' | 'card' | 'bill' | 'pot') exactly where live redirects to /?error=CODE. */
 (function (root) {
   'use strict';
 
@@ -47,7 +51,9 @@
   const KEYWORDS = [
     ['Household', ['RENT', 'WATER', 'COUNCIL', 'CITY OF', 'E.ON', 'ENERGY', 'ELECTRIC', 'GAS', 'OCTOPUS', 'SKY',
                    'TV LICENCE', 'LICENCE', 'MOBILE', 'BROADBAND', 'VIRGIN MEDIA', 'BT', 'LIFE', 'INSURANCE', 'BILLS']],
-    ['Car', ['CAR', 'PETROL', 'FUEL', 'PUMP', 'DVLA', 'SHELL', 'ESSO', 'TEXACO', 'PARKING']],
+    ['Fuel', ['PETROL', 'FUEL', 'SHELL', 'ESSO', 'TEXACO', 'PUMP', 'BP']],
+    ['Car', ['CAR', 'DVLA', 'PARKING']],
+    ['Going out', ['PUB', 'BAR', 'CINEMA', 'ODEON', 'VUE', 'RESTAURANT', 'NANDOS', 'WETHERSPOON', 'BOWLING']],
     ['Subscriptions', ['NETFLIX', 'SPOTIFY', 'YOUTUBE', 'AUDIBLE', 'XBOX', 'PLAYSTATION', 'DISNEY', 'PRIME', 'UDEMY',
                        'GOOGLE PLAY', 'GOOGLE', 'APPLE']],
     ['Takeaways', ['JUST EAT', 'DELIVEROO', 'UBER EATS', 'DOMINOS', 'PIZZA', 'KFC', 'MCDONALDS', 'TAKEAWAY']],
@@ -153,34 +159,98 @@
     tidy(c);
   }
 
+  // ---------- dates ----------
+  const iso = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const daysIn = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();          // m = 1..12
+  function dayBefore(d) {
+    const t = new Date(d + 'T00:00:00Z');
+    t.setUTCDate(t.getUTCDate() - 1);
+    return t.toISOString().slice(0, 10);
+  }
+  function ordinal(n) {                                                       // 1st 2nd 3rd 4th .. 11th 12th 13th .. 21st
+    const e = n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+    return n + e;
+  }
+  // The first date on or after the pay month's start whose day is `due` (the last day of a short month).
+  function dueDate(start, due) {
+    let y = Number(start.slice(0, 4)), m = Number(start.slice(5, 7));
+    for (let i = 0; i < 2; i++) {
+      const d = iso(y, m, Math.min(due, daysIn(y, m)));
+      if (d >= start) return d;
+      m += 1; if (m > 12) { m = 1; y += 1; }
+    }
+    return start;
+  }
+
+  // ---------- saved months (the history) ----------
+  const clone = x => JSON.parse(JSON.stringify(x));
+  const byStart = h => h.slice().sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+  const billAmount = b => (typeof b.amount === 'number' ? b.amount : 0);
+  const monthBills = m => sum(m.bills.filter(b => !b.stopped).map(billAmount));
+  const monthSpends = m => sum(m.spends.map(x => x.amount));
+  const isSet = p => typeof p.amount === 'number';
+  const saved = (s, key) => {                                                 // the newest saved month's entry for a bill
+    for (const m of byStart(s.history || []).reverse()) {
+      const b = m.bills.find(x => x.key === key);
+      if (b) return b;
+    }
+    return null;
+  };
+
   // ---------- compute: everything the page shows ----------
-  function compute(s) {
+  // today (ISO) is optional: without it no bill is "past its due day" and "this year" is the newest saved year.
+  function compute(s, today) {
+    if (!s || s.v !== 2) s = migrate(clone(s || {}));
+    const history = byStart(s.history || []);
+
+    // bills
+    const start = s.payday || (today ? today.slice(0, 8) + '01' : null);
     const bills = (s.bills || []).map(b => {
-      const changed = b.change !== undefined && b.change !== null;
-      const stopped = !!b.stopped && !changed;
-      const last = b.last || 0;
-      const estimated = !changed && !stopped && last <= 0;
-      const used = changed ? b.change : (stopped ? 0 : (estimated ? b.avg : last));
-      return {key: b.key, id: 'bill:' + b.key, name: b.name === undefined ? b.key : b.name, orig: b.name === undefined ? b.key : b.name,
-              cat: b.cat, type: b.type, avg: b.avg, last, used, changed, estimated, stopped, new: !!b.new,
-              diff: (estimated || stopped) ? null : used - b.avg};
+      const blank = typeof b.amount !== 'number', stopped = !!b.stopped;
+      const amount = blank ? null : b.amount;
+      const used = stopped ? 0 : (amount || 0);
+      const past = history.map(m => m.bills.find(x => x.key === b.key))
+        .filter(x => x && !x.stopped && typeof x.amount === 'number' && x.amount > 0).map(x => x.amount);
+      const avg = past.length ? sum(past) / past.length : (amount || 0);
+      const was = saved(s, b.key);
+      const due = b.due || null, dueAt = due && start ? dueDate(start, due) : null;
+      const name = b.name === undefined ? b.key : b.name;
+      return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, last: amount || 0, used, blank, stopped,
+              saved: was && typeof was.amount === 'number' ? was.amount : null,
+              changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
+              due, dueText: due ? ordinal(due) : '', duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
+              diff: (blank || stopped) ? null : used - avg};
     });
-    bills.sort((a, b) => (a.stopped - b.stopped) || (b.avg - a.avg) || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    bills.forEach((b, i) => { b.i = i; });
+    bills.sort((a, b) => (a.stopped - b.stopped) || (b.avg - a.avg) || (a.i - b.i));
     const live = bills.filter(b => !b.stopped);
     const billsTotal = sum(live.map(b => b.used));
     const billsAvg = sum(live.map(b => b.avg));
 
+    // spends and pots: a spend is "in a pot" when its category is a pot that has an amount
     const pay = s.pay || 0, left = s.left || 0;
     const spends = (s.spends || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
-    const moneyForSpending = pay + left - billsTotal;            // spare cash with bills taken off
-    const leftNow = moneyForSpending - sum(spends.map(x => x.amount));
-    const spendsTotal = moneyForSpending - leftNow;              // live: typed_total = money - left_now
+    const potOf = {};
+    (s.pots || []).forEach(p => { if (isSet(p)) potOf[p.cat] = p; });
+    const pots = (s.pots || []).map(p => {
+      const spent = sum(spends.filter(x => x.cat === p.cat).map(x => x.amount)), blank = !isSet(p);
+      const amount = blank ? null : p.amount;
+      return {key: p.key, name: p.name, cat: p.cat, amount, spent, blank,
+              left: blank ? 0 : Math.max(amount - spent, 0), over: blank ? 0 : Math.max(spent - amount, 0),
+              pct: blank || amount <= 0 ? 0 : Math.min(r0(100 * spent / amount), 100)};
+    });
+    const potsSet = sum(pots.map(p => p.amount || 0)), potsOver = sum(pots.map(p => p.over));
+    const potsTotal = potsSet + potsOver;
+    const shown = spends.map(x => Object.assign({}, x, {pot: potOf[x.cat] ? potOf[x.cat].name : null}));
+    const spendsTotal = sum(shown.filter(x => !x.pot).map(x => x.amount));
+    const moneyForSpending = pay + left - billsTotal - potsSet;
+    const leftNow = pay + left - billsTotal - potsTotal - spendsTotal;
 
-    const total = pay + left;                                    // the ring: pay + left split three ways
+    const total = pay + left;                                    // the ring: pay + left split four ways
     const f = x => total > 0 ? Math.max(x, 0) / total : 0;
-    const spareRing = Math.max(total - billsTotal - spendsTotal, 0);
-    const pct = {bills: Math.round(100 * f(billsTotal)), spends: Math.round(100 * f(spendsTotal)),
-                 spare: Math.round(100 * f(spareRing))};
+    const spareRing = Math.max(total - billsTotal - potsTotal - spendsTotal, 0);
+    const pct = {bills: r0(100 * f(billsTotal)), pots: r0(100 * f(potsTotal)), spends: r0(100 * f(spendsTotal)),
+                 spare: r0(100 * f(spareRing))};
 
     const c = cardOf(s);
     const rows = allocate(c.items, c.carry).map(r => Object.assign(r, {removable: r.status !== 'paid'}));
@@ -188,10 +258,81 @@
     const pc = c.limit ? 100 * used / c.limit : 0;
     const card = {limit: c.limit, carry: c.carry, used, free: r2(c.limit - used), pc, pctUsed: r0(pc), rows};
 
-    return {pay, left, bills, billsTotal, billsAvg, billsDiff: billsTotal - billsAvg, spends, spendsTotal,
-            moneyForSpending, leftNow, spare: leftNow, pct, card,
-            anyEstimated: bills.some(b => b.estimated), cycles: s.cycles || 2};
+    // history cards (all from the months saved at payday)
+    const cycles = Math.max(1, history.length);
+    const group = (list, keyOf) => {                             // [{key, total}] biggest first
+      const t = new Map();
+      list.forEach(x => t.set(keyOf(x), (t.get(keyOf(x)) || 0) + x.amount));
+      return [...t].map(([key, total]) => ({key, total})).sort((a, b) => b.total - a.total);
+    };
+    let lastMonth = null;
+    if (history.length) {
+      const m = history[history.length - 1], b = monthBills(m);
+      const cats = group(m.spends, x => x.cat || 'Unsorted').map(g => ({cat: g.key, total: g.total,
+        items: group(m.spends.filter(x => (x.cat || 'Unsorted') === g.key), x => x.name).map(i => ({name: i.key, total: i.total}))}));
+      lastMonth = {start: m.start, end: m.end, bills: b, cats, total: b + monthSpends(m)};
+    }
+    const nowBy = new Map(), pastBy = new Map();
+    spends.forEach(x => nowBy.set(x.cat || 'Unsorted', (nowBy.get(x.cat || 'Unsorted') || 0) + x.amount));
+    history.forEach(m => m.spends.forEach(x => pastBy.set(x.cat || 'Unsorted', (pastBy.get(x.cat || 'Unsorted') || 0) + x.amount)));
+    const cats = [...new Set([...nowBy.keys(), ...pastBy.keys()])].map(cat => {
+      const now = nowBy.get(cat) || 0, avg = (pastBy.get(cat) || 0) / cycles;
+      return {cat, now, avg, diff: now - avg};
+    }).sort((a, b) => Math.max(b.now, b.avg) - Math.max(a.now, a.avg) || (a.cat < b.cat ? -1 : 1));
+    const year = today ? today.slice(0, 4) : (history.length ? history[history.length - 1].start.slice(0, 4) : '');
+    const sums = list => {
+      const wage = sum(list.map(m => m.pay)), b = sum(list.map(monthBills)), sp = sum(list.map(monthSpends));
+      return {months: list.length, wage, bills: b, spending: sp, left: wage - b - sp};
+    };
+    const periods = {six: sums(history.slice(-6)), twelve: sums(history.slice(-12)),
+                     ytd: sums(history.filter(m => m.start.slice(0, 4) === year)), year};
+
+    return {pay, left, bills, billsTotal, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
+            pots, potsSet, potsOver, potsTotal, moneyForSpending, leftNow, spare: leftNow, pct, card,
+            anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
+
+  // The money really left at the end of the month (unspent pot money goes back into spare).
+  function monthEndSpare(s) {
+    const r = compute(s);
+    return r.pay + r.left - r.billsTotal - sum((s.spends || []).map(x => x.amount));
+  }
+
+  // ---------- state shape ----------
+  const TEMPLATE_BILLS = ['Rent / Mortgage', 'Council tax', 'Gas & electric', 'Water', 'Phone', 'Broadband', 'TV licence', 'Car insurance'];
+  const TEMPLATE_POTS = ['Shopping', 'Fuel', 'Going out'];
+  const newBill = (name, amount) => ({key: name, name, cat: guessCategory(name), amount, due: null, paid: false, stopped: false});
+  const newPot = (name, amount) => ({key: name, name, cat: name, amount});
+
+  function TEMPLATE() {                                          // a new person: the usual bills, amounts blank, no fake numbers
+    return {v: 2, pay: 0, left: 0, bills: TEMPLATE_BILLS.map(n => newBill(n, null)), pots: TEMPLATE_POTS.map(n => newPot(n, null)),
+            spends: [], history: [], card: {limit: 500, carry: 0, next: 1, items: []}};
+  }
+
+  // v1 (step 2: avg / last / change) -> v2. A state that is already v2 comes back untouched.
+  function migrate(old) {
+    if (old && old.v === 2) return old;
+    old = old || {};
+    const s = {v: 2, pay: old.pay || 0, left: old.left || 0,
+      bills: (old.bills || []).map(b => ({key: b.key, name: b.name === undefined ? b.key : b.name, cat: b.cat || 'Unsorted',
+        amount: b.change !== undefined && b.change !== null ? b.change : (b.last > 0 ? b.last : (typeof b.avg === 'number' ? b.avg : null)),
+        due: null, paid: false, stopped: !!b.stopped})),
+      pots: TEMPLATE_POTS.map(n => newPot(n, null)), spends: old.spends || [], history: [], card: old.card};
+    if (old.payday) s.payday = old.payday;
+    if (!s.card) s.card = {limit: 500, carry: 0, next: 1, items: []};
+    return s;
+  }
+
+  // ---------- the backup file ----------
+  const APP = 'wheres-my-money-lite', VERSION = '0.07';
+  const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
+  function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
+    if (!file || typeof file !== 'object' || file.app !== APP) return null;
+    const st = file.state;
+    if (!st || typeof st !== 'object' || !Array.isArray(st.bills)) return null;
+    return migrate(clone(st));
+  }
+  const backupName = day => `wheres-my-money-backup-${day}.json`;
 
   // ---------- the routes (web.py), as functions on the state ----------
   function addSpend(s, iso, amountText, nameText) {              // POST /add
@@ -222,22 +363,126 @@
     s.left = v;
     return null;
   }
-  // POST /bill: returns null | 'pay' (bad amount) | 'unknown' (no such bill: nothing happens)
+  // POST /bill: sets this bill's amount (it carries over to next month). '' puts back the last saved month's amount.
+  // Returns null | 'pay' (bad amount) | 'unknown' (no such bill: nothing happens)
   function setBill(s, key, text) {
     const b = (s.bills || []).find(x => x.key === key);
     if (!b) return 'unknown';
     text = String(text == null ? '' : text).trim();
-    if (text === '') { delete b.change; return null; }
+    if (text === '') {
+      const was = saved(s, key);
+      if (was) b.amount = typeof was.amount === 'number' ? was.amount : null;
+      return null;
+    }
     let v = parseMoney(text);
     if (v === null && isZeroText(text)) v = 0;                   // 0 = not paying it this month
     if (v === null) return 'pay';
-    b.change = v;
+    b.amount = v;
     return null;
   }
-  function setStopped(s, key, on) {                              // POST /stopped (Lite: a simple switch; Stop rules = issue #2)
+  function setStopped(s, key, on) {                              // POST /stopped (a simple switch)
     const b = (s.bills || []).find(x => x.key === key);
     if (!b) return 'unknown';
     b.stopped = !!on;
+    return null;
+  }
+  const findBill = (s, key) => (s.bills || []).find(x => x.key === key);
+  const uniqueKey = (list, name) => {                            // "Netflix", "Netflix 2", "Netflix 3"
+    let key = name, n = 1;
+    while (list.some(x => x.key === key)) { n += 1; key = name + ' ' + n; }
+    return key;
+  };
+  function addBill(s, amountText, nameText) {                    // POST /bill/add (a blank amount is fine)
+    const name = String(nameText == null ? '' : nameText).trim().slice(0, 60);
+    const text = String(amountText == null ? '' : amountText).trim();
+    const amount = text === '' ? null : parseMoney(text);
+    if (!name || (text !== '' && amount === null)) return 'bill';
+    s.bills = s.bills || [];
+    s.bills.push({key: uniqueKey(s.bills, name), name, cat: guessCategory(name), amount, due: null, paid: false, stopped: false});
+    return null;
+  }
+  function renameBill(s, key, nameText) {                        // POST /bill/name
+    const b = findBill(s, key), name = String(nameText == null ? '' : nameText).trim().slice(0, 60);
+    if (!b) return 'unknown';
+    if (!name) return 'bill';
+    b.name = name;
+    return null;
+  }
+  function setDue(s, key, text) {                                // POST /bill/due ('' = none, else a whole day 1-31)
+    const b = findBill(s, key);
+    if (!b) return 'unknown';
+    text = String(text == null ? '' : text).trim();
+    if (text === '') { b.due = null; return null; }
+    if (!/^\d{1,2}$/.test(text) || Number(text) < 1 || Number(text) > 31) return 'bill';
+    b.due = Number(text);
+    return null;
+  }
+  function setPaid(s, key, on) {                                 // POST /bill/paid (only ever ticked by the person)
+    const b = findBill(s, key);
+    if (!b) return 'unknown';
+    b.paid = !!on;
+    return null;
+  }
+  function deleteBill(s, key) {                                  // POST /bill/delete
+    if (!findBill(s, key)) return 'unknown';
+    s.bills = s.bills.filter(x => x.key !== key);
+    return null;
+  }
+
+  // ---------- pots: a category + a monthly amount ----------
+  const findPot = (s, key) => (s.pots || []).find(x => x.key === key);
+  const sameName = (s, name, except) => (s.pots || []).some(p => p !== except && p.name.toLowerCase() === name.toLowerCase());
+  function addPot(s, amountText, nameText) {                     // POST /pot/add
+    const name = String(nameText == null ? '' : nameText).trim().slice(0, 40);
+    const text = String(amountText == null ? '' : amountText).trim();
+    const amount = text === '' ? null : parseMoney(text);
+    if (!name || sameName(s, name) || (text !== '' && amount === null)) return 'pot';
+    s.pots = s.pots || [];
+    s.pots.push({key: uniqueKey(s.pots, name), name, cat: name, amount});
+    return null;
+  }
+  function setPotAmount(s, key, text) {                          // POST /pot/amount ('' = no amount: not a pot for now)
+    const p = findPot(s, key);
+    if (!p) return 'unknown';
+    text = String(text == null ? '' : text).trim();
+    if (text === '') { p.amount = null; return null; }
+    const v = parseMoney(text);
+    if (v === null) return 'pot';
+    p.amount = v;
+    return null;
+  }
+  function renamePot(s, key, nameText) {                         // POST /pot/name (the category it collects stays)
+    const p = findPot(s, key), name = String(nameText == null ? '' : nameText).trim().slice(0, 40);
+    if (!p) return 'unknown';
+    if (!name || sameName(s, name, p)) return 'pot';
+    p.name = name;
+    return null;
+  }
+  function deletePot(s, key) {                                   // POST /pot/delete
+    if (!findPot(s, key)) return 'unknown';
+    s.pots = s.pots.filter(x => x.key !== key);
+    return null;
+  }
+
+  // ---------- payday: save this month, start the next ----------
+  // POST /payday. Bad pay or bad left = 'pay' and nothing changes. A blank left = 0.
+  function newPayday(s, day, payText, leftText) {
+    const pay = parseMoney(payText);
+    leftText = String(leftText == null ? '' : leftText).trim();
+    const left = leftText === '' || isZeroText(leftText) ? 0 : parseMoney(leftText);
+    if (pay === null || left === null) return 'pay';
+    const spends = s.spends || [], pots = s.pots || [];
+    const first = spends.length ? spends.map(x => x.date).sort()[0] : day;
+    s.history = s.history || [];
+    s.history.push({
+      start: s.payday || first, end: dayBefore(day), pay: s.pay || 0, left: s.left || 0, spare: monthEndSpare(s),
+      bills: (s.bills || []).map(b => ({key: b.key, name: b.name, cat: b.cat, amount: typeof b.amount === 'number' ? b.amount : null, stopped: !!b.stopped})),
+      spends: clone(spends),
+      pots: pots.map(p => ({key: p.key, name: p.name, cat: p.cat, amount: isSet(p) ? p.amount : null,
+                            spent: sum(spends.filter(x => x.cat === p.cat).map(x => x.amount))})),
+    });
+    s.payday = day; s.pay = pay; s.left = left; s.spends = [];
+    (s.bills || []).forEach(b => { b.paid = false; });
     return null;
   }
   function cardAdd(s, iso, amountText, nameText, paid) {         // POST /card/add
@@ -273,33 +518,54 @@
     return null;
   }
 
-  // ---------- the fake starting data (what the live page shows on the fake statements) ----------
+  // ---------- the fake starting data (the ?demo=1 page; "today" there is about 8 Nov 2024) ----------
   function FAKE() {
-    const b = (key, type, cat, avg, isNew) => ({key, name: key, cat, type, avg, last: avg, new: !!isNew, stopped: false});
+    const b = (key, cat, amount, due) => ({key, name: key, cat, amount, due, paid: false, stopped: false});
+    const bills = () => [
+      b('Rent', 'Household', 550, 1),
+      b('Council Tax', 'Household', 161, 1),
+      b('Energy Co', 'Household', 157.12, 5),
+      b('Bills', 'Household', 150, 3),
+      b('Gym Club', 'Unsorted', 50, 10),
+      b('Sky Digital', 'Household', 46.5, 15),
+      b('Phone Co', 'Unsorted', 40.11, 18),
+      b('Water Board', 'Household', 15.75, 20),
+      b('Tv Licence', 'Household', 13.25, 28),
+    ];
+    const pots = () => [{key: 'Shopping', name: 'Shopping', cat: 'Shopping', amount: 400},
+                        {key: 'Fuel', name: 'Fuel', cat: 'Fuel', amount: 150},
+                        {key: 'Going out', name: 'Going out', cat: 'Going out', amount: null}];
+    // a month that was saved at an earlier payday: [amount, name, category] spends
+    const month = (start, end, energy, list) => {
+      const bl = bills().map(x => ({key: x.key, name: x.name, cat: x.cat, amount: x.key === 'Energy Co' ? energy : x.amount, stopped: false}));
+      const sp = list.map(([amount, name, cat], i) => ({id: i + 1, date: start, amount, name, cat}));
+      const pl = pots().map(p => ({key: p.key, name: p.name, cat: p.cat, amount: p.amount,
+                                   spent: sum(sp.filter(x => x.cat === p.cat).map(x => x.amount))}));
+      return {start, end, pay: 2500, left: 0, spare: 2500 - sum(bl.map(x => x.amount)) - sum(sp.map(x => x.amount)),
+              bills: bl, spends: sp, pots: pl};
+    };
     return {
-      pay: 2500, left: 0, cycles: 2,
-      bills: [
-        b('Rent', 'SO', 'Household', 550),
-        b('Council Tax', 'DD', 'Household', 161, true),
-        b('Energy Co', 'DD', 'Household', 157.12, true),
-        b('Bills', 'SO', 'Household', 150, true),
-        b('Gym Club', 'DD', 'Unsorted', 50),
-        b('Sky Digital', 'DD', 'Household', 46.5),
-        b('Phone Co', 'DD', 'Unsorted', 40.11),
-        b('Water Board', 'DD', 'Household', 15.75),
-        b('Tv Licence', 'DD', 'Household', 13.25),
-      ],
+      v: 2, pay: 2500, left: 0, payday: '2024-10-25',
+      bills: bills(), pots: pots(),
       spends: [
         {id: 1, date: '2024-10-25', amount: 12.5, name: 'Costa', cat: 'Unsorted'},
         {id: 2, date: '2024-10-25', amount: 34.2, name: 'Tesco', cat: 'Food shopping'},
+        {id: 3, date: '2024-10-30', amount: 60, name: 'Shell', cat: 'Fuel'},
+      ],
+      history: [
+        month('2024-07-25', '2024-08-24', 148.4, [[210, 'Tesco', 'Food shopping'], [70, 'Shell', 'Fuel'], [85, 'Amazon', 'Shopping'], [32, 'Odeon', 'Going out']]),
+        month('2024-08-25', '2024-09-24', 152.9, [[225, 'Tesco', 'Food shopping'], [64, 'Shell', 'Fuel'], [120, 'Amazon', 'Shopping'], [45, 'The Red Lion pub', 'Going out'], [9.5, 'Costa', 'Unsorted']]),
+        month('2024-09-25', '2024-10-24', 157.12, [[238, 'Tesco', 'Food shopping'], [81, 'Shell', 'Fuel'], [60, 'Amazon', 'Shopping'], [28, 'Nandos', 'Going out'], [12.5, 'Costa', 'Unsorted'], [14, 'Costa', 'Unsorted']]),
       ],
       card: {limit: 500, carry: 0, next: 2,
              items: [{id: 1, date: '2024-10-25', amount: 45, name: 'Amazon', kind: 'spend'}]},
     };
   }
 
-  const Money = {FAKE, compute, setUsed, parseMoney, guessCategory, allocate, r2,
-    addSpend, removeSpend, setPay, setLeft, setBill, setStopped, cardAdd, cardRemove, cardLimit, cardBalance,
+  const Money = {FAKE, TEMPLATE, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
+    exportBackup, importBackup, backupName,
+    addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, deleteBill,
+    addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     fmt: {money, diff, day, tagsplit, pyfloat, r0}};
   if (typeof module !== 'undefined' && module.exports) module.exports = Money;
   else root.Money = Money;

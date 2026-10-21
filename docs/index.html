@@ -15,9 +15,9 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.06"></script>
-<script src="render.js?v=0.06"></script>
-<script src="lite.js?v=0.06"></script>
+<script src="money.js?v=0.07"></script>
+<script src="render.js?v=0.07"></script>
+<script src="lite.js?v=0.07"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -174,7 +174,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.06">
+<link rel="stylesheet" href="look.css?v=0.07">
+<link rel="stylesheet" href="lite.css?v=0.07">
 </head>
 <body class="demo">
 
@@ -187,16 +188,13 @@
       
       <div class="setmenu" id="setmenu" hidden>
         <div class="v3links">
-          <div class="grp"><a class="small" href="/ideas">💡 Ideas &amp; feedback</a><a class="small" href="/fix">🛠 Fix an item</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
-          <div class="grp"><a class="small" href="/backup/download">💾 Download backup</a>
-          <a class="small" href="/backup/restore">♻️ Restore a backup</a>
-          <form method="post" action="/settings/codes"><button class="small" type="submit">🔑 New backup codes</button></form>
-          <form method="post" action="/settings/pin"><button class="small" type="submit">🔢 Change passcode</button></form>
-          <a class="small" href="/passkey/setup">👆 Fingerprint</a></div>
-          <div class="grp"><form method="post" action="/signout"><button class="small" type="submit">🚪 Sign out</button></form></div>
+          <div class="grp"><a class="small" href="/ideas">💡 Ideas &amp; feedback</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
+          <div class="grp"><button type="button" class="small" id="savebackup">💾 Save backup</button>
+          <button type="button" class="small" id="loadbackup">📂 Load backup</button>
+          <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
         </div></div>
-      <div class="appver">v0.06</div></div>
-    <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday / add statements"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
+      <div class="appver">v0.07</div></div>
+    <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
     // Settings (14 Oct 2026, order 15 Oct): the Update and Move & rename buttons live in this menu on the demo page
@@ -241,19 +239,19 @@
 <div class="card quick" id="quick" hidden>
   <div class="q-pay">
     <div class="q-title">New payday?</div>
-    <form method="post" action="/pay" id="payform" data-spends="1" data-pay="2500.00"
-          data-left="">
-      <input type="hidden" name="clear" value="0">
+    <form method="post" action="/pay" id="payform" data-pay="0.00" data-left="">
       <div class="q-fields">
-        <label>Pay<input class="amount" type="text" name="pay" id="qpay" inputmode="decimal" value="2500.00"></label>
-        <label>Left from last month<span class="lx"><input class="amount" type="text" id="qleft" inputmode="decimal" placeholder="0.00" value="">
+        <label>Pay<input class="amount" type="text" name="pay" id="qpay" inputmode="decimal" value="0.00" autocomplete="off"></label>
+        <label>Left from last month<span class="lx"><input class="amount" type="text" name="left" id="qleft" inputmode="decimal" placeholder="0.00" value="" autocomplete="off">
           <button type="button" class="small" id="qleftx" title="Remove what was left">✖</button></span></label>
       </div>
+      <div class="labels" id="lefthint">💡 Last month's spare was <b id="lhval"></b>. Not right? Type what's really left.
+        <button type="button" class="info" aria-label="What is this?" data-tip="Check your bank app for what is really left.">ⓘ</button>
+        <span>Please check this each month.</span></div>
       <button type="submit" class="q-go">Work it out</button>
     </form>
-    <form method="post" action="/left" hidden><input type="hidden" name="amount" value=""></form>
   </div>
-  <div class="q-drop" id="qdrop"></div>
+  <div class="q-drop" id="qdrop"><div id="qbackup">💾 <b>Save a backup?</b> <span>Goes to your phone's Downloads</span> <button type="button" class="small" id="qsave">Save backup</button></div></div>
 </div>
 <div class="st-grid">
   <div class="card st-sum">
@@ -266,6 +264,7 @@
       <svg id="ring" viewBox="0 0 100 100" role="img" aria-label="Where the money went">
         <circle cx="50" cy="50" r="40" class="ring-bg"/>
         <circle cx="50" cy="50" r="40" class="seg-bill" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="40" class="seg-pot" transform="rotate(-90 50 50)"/>
         <circle cx="50" cy="50" r="40" class="seg-spend" transform="rotate(-90 50 50)"/>
         <circle cx="50" cy="50" r="40" class="seg-spare" transform="rotate(-90 50 50)"/>
         <text x="50" y="57" text-anchor="middle" id="ring-pc"></text>
@@ -275,7 +274,8 @@
       <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">£2,500.00</button></div>
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">Add</button></div>
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">£1,183.73</span></div>
-      <div class="r"><span><i class="dot spend"></i>− Spends</span><span class="k-spend" id="st-spends">£46.70</span></div>
+      <div class="r"><span><i class="dot pot"></i>− Pots</span><span class="k-pot" id="st-pots">£0.00</span></div>
+      <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">£46.70</span></div>
       <div class="r tot"><span>Spare</span><span id="st-spare">£1,269.57</span></div>
     </div>
     <div id="spare-how" hidden></div>
@@ -299,14 +299,14 @@
   </div>
 </div>
 <script>
-  // Ring: all money in (pay + left) split into bills, spends and spare. Tap Pay or Left to change them.
+  // Ring: all money in (pay + left) split into bills, pots, spends and spare. Tap Pay or Left to change them.
   window.demoTop = function (bills) {
     if (typeof PAGE === 'undefined' || PAGE.wage === undefined) return;
     if (bills === undefined) bills = PAGE.bills;
-    const total = PAGE.wage + PAGE.left, spends = PAGE.typed, spare = Math.max(total - bills - spends, 0);
+    const total = PAGE.wage + PAGE.left, pots = PAGE.pots, spends = PAGE.typed, spare = Math.max(total - bills - pots - spends, 0);
     const C = 2 * Math.PI * 40, f = x => total > 0 ? Math.max(x, 0) / total : 0;
     let start = 0;
-    [['seg-bill', f(bills)], ['seg-spend', f(spends)], ['seg-spare', f(spare)]].forEach(([cls, part]) => {
+    [['seg-bill', f(bills)], ['seg-pot', f(pots)], ['seg-spend', f(spends)], ['seg-spare', f(spare)]].forEach(([cls, part]) => {
       const el = document.querySelector('#ring .' + cls), len = Math.min(part, 1 - start) * C;
       el.setAttribute('stroke-dasharray', (len > 2 ? len - 1.5 : len) + ' ' + C);
       el.setAttribute('stroke-dashoffset', -start * C);
@@ -315,16 +315,15 @@
     const pc = x => Math.round(100 * f(x)) + '%';
     document.getElementById('ring-pc').textContent = pc(spare);
     // each dot stays with its word when the line wraps (15 Oct 2026)
-    document.getElementById('st-key').innerHTML = '<span><i class="dot bill"></i>Bills ' + pc(bills) + '</span> · <span><i class="dot spend"></i>Spends ' +
+    document.getElementById('st-key').innerHTML = '<span><i class="dot bill"></i>Bills ' + pc(bills) + '</span> · <span><i class="dot pot"></i>Pots ' + pc(pots) + '</span> · <span><i class="dot spend"></i>Spends ' +
       pc(spends) + '</span> · <span><i class="dot spare"></i>Spare ' + pc(spare) + '</span>';
     const set = (id, x) => { const el = document.getElementById(id); if (el) el.textContent = money(x); };
-    set('st-bills', bills); set('st-spare', total - bills - spends);
+    set('st-bills', bills); set('st-spare', total - bills - pots - spends);
   };
   document.addEventListener('DOMContentLoaded', () => {
     demoTop();
     // The arrow tab on the header line opens / hides the New payday panel (up = hidden, down = open). Starts hidden.
     const quick = document.getElementById('quick'), tab = document.getElementById('quicktab');
-    const drop = document.getElementById('dropbar'); if (drop) document.getElementById('qdrop').appendChild(drop);
     // Slides open / shut: height, padding and fade animate together (none if the computer asks for less motion)
     const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let anim = null;
@@ -350,379 +349,100 @@
       openQuick(true); const i = document.getElementById(b.dataset.edit); i.focus(); i.select();
     }));
     document.getElementById('qleftx').addEventListener('click', () => { document.getElementById('qleft').value = ''; });
-    // Work it out: save Left first when it changed (same POST /left as the normal page), then send the pay form
+    // Work it out: a new month (save this one, start the next) or just a change to this month's pay
     const payForm = document.getElementById('payform');
-    payForm.addEventListener('submit', async e => {
-      const left = document.getElementById('qleft').value.trim();
-      if (left === payForm.dataset.left) return;
+    payForm.addEventListener('submit', e => {
       e.preventDefault();
-      await fetch('/left', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                            body: new URLSearchParams({amount: left})});
-      payForm.submit();
+      const left = document.getElementById('qleft').value.trim();
+      if (confirm("Start a new month?\n\nOK = save this month and start the new one, Cancel = just change this month's pay")) {
+        payForm.action = '/payday'; payForm.submit(); return;
+      }
+      if (left !== payForm.dataset.left) {                              // Left was changed by hand: keep it too
+        const r = Lite.run('/left', new URLSearchParams({amount: left}));
+        if (r && r.error) { Lite.leave(r.error); return; }
+      }
+      payForm.action = '/pay'; payForm.submit();
     });
   });
 </script>
 
   
-  <!-- No. 6a: drop statement PDFs anywhere on the page, or click to choose them -->
-  <label class="dropbar" id="dropbar">
-    <input type="file" id="dropfiles" accept=".pdf,application/pdf" multiple hidden>
-    <span id="droptext"><i class="dot "></i> <b>Drop statements here</b> (PDFs), or click to choose them</span>
-  </label>
-  <div id="dropresult" class="dropresult" hidden></div>
-  
-
-  <!-- No. 6b: new items sorted on the page (my guess is picked; change any, then Save) -->
-  
-
-  <!-- No. 6c: the other questions (same bill, rent, typed spends), answered with one click -->
-  
-  
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
   <!-- Cards and rows in the user's own order, rows renamed (fintrack/layout.py, 3 Oct 2026) -->
   <div id="cards" data-sort="cards">
-  
-  <div class="card" data-id="spend" data-card="spend">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot spend"></i> Add a spend<button type="button" class="fold" title="Fold">▾</button></h2>
-    
-    
-    <form class="inline" method="post" action="/add">
-      <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.50" aria-label="Amount">
-      <input class="name" type="text" name="name" placeholder="Costa" aria-label="What">
-      <button type="submit">Add</button>
-    </form>
-    
-      <table style="margin-top:12px">
-        
-          
-          <tr class="drow"><td><b>Costa</b><span class="labels">25 Oct 2024 · Unsorted</span></td><td class="n">£12.50</td>
-              <td class="n"><form method="post" action="/remove"><input type="hidden" name="id" value="1"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove Costa">×</button></form></td></tr>
-          
-        
-          
-          <tr class="drow"><td><b>Tesco</b><span class="labels">25 Oct 2024 · Food shopping</span></td><td class="n">£34.20</td>
-              <td class="n"><form method="post" action="/remove"><input type="hidden" name="id" value="2"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove Tesco">×</button></form></td></tr>
-          
-        
-      </table>
-    
-    
-    <div class="sum" style="margin-top:12px">
-      <span>Money for spending</span><span class="n" id="mfs">£1,316.27</span>
-      <span>Typed so far</span><span class="n" id="typed">£46.70</span>
-      <span class="eq">Left now</span><span class="n eq" id="leftnow">£1,269.57</span>
-    </div>
+  <!-- Lite.start() draws every card here (docs/render.js): spend, pots, credit card, bills, then the history cards -->
+  <div class="card" data-id="spend" data-card="spend"></div>
+  <div class="card" data-id="pots" data-card="pots"></div>
+  <div class="card" data-id="card" data-card="card"></div>
+  <div class="card" data-id="bills" data-card="bills"></div>
+  <div class="card" data-id="lastmonth" data-card="lastmonth"></div>
+  <div class="card" data-id="cats" data-card="cats"></div>
+  <div class="card" data-id="periods" data-card="periods"></div>
   </div>
-  
-  <div class="card" data-id="card" data-card="card">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot zused"></i> Credit card<button type="button" class="fold" title="Fold">▾</button></h2>
-    
-    
-    <form class="inline" method="post" action="/card/add">
-      <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="40" aria-label="Amount">
-      <input class="name" type="text" name="name" placeholder="Shell" aria-label="What">
-      <button type="submit">Add</button>
-      <button type="submit" class="small" name="paid" value="1" title="Money you paid off the card (name can be empty)">Paid off</button>
-    </form>
-    
-      <table style="margin-top:12px">
-        
-          
-          <tr class="drow "><td><b>Amazon</b><span class="labels">25 Oct 2024</span></td>
-              <td class="n ">£45.00</td>
-              <td class="n"><form method="post" action="/card/remove"><input type="hidden" name="id" value="1"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove Amazon">×</button></form></td></tr>
-          
-        
-      </table>
-    
-    
-    <div class="sum cardsum" style="margin-top:12px">
-      <span>Limit</span><span class="n"><form class="inline" method="post" action="/card/limit"><input class="amount" type="text" name="amount" inputmode="decimal" value="500.00" aria-label="Limit"><button class="small" type="submit">Change</button></form></span>
-      <span>Used <span class="labels">type the Zopa app's amount to make it exact</span></span><span class="n"><form class="inline" method="post" action="/card/balance" id="ccbalform"><input class="amount" type="text" name="amount" id="ccused2" inputmode="decimal" value="45.00" aria-label="What the Zopa card owes now"><button class="small" type="submit">Change</button></form></span>
-      <span class="eq">Free</span><span class="n eq" id="ccfree2">£455.00</span>
-    </div>
-  </div>
-  
-  
-<div class="card" data-id="bills" data-card="bills">
-  <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot bill"></i> Bills (every month)<button type="button" class="fold" title="Fold">▾</button></h2>
-  <table id="bills" class="dbills">
-    <thead><tr><th>Bill</th><th class="n">2-mth avg</th><th class="n">Last month</th><th class="n">Diff</th><th></th></tr></thead>
-    <tbody data-sort="bills">
-    
-      
-      
-      <tr class="bill" data-id="bill:Rent" data-key="Rent" data-avg="550.0" data-avg0="550.0" data-default="550.0" data-default0="550.0" data-estimated="0" data-changed="0" data-used="550.0" data-new="0" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Rent" data-orig="Rent">Rent</span><b class="bbase">Rent</b>
-          <span class="bsub">avg £550.00</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Rent"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£550.00</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£550.00</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="550.00" aria-label="New amount for Rent" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Rent">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Council Tax" data-key="Council Tax" data-avg="161.0" data-avg0="161.0" data-default="161.0" data-default0="161.0" data-estimated="0" data-changed="0" data-used="161.0" data-new="1" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Council Tax" data-orig="Council Tax">Council Tax</span><b class="bbase">Council Tax</b>
-          <span class="bsub">avg £161.00 · <span class="bnew">new</span></span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Council Tax"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£161.00</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£161.00</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="161.00" aria-label="New amount for Council Tax" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Council Tax">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Energy Co" data-key="Energy Co" data-avg="157.12" data-avg0="157.12" data-default="157.12" data-default0="157.12" data-estimated="0" data-changed="0" data-used="157.12" data-new="1" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Energy Co" data-orig="Energy Co">Energy Co</span><b class="bbase">Energy Co</b>
-          <span class="bsub">avg £157.12 · <span class="bnew">new</span></span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Energy Co"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£157.12</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£157.12</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="157.12" aria-label="New amount for Energy Co" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Energy Co">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Bills" data-key="Bills" data-avg="150.0" data-avg0="150.0" data-default="150.0" data-default0="150.0" data-estimated="0" data-changed="0" data-used="150.0" data-new="1" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Bills" data-orig="Bills">Bills</span><b class="bbase">Bills</b>
-          <span class="bsub">avg £150.00 · <span class="bnew">new</span></span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Bills"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£150.00</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£150.00</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="150.00" aria-label="New amount for Bills" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Bills">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Gym Club" data-key="Gym Club" data-avg="50.0" data-avg0="50.0" data-default="50.0" data-default0="50.0" data-estimated="0" data-changed="0" data-used="50.0" data-new="0" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Gym Club" data-orig="Gym Club">Gym Club</span><b class="bbase">Gym Club</b>
-          <span class="bsub">avg £50.00</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Gym Club"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£50.00</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£50.00</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="50.00" aria-label="New amount for Gym Club" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Gym Club">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Sky Digital" data-key="Sky Digital" data-avg="46.5" data-avg0="46.5" data-default="46.5" data-default0="46.5" data-estimated="0" data-changed="0" data-used="46.5" data-new="0" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Sky Digital" data-orig="Sky Digital">Sky Digital</span><b class="bbase">Sky Digital</b>
-          <span class="bsub">avg £46.50</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Sky Digital"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£46.50</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£46.50</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="46.50" aria-label="New amount for Sky Digital" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Sky Digital">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Phone Co" data-key="Phone Co" data-avg="40.11" data-avg0="40.11" data-default="40.11" data-default0="40.11" data-estimated="0" data-changed="0" data-used="40.11" data-new="0" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Phone Co" data-orig="Phone Co">Phone Co</span><b class="bbase">Phone Co</b>
-          <span class="bsub">avg £40.11</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Phone Co"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£40.11</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£40.11</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="40.11" aria-label="New amount for Phone Co" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Phone Co">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Water Board" data-key="Water Board" data-avg="15.75" data-avg0="15.75" data-default="15.75" data-default0="15.75" data-estimated="0" data-changed="0" data-used="15.75" data-new="0" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Water Board" data-orig="Water Board">Water Board</span><b class="bbase">Water Board</b>
-          <span class="bsub">avg £15.75</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Water Board"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£15.75</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£15.75</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="15.75" aria-label="New amount for Water Board" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Water Board">⋯</button></td></tr>
-    
-      
-      
-      <tr class="bill" data-id="bill:Tv Licence" data-key="Tv Licence" data-avg="13.25" data-avg0="13.25" data-default="13.25" data-default0="13.25" data-estimated="0" data-changed="0" data-used="13.25" data-new="0" data-stopped="0">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Tv Licence" data-orig="Tv Licence">Tv Licence</span><b class="bbase">Tv Licence</b>
-          <span class="bsub">avg £13.25</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Tv Licence"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
-        <td class="n bavg">£13.25</td>
-        <td class="n bamt">
-          <button type="button" class="link " title="Change it for this pay cycle">£13.25</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="13.25" aria-label="New amount for Tv Licence" hidden>
-          <button type="button" class="small x" title="Put it back" hidden>✖</button>
-        </td>
-        <td class="n diff muted">£0.00</td>
-        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Tv Licence">⋯</button></td></tr>
-    
-    </tbody>
-    
-    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg £1,183.73</span></td><td class="n bavg">£1,183.73</td><td class="n bamt" id="btotal">£1,183.73</td>
-      <td class="n diff " id="bdiff">£0.00</td><td></td></tr></tbody>
-  </table>
-  <div class="labels bnote">
-    
-    ⋯ → Change amount = this pay cycle only (or tap the blue amount). Spare cash updates as you type.
-  </div>
-</div>
 <script>
-  // ⋯ menu for each bill: Change amount (opens the same box), Put back (the same ✖), Stop / Undo (the same form)
+  // Go A: the ⋯ menus (bills and pots), the ⓘ help bubbles and the Paid tick boxes. Every change goes to the same
+  // routes as the forms (docs/lite.js), so the page reloads with the new numbers like live's redirect after a POST.
   document.addEventListener('DOMContentLoaded', () => {
-    const close = () => document.querySelectorAll('.bmenu, .bswap').forEach(m => m.remove());
-    const SWAP = {"join": ["Rent", "Council Tax", "Energy Co", "Bills", "Gym Club", "Sky Digital", "Phone Co", "Water Board", "Tv Licence"], "on": true, "split": []};
-    const post = (url, key) => { const f = document.createElement('form'); f.method = 'post'; f.action = url; f.className = 'bswap';
-      const k = document.createElement('input'); k.type = 'hidden'; k.name = 'key'; k.value = key; f.appendChild(k);
-      document.body.appendChild(f); return f; };
+    const close = () => document.querySelectorAll('.bmenu, .infotip').forEach(m => m.remove());
+    const send = (action, fields) => {                       // a quiet form post
+      const f = document.createElement('form'); f.method = 'post'; f.action = action;
+      Object.entries(fields).forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
+      document.body.appendChild(f); f.submit();
+    };
+    // a ⋯ button opens a menu of [text, class, action] items under it
+    const menu = (btn, items) => {
+      const open = btn.parentElement.querySelector('.bmenu'); close(); if (open) return;
+      const m = document.createElement('div'); m.className = 'bmenu'; m.setAttribute('role', 'menu');
+      items.forEach(([text, cls, fn]) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (cls) b.className = cls;
+        b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); m.appendChild(b);
+      });
+      btn.parentElement.appendChild(m); m.querySelector('button').focus();
+    };
+
+    // bills
     document.querySelectorAll('.dbills tr.bill .more').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
-      const open = btn.parentElement.querySelector('.bmenu'); close(); if (open) return;
-      const row = btn.closest('tr'), m = document.createElement('div'); m.className = 'bmenu'; m.setAttribute('role', 'menu');
-      const add = (text, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text;
-        if (cls) b.className = cls; b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); m.appendChild(b); };
-      const stopped = row.dataset.stopped === '1';
-      if (!stopped) add('✏️ Change amount', '', () => row.querySelector('button.link').click());
-      if (row.dataset.changed === '1') add('↩ Put back', '', () => row.querySelector('button.x').click());
-      add(stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit());
-      // v3 (fintrack/v3/billswap.py): this bill replaces another one (joins it), or undo that
-      const others = [...document.querySelectorAll('.dbills tr.bill')].filter(r => r !== row && SWAP.join.includes(r.dataset.key));
-      if (SWAP.on && SWAP.join.includes(row.dataset.key) && others.length) add('🔁 Replaces…', '', () => {
-        const f = post('/bill/join', row.dataset.key), sel = document.createElement('select'), go = document.createElement('button');
-        sel.name = 'into'; sel.required = true; sel.setAttribute('aria-label', 'Which bill it replaces'); sel.add(new Option('Pick the bill ▾', ''));
-        others.forEach(r => sel.add(new Option(r.querySelector('.bbase').textContent, r.dataset.key)));
-        go.type = 'submit'; go.className = 'small'; go.textContent = 'Replaces it';
-        f.append(sel, go); f.addEventListener('click', ev => ev.stopPropagation());
-        btn.parentElement.appendChild(f); sel.focus(); });
-      if (SWAP.on && SWAP.split.includes(row.dataset.key)) add('↔ Split back out', '', () => post('/bill/split', row.dataset.key).submit());
-      btn.parentElement.appendChild(m); m.querySelector('button').focus();
+      const row = btn.closest('tr'), key = row.dataset.key, stopped = row.dataset.stopped === '1', items = [];
+      if (!stopped) items.push(['✏️ Change amount', '', () => row.querySelector('button.link').click()]);
+      if (row.dataset.changed === '1') items.push(['↩ Put back', '', () => row.querySelector('button.x').click()]);
+      items.push(['✏️ Change name', '', () => {
+        const name = prompt('Name of the bill', row.dataset.name); if (name !== null) send('/bill/name', {key, name}); }]);
+      items.push(['📅 Due day', '', () => {
+        const day = prompt('Due day (1-31), empty = none', row.dataset.due); if (day !== null) send('/bill/due', {key, day}); }]);
+      items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
+      items.push(['🗑 Delete', 'stop', () => { if (confirm('Delete ' + row.dataset.name + '?')) send('/bill/delete', {key}); }]);
+      menu(btn, items);
     }));
-    document.addEventListener('click', close);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
-  });
-</script>
-  
-  
+    // Paid ticks
+    document.querySelectorAll('input.paidbox').forEach(box => box.addEventListener('change', () =>
+      send('/bill/paid', {key: box.closest('tr.bill').dataset.key, paid: box.checked ? '1' : '0'})));
 
-<div class="card" data-id="lastmonth" data-card="lastmonth">
-  <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot"></i> Last month's spending<button type="button" class="fold" title="Fold">▾</button></h2>
-  <table class="dlast">
-    <thead>
-      
-      <tr class="lbills"><td><b class="bbase"><i class="dot bill"></i>Bills</b><span class="bsub">Rent, direct debits, standing orders · in the Bills card · avg £1,183.73</span></td>
-        <td class="n lamt k-bill">£1,183.73</td>
-        <td class="n diff ">£0.00</td><td></td></tr>
-    </thead>
-    <tbody data-sort="lastmonth">
-    
-      
-      
-      <tr data-id="cat:Unsorted"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Unsorted" data-orig="Unsorted">Unsorted</span></b>
-          <span class="bsub">Chiropractor, Cloud Host Aws.example.co, Taco Place · avg £125.10</span></td>
-        <td class="n lamt">£143.58</td>
-        <td class="n diff bad">+£18.48</td>
-        <td class="lchev"><button type="button" class="chev" aria-expanded="false" aria-label="Show the shops in Unsorted"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>6</span></button></td></tr>
-      
-      <tr class="item" data-cat="cat:Unsorted" hidden><td>Chiropractor</td><td class="n">£70.00</td>
-        <td class="n"><button type="button" class="small tobill" data-key="CARD|CHIROPRACTOR|" data-name="Chiropractor">→ Bill</button></td><td></td></tr>
-      
-      <tr class="item" data-cat="cat:Unsorted" hidden><td>Cloud Host Aws.example.co</td><td class="n">£26.59</td>
-        <td class="n"><button type="button" class="small tobill" data-key="CARD|CLOUD HOST AWS.EXAMPLE.CO|" data-name="Cloud Host Aws.example.co">→ Bill</button></td><td></td></tr>
-      
-      <tr class="item" data-cat="cat:Unsorted" hidden><td>Taco Place</td><td class="n">£14.20</td>
-        <td class="n"><button type="button" class="small tobill" data-key="CARD|TACO PLACE|" data-name="Taco Place">→ Bill</button></td><td></td></tr>
-      
-      <tr class="item" data-cat="cat:Unsorted" hidden><td>Stream Video</td><td class="n">£12.99</td>
-        <td class="n"><button type="button" class="small tobill" data-key="CARD|STREAM VIDEO|" data-name="Stream Video">→ Bill</button></td><td></td></tr>
-      
-      <tr class="item" data-cat="cat:Unsorted" hidden><td>Tools</td><td class="n">£10.00</td>
-        <td class="n"><button type="button" class="small tobill" data-key="BP|TOOL SHOP|TOOLS" data-name="Tools">→ Bill</button></td><td></td></tr>
-      
-      <tr class="item" data-cat="cat:Unsorted" hidden><td>Greengrocer</td><td class="n">£9.80</td>
-        <td class="n"><button type="button" class="small tobill" data-key="CARD|GREENGROCER|" data-name="Greengrocer">→ Bill</button></td><td></td></tr>
-      
-    
-      
-      
-      <tr data-id="cat:Food shopping"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Food shopping" data-orig="Food shopping">Food shopping</span></b>
-          <span class="bsub">Food And Bil · avg £80.00</span></td>
-        <td class="n lamt">£90.00</td>
-        <td class="n diff bad">+£10.00</td>
-        <td class="lchev"><button type="button" class="chev" aria-expanded="false" aria-label="Show the shops in Food shopping"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>1</span></button></td></tr>
-      
-      <tr class="item" data-cat="cat:Food shopping" hidden><td>Food And Bil</td><td class="n">£90.00</td>
-        <td class="n"><button type="button" class="small tobill" data-key="BP|SAM PARKER|FOOD AND BIL" data-name="Food And Bil">→ Bill</button></td><td></td></tr>
-      
-    
-      
-      
-      <tr data-id="cat:Cash"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Cash" data-orig="Cash">Cash</span></b>
-          <span class="bsub">Cash Machine · avg £45.00</span></td>
-        <td class="n lamt">£40.00</td>
-        <td class="n diff good">-£5.00</td>
-        <td class="lchev"><button type="button" class="chev" aria-expanded="false" aria-label="Show the shops in Cash"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>1</span></button></td></tr>
-      
-      <tr class="item" data-cat="cat:Cash" hidden><td>Cash Machine</td><td class="n">£40.00</td>
-        <td class="n"><button type="button" class="small tobill" data-key="CASH|CASH MACHINE|" data-name="Cash Machine">→ Bill</button></td><td></td></tr>
-      
-    
-      
-      
-      <tr data-id="cat:Car"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Car" data-orig="Car">Car</span></b>
-          <span class="bsub">avg £35.01</span></td>
-        <td class="n lamt">£0.00</td>
-        <td class="n diff good">-£35.01</td>
-        <td class="lchev"></td></tr>
-      
-    
-    </tbody>
-    
-    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg £1,468.83</span></td>
-      <td class="n lamt">£1,457.31</td>
-      <td class="n diff good">-£11.52</td><td></td></tr></tbody>
-  </table>
-</div>
-<script>
-  // The arrow button opens / shuts a category's shops (the same item rows the normal card opens with ▸ N)
-  document.addEventListener('DOMContentLoaded', () => {
+    // pots
+    const askPot = (pot, what) => {
+      if (what === 'amount') { const v = prompt('Monthly amount for ' + pot.dataset.name + ' (empty = none)', pot.dataset.amount); if (v !== null) send('/pot/amount', {key: pot.dataset.key, amount: v}); }
+      else { const v = prompt('Name of the pot', pot.dataset.name); if (v !== null) send('/pot/name', {key: pot.dataset.key, name: v}); }
+    };
+    document.querySelectorAll('.pot .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pot = btn.closest('.pot');
+      menu(btn, [['✏️ Change amount', '', () => askPot(pot, 'amount')], ['✏️ Change name', '', () => askPot(pot, 'name')],
+                 ['🗑 Delete', 'stop', () => { if (confirm('Delete the ' + pot.dataset.name + ' pot?')) send('/pot/delete', {key: pot.dataset.key}); }]]);
+    }));
+    document.querySelectorAll('.pot .potset').forEach(btn => btn.addEventListener('click', () => askPot(btn.closest('.pot'), 'amount')));
+
+    // ⓘ: a small bubble under the line, closed by the next tap
+    document.addEventListener('click', e => {
+      const btn = e.target.closest && e.target.closest('button.info'), had = btn && btn.classList.contains('tipon');
+      close();
+      document.querySelectorAll('.tipon').forEach(x => x.classList.remove('tipon'));
+      if (!btn || had) return;
+      btn.classList.add('tipon');
+      const tip = document.createElement('div'); tip.className = 'infotip'; tip.setAttribute('role', 'note'); tip.textContent = btn.dataset.tip;
+      (btn.closest('.bsub') || btn.closest('.labels') || btn.parentElement).insertAdjacentElement('afterend', tip);
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+    // History: the arrow button opens / shuts a category's shops
     document.querySelectorAll('.dlast .chev').forEach(btn => btn.addEventListener('click', e => {
       e.preventDefault(); e.stopPropagation();
       const id = btn.closest('tr').dataset.id, open = btn.getAttribute('aria-expanded') !== 'true';
@@ -731,124 +451,8 @@
     }));
   });
 </script>
-  
-  
-  <div class="card" data-id="where" data-card="where">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> Where did last cycle's money go?<button type="button" class="fold" title="Fold">▾</button></h2>
-    <div class="sub">30 Aug 2024 to 29 Sep 2024</div>
-    <div class="tiles">
-      <div class="tile"><div class="label">Expected spare</div><div class="num">£3,153.84</div></div>
-      <div class="tile"><div class="label">Actual spare</div><div class="num">£3,203.47</div></div>
-      <div class="tile"><div class="label">Extra</div>
-        <div class="num good">£49.63</div></div>
-    </div>
-    
-      
-        <details><summary><span class="what">Car under normal<span class="note">(0.00 vs usual 70.01)</span></span><span class="val">£70.01</span></summary>
-          <div class="inside">
-            <div>No payments in this cycle.</div>
-          </div></details>
-      
-        <details><summary><span class="what">Other money in</span><span class="val">£26.59</span></summary>
-          <div class="inside">
-            <div><span>18 Sep 2024 · INT&#39;L 0093267280</span><span>£26.59</span></div>
-            
-          </div></details>
-      
-        <details><summary><span class="what">Small bits (under 20 each)</span><span class="val">£21.99</span></summary>
-          <div class="inside">
-            <div><span>9 Sep 2024 · CASH MACHINE</span><span>-£40.00</span></div>
-            
-          </div></details>
-      
-      
-        <div class="against"><span>Spent MORE than normal (Unsorted -48.96, Food shopping -20.00)</span><span>-£68.96</span></div>
-      
-      <div class="addsup"><span>Adds up to</span><span>£49.63 ✅</span></div>
-    
-  </div>
-  
-  
-  <div class="card" data-id="cats" data-card="cats">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> Spending by category<button type="button" class="fold" title="Fold">▾</button></h2>
-    <div class="sub">This cycle so far vs the 2-cycle average. Tap one to see inside.</div>
-    <div data-sort="cats">
-    
-      <details data-id="cat:Household"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Household" data-orig="Household">Household</span><span class="note">now £1,093.62 · usual £625.50</span></span>
-        <span class="val bad">+£468.12</span></summary>
-        <div class="inside">
-          <div><span>Council Tax</span><span>£161.00 now · £0.00 usual</span></div><div><span>Energy Co</span><span>£157.12 now · £0.00 usual</span></div><div><span>Bills</span><span>£150.00 now · £0.00 usual</span></div><div><span>Rent</span><span>£550.00 now · £550.00 usual</span></div><div><span>Sky Digital</span><span>£46.50 now · £46.50 usual</span></div><div><span>Tv Licence</span><span>£13.25 now · £13.25 usual</span></div><div><span>Water Board</span><span>£15.75 now · £15.75 usual</span></div>
-        </div></details>
-    
-      <details data-id="cat:Unsorted"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Unsorted" data-orig="Unsorted">Unsorted</span><span class="note">now £454.93 · usual £215.20</span></span>
-        <span class="val bad">+£239.73</span></summary>
-        <div class="inside">
-          <div><span>Furniture Store</span><span>£279.00 now · £0.00 usual</span></div><div><span>Farm Shop</span><span>£52.44 now · £0.00 usual</span></div><div><span>Print Shop</span><span>£1.49 now · £0.00 usual</span></div><div><span>Taco Place</span><span>£18.90 now · £18.25 usual</span></div><div><span>Gym Club</span><span>£50.00 now · £50.00 usual</span></div><div><span>Phone Co</span><span>£40.11 now · £40.11 usual</span></div><div><span>Stream Video</span><span>£12.99 now · £12.99 usual</span></div><div><span>Tools</span><span>£0.00 now · £5.00 usual</span></div><div><span>Learn Online</span><span>£0.00 now · £6.00 usual</span></div><div><span>Cloud Host Aws.example.co</span><span>£0.00 now · £13.29 usual</span></div><div><span>Greengrocer</span><span>£0.00 now · £34.56 usual</span></div><div><span>Chiropractor</span><span>£0.00 now · £35.00 usual</span></div>
-        </div></details>
-    
-      <details data-id="cat:Car"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Car" data-orig="Car">Car</span><span class="note">now £61.30 · usual £35.01</span></span>
-        <span class="val bad">+£26.29</span></summary>
-        <div class="inside">
-          <div><span>Petrol Station</span><span>£61.30 now · £35.01 usual</span></div>
-        </div></details>
-    
-      <details data-id="cat:Cash"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Cash" data-orig="Cash">Cash</span><span class="note">now £0.00 · usual £45.00</span></span>
-        <span class="val good">-£45.00</span></summary>
-        <div class="inside">
-          <div><span>Cash Machine</span><span>£0.00 now · £45.00 usual</span></div>
-        </div></details>
-    
-      <details data-id="cat:Food shopping"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Food shopping" data-orig="Food shopping">Food shopping</span><span class="note">now £30.00 · usual £80.00</span></span>
-        <span class="val good">-£50.00</span></summary>
-        <div class="inside">
-          <div><span>Food And Bil</span><span>£30.00 now · £80.00 usual</span></div>
-        </div></details>
-    
-    </div>
-  </div>
-  
-  <div class="card" data-id="subs" data-card="subs">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> Subscriptions<button type="button" class="fold" title="Fold">▾</button></h2>
-    
-      <table>
-        <thead><tr><th>Still paying</th><th class="n">Monthly price</th><th class="n">Last 12 months</th><th class="n">This year</th></tr></thead>
-        <tbody data-sort="subs-active">
-        <tr data-id="sub:Stream Video"><td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="sub:Stream Video" data-orig="Stream Video">Stream Video</span><button type="button" class="small tobill" data-key="CARD|STREAM VIDEO|" data-name="Stream Video">→ Bill</button><span class="labels">since Aug 2024</span></td><td class="n">£12.99</td><td class="n">£38.97</td><td class="n">£38.97</td></tr>
-        </tbody>
-        
-      </table>
-    
-    
-  </div>
-  
-  <div class="card" data-id="periods" data-card="periods">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> 6 months, 12 months and this year<button type="button" class="fold" title="Fold">▾</button></h2>
-    
-    <div class="scroll"><table class="periods">
-      <tr><th></th><th class="n">Last 6 months<span class="labels">2 pay cycles</span></th><th class="n">Last 12 months<span class="labels">2 pay cycles</span></th><th class="n">2024 so far<span class="labels">2 pay cycles</span></th></tr>
-      <tr><td>Wage</td><td class="n">£4,798.30</td><td class="n">£4,798.30</td><td class="n">£4,798.30</td></tr>
-      <tr><td>Other money in</td><td class="n">£56.59</td><td class="n">£56.59</td><td class="n">£56.59</td></tr>
-      <tr><td>Bills</td><td class="n">£1,431.22</td><td class="n">£1,431.22</td><td class="n">£1,431.22</td></tr>
-      <tr><td>Spending</td><td class="n">£570.20</td><td class="n">£570.20</td><td class="n">£570.20</td></tr>
-      <tr><td>One-offs</td><td class="n">£0.00</td><td class="n">£0.00</td><td class="n">£0.00</td></tr>
-      <tr class="total"><td>Left over</td><td class="n good">£2,853.47</td><td class="n good">£2,853.47</td><td class="n good">£2,853.47</td></tr>
-    </table></div>
-    
-    <div class="sub" style="margin:14px 0 4px">Six-month picture (averages per pay cycle)</div>
-    <div class="sum">
-      <span>Wage (average)</span><span class="n">£2,399.15</span>
-      <span>Bills (average)</span><span class="n">£715.61</span>
-      <span>Normal spending (average)</span><span class="n">£285.10</span>
-      <span>One-offs (not counted)</span><span class="n">£0.00</span>
-      <span>Unsorted (average)</span><span class="n">£215.21</span>
-    </div>
-  </div>
-  
-  </div>
-  
 
-  
-  <div class="footer">New statements? Put the PDFs in the statements folder, run run.py (it asks any questions), then refresh this page.</div>
+  <div class="footer">Everything is kept in this phone's browser, nowhere else. Save a backup now and then (Settings).</div>
   
 </div>
 
@@ -972,22 +576,10 @@
                   {duration: 400, easing: 'ease-in-out'}).onfinish = function () { box.remove(); };
     }, 5000);
   });
-  if (location.search.indexOf('error=') >= 0 && history.replaceState) history.replaceState(null, '', location.pathname);
-
-  // Expand/collapse items in last month's spending
-  document.querySelectorAll('.openitems').forEach(function (btn) {
-    btn.addEventListener('click', function (e) {
-      e.preventDefault();
-      e.stopPropagation();
-      var row = btn.closest('tr');
-      if (!row) return;
-      var catId = row.dataset.id;
-      var items = document.querySelectorAll('tr.item[data-cat="' + catId + '"]');
-      var isHidden = items[0] && items[0].hidden;
-      items.forEach(function (item) { item.hidden = !isHidden; });
-      btn.textContent = isHidden ? '▾ ' + items.length : '▸ ' + items.length;
-    });
-  });
+  if (location.search.indexOf('error=') >= 0 && history.replaceState) {
+    var q = new URLSearchParams(location.search); q.delete('error');
+    history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+  }
 
   // Set up data-label attributes for responsive tables (runs on all pages before other scripts)
   document.querySelectorAll('table').forEach(function (table) {
@@ -1024,7 +616,7 @@
   function showRow(row) {
     const used = parseFloat(row.dataset.used), changed = row.dataset.changed === '1', est = row.dataset.estimated === '1' && !changed;
     const link = row.querySelector('button.link');
-    link.textContent = money(used) + (est ? '*' : (changed && !document.body.classList.contains('demo') ? ' ✏️' : ''));
+    link.textContent = est ? 'Add' : money(used);
     link.classList.toggle('muted', est);
     row.querySelector('button.x').hidden = !changed;
     const d = est ? null : used - parseFloat(row.dataset.avg);
@@ -1035,15 +627,15 @@
   function recalc() {
     let bills = 0, avg = 0;
     document.querySelectorAll('tr.bill').forEach(r => { bills += parseFloat(r.dataset.used); avg += parseFloat(r.dataset.avg); });
-    const spare = PAGE.wage + PAGE.left - bills, leftNow = spare - PAGE.typed;
+    const spare = PAGE.wage + PAGE.left - bills - PAGE.potsSet, leftNow = spare - PAGE.potsOver - PAGE.typed;
     document.getElementById('btotal').textContent = money(bills);
     const bd = document.getElementById('bdiff'); bd.textContent = diff(bills - avg); tone(bd, bills - avg); bd.classList.remove('muted');
     document.getElementById('spare-big').textContent = money(leftNow);
     document.getElementById('spare-how').textContent = 'Pay ' + money(PAGE.wage) + (PAGE.left ? ' + left ' + money(PAGE.left) : '') +
-      ' − bills ' + money(bills) + ' = ' + money(spare) + (PAGE.typed ? ' − spends ' + money(PAGE.typed) : '');
+      ' − bills ' + money(bills) + (PAGE.potsSet ? ' − pots ' + money(PAGE.potsSet) : '') + ' = ' + money(spare) +
+      (PAGE.potsOver ? ' − over ' + money(PAGE.potsOver) : '') + (PAGE.typed ? ' − spends ' + money(PAGE.typed) : '');
     document.getElementById('mfs').textContent = money(spare);
     document.getElementById('leftnow').textContent = money(leftNow);
-    document.querySelectorAll('.yleft').forEach(el => el.textContent = money(spare - parseFloat(el.dataset.amount)));
     if (window.demoTop) demoTop(bills);
   }
 
@@ -1055,7 +647,8 @@
       const v = readMoney(box.value);
       box.classList.toggle('badval', isNaN(v) && box.value.trim() !== '');
       if (isNaN(v)) return;
-      row.dataset.used = v; row.dataset.changed = '1';
+      row.dataset.used = v; row.dataset.estimated = '0';
+      row.dataset.changed = row.dataset.saved !== '' ? '1' : '0';      // only a bill with a saved month can be put back
       showRow(row); recalc();
       clearTimeout(timer); timer = setTimeout(() => save(row, v), 500);
     });
@@ -1063,7 +656,7 @@
     box.addEventListener('blur', () => { box.hidden = true; link.hidden = false; box.value = parseFloat(row.dataset.used).toFixed(2); box.classList.remove('badval'); });
     x.addEventListener('click', () => {
       clearTimeout(timer);
-      row.dataset.used = row.dataset.default; row.dataset.changed = '0';
+      row.dataset.used = row.dataset.default; row.dataset.changed = '0'; row.dataset.estimated = row.dataset.blank;
       box.value = parseFloat(row.dataset.default).toFixed(2);
       showRow(row); recalc(); save(row, '');
     });
@@ -1164,111 +757,6 @@
                                                       .catch(() => setTimeout(wait, 1000));
     setTimeout(wait, 3000);
   });
-
-  // A new pay = "I got paid": ask before clearing the typed spends (3 Oct 2026). Same pay (a typo fix) asks nothing.
-  const payForm = document.getElementById('payform');
-  if (payForm) payForm.addEventListener('submit', () => {
-    const typed = parseFloat(payForm.pay.value.replace(/[£,\s]/g, ''));
-    if (payForm.dataset.spends === '1' && !isNaN(typed) && Math.abs(typed - parseFloat(payForm.dataset.pay)) >= 0.005)
-      payForm.clear.value = confirm('New pay. Clear your typed spends?\n\nOK = clear them, Cancel = keep them') ? '1' : '0';
-  });
-
-  // No. 6a: drop PDFs anywhere on the page (or click the bar): read in, then the page reloads with any new items to sort
-  const dropbar = document.getElementById('dropbar'), dropfiles = document.getElementById('dropfiles');
-  const dropresult = document.getElementById('dropresult');
-  function showDrop(html) { if (dropresult) { dropresult.innerHTML = html; dropresult.hidden = false; } }
-  try { const m = sessionStorage.getItem('dropmsg'); if (m) { showDrop(m); sessionStorage.removeItem('dropmsg'); } } catch (e) {}
-  async function sendPdfs(files) {
-    files = [...files].filter(f => /\.pdf$/i.test(f.name));
-    if (!files.length) { showDrop('Only PDF statements can be dropped here.'); return; }
-    showDrop('⏳ Reading ' + files.length + ' statement' + (files.length > 1 ? 's' : '') + '...');
-    const fd = new FormData(); files.forEach(f => fd.append('files', f));
-    let r;
-    try { r = await (await fetch('/upload', {method: 'POST', body: fd})).json(); }
-    catch (e) { showDrop('❌ Sorry, that did not work. Is the black window still open?'); return; }
-    const esc = t => String(t).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
-    const lines = r.results.map(x => x.error ? '❌ ' + esc(x.file) + ': ' + esc(x.error)
-      : !x.new ? '↩️ ' + esc(x.file) + ': already in (' + x.start + ' to ' + x.end + ')'
-      : (x.problems.length ? '⚠️ ' : '✅ ') + esc(x.file) + ': ' + x.start + ' to ' + x.end + ', ' + x.payments + ' payments'
-        + (x.problems.length ? '<br><span class="muted">' + x.problems.map(esc).join('<br>') + '</span>' : ''));
-    const html = lines.join('<br>');
-    if (r.results.some(x => x.new)) { try { sessionStorage.setItem('dropmsg', html); } catch (e) {} location.reload(); }
-    else showDrop(html);
-  }
-  if (dropfiles) dropfiles.addEventListener('change', () => sendPdfs(dropfiles.files));
-  document.addEventListener('dragover', e => { if (!dragEl && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); document.body.classList.add('dragover'); } });
-  document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragover'); });
-  document.addEventListener('drop', e => {
-    if (dragEl || !e.dataTransfer.files.length) return;
-    e.preventDefault(); document.body.classList.remove('dragover'); sendPdfs(e.dataTransfer.files);
-  });
-
-  // No. 6b: sort new items: buttons, Save, Copy for AI, Paste answers
-  document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
-  }));
-  // → Bill buttons (last month's spending items and subscriptions)
-  document.querySelectorAll('.tobill').forEach(btn => btn.addEventListener('click', async () => {
-    const keys = btn.dataset.key.split(',');
-    const answers = keys.map(k => ({key: k, kind: 'bill', label: '', category: ''}));
-    await fetch('/sort/save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({answers})});
-    location.reload();
-  }));
-
-  const sortSave = document.getElementById('sortsave');
-  if (sortSave) sortSave.addEventListener('click', async () => {
-    const answers = [...document.querySelectorAll('tr.sortrow')].map(r => ({
-      key: r.dataset.key, kind: (r.querySelector('.seg .on') || {}).dataset?.kind || '',
-      label: r.querySelector('.sname').value, category: r.querySelector('.scat').value}));
-    sortSave.disabled = true; sortSave.textContent = '⏳ Saving...';
-    await fetch('/sort/save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({answers})});
-    location.reload();
-  });
-  const aiCopy = document.getElementById('aicopy');
-  if (aiCopy) aiCopy.addEventListener('click', async () => {
-    const text = document.getElementById('aitext').value;
-    try { await navigator.clipboard.writeText(text); }
-    catch (e) { const t = document.getElementById('aitext'); t.hidden = false; t.select(); document.execCommand('copy'); t.hidden = true; }
-    aiCopy.textContent = '✅ Copied! Paste it into ChatGPT or Claude';
-    setTimeout(() => aiCopy.textContent = '📋 Copy for AI', 4000);
-  });
-  const aiPasteBtn = document.getElementById('aipastebtn');
-  if (aiPasteBtn) aiPasteBtn.addEventListener('click', () => {
-    const box = document.getElementById('aipaste'); box.hidden = !box.hidden;
-    if (!box.hidden) document.getElementById('aireply').focus();
-  });
-  const aiFill = document.getElementById('aifill');
-  if (aiFill) aiFill.addEventListener('click', async () => {
-    const count = parseInt(document.getElementById('sortcard').dataset.count);
-    const got = await (await fetch('/sort/parse', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text: document.getElementById('aireply').value, count})})).json();
-    let n = 0;
-    document.querySelectorAll('tr.sortrow').forEach(r => {
-      const a = got[r.dataset.n]; if (!a) return;
-      r.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.kind === a.kind));
-      if (a.category) r.querySelector('.scat').value = a.category;
-      r.classList.add('filled'); n++;
-    });
-    document.getElementById('aimsg').textContent = n ? `Filled in ${n} of ${count}. Check them, then press Save.` :
-      'I could not read any answers. Lines should look like: 1 bill Household';
-  });
-
-  // No. 6c: one click answers a question; the page reloads with the new numbers
-  document.querySelectorAll('.ask').forEach(box => box.addEventListener('click', async e => {
-    const b = e.target.closest('button'); if (!b) return;
-    const q = JSON.parse(box.dataset.q), a = {type: q.type};
-    if (q.type === 'newbill' && b.dataset.new === '0' && !box.querySelector('.askinto').value) return box.querySelector('.askinto').focus();
-    if (q.type === 'job') Object.assign(a, {name: q.name, yes: b.dataset.yes === '1'});
-    else if (q.type === 'same') Object.assign(a, {big: q.big, small: q.small, yes: b.dataset.yes === '1'});
-    else if (q.type === 'rent') Object.assign(a, {payer: q.payer, usual: q.usual, yes: b.dataset.yes === '1',
-                                                  label: box.querySelector('.asklabel').value});
-    else if (q.type === 'newbill') Object.assign(a, {key: q.key, into: b.dataset.new === '1' ? '' : box.querySelector('.askinto').value});
-    else Object.assign(a, {id: q.id, keep: b.dataset.keep === '1'});
-    box.querySelectorAll('button').forEach(x => x.disabled = true);
-    await fetch('/ask', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(a)});
-    location.reload();
-  }));
 </script>
 
 

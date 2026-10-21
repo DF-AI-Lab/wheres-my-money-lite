@@ -1,6 +1,7 @@
-/* Where's My Money? Lite - step 2: draws the parts of the page that depend on the numbers.
+/* Where's My Money? Lite - draws the parts of the page that depend on the numbers.
    A port of live's Jinja templates (demo_top.html, demo_bills.html and the spend / credit card cards of home.html):
-   the markup it writes is the same markup live sends. Everything statement-based stays as the static HTML.
+   the markup it writes is the same markup live sends. Go A adds the pots card, the due day / Paid ticks on bills and
+   the history cards (last month, categories, 6 / 12 months), all from the months saved at payday.
    Lite.render(state) runs once, before the page's own script, so that script binds to what is drawn here. */
 (function (root) {
   'use strict';
@@ -11,9 +12,13 @@
 
   const ERRORS = {
     pay: 'Sorry, I could not read that as money.',
-    spend: 'Sorry, type an amount and a name, e.g. 12.50 and Costa.',
+    spend: 'Sorry, type an amount and a name, e.g. 12.50 and Coffee.',
     card: 'Sorry, type an amount and a name for the credit card, e.g. 40 and Shell.',
+    bill: 'Sorry, type a name for the bill (and an amount, e.g. 12.99).',
+    pot: 'Sorry, type a name and a monthly amount for the pot, e.g. 400 and Shopping.',
   };
+  const INLINE = ['spend', 'card', 'bill', 'pot'];                 // errors shown inside their own card
+  const errorBox = (err, code) => err === code ? `<div class="error fade">${ERRORS[code]}</div>` : '';
 
   // ---------- the pieces ----------
   function statementRows(r) {
@@ -22,7 +27,8 @@
       <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">${money(r.pay)}</button></div>
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">${left}</button></div>
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">${money(r.billsTotal)}</span></div>
-      <div class="r"><span><i class="dot spend"></i>− Spends</span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
+      <div class="r"><span><i class="dot pot"></i>− Pots${r.potsOver > 0.004 ? ` <span class="labels k-pot">(${money(r.potsOver)} over)</span>` : ''}</span><span class="k-pot" id="st-pots">${money(r.potsTotal)}</span></div>
+      <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
       <div class="r tot"><span>Spare</span><span id="st-spare">${money(r.leftNow)}</span></div>
     `;
   }
@@ -51,17 +57,17 @@
   function spendCard(r, err) {
     const rows = r.spends.map(s => `
 
-          <tr class="drow"><td><b>${esc(s.name)}</b><span class="labels">${F.day(s.date)} · ${esc(s.cat || 'Unsorted')}</span></td><td class="n">${money(s.amount)}</td>
+          <tr class="drow"><td><b>${esc(s.name)}</b><span class="labels">${F.day(s.date)} · ${s.pot ? `<i class="dot pot"></i>${esc(s.pot)}` : esc(s.cat || 'Unsorted')}</span></td><td class="n">${money(s.amount)}</td>
               <td class="n"><form method="post" action="/remove"><input type="hidden" name="id" value="${s.id}"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove ${esc(s.name)}">×</button></form></td></tr>
 
         `).join('');
     return `<div class="card" data-id="spend" data-card="spend">
     <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot spend"></i> Add a spend<button type="button" class="fold" title="Fold">▾</button></h2>
-    ${err === 'spend' ? `<div class="error fade">${ERRORS.spend}</div>` : ''}
+    ${errorBox(err, 'spend')}
 
     <form class="inline" method="post" action="/add">
       <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.50" aria-label="Amount">
-      <input class="name" type="text" name="name" placeholder="Costa" aria-label="What">
+      <input class="name" type="text" name="name" placeholder="Coffee" aria-label="What">
       <button type="submit">Add</button>
     </form>
     ${r.spends.length ? `
@@ -72,7 +78,7 @@
 
     <div class="sum" style="margin-top:12px">
       <span>Money for spending</span><span class="n" id="mfs">${money(r.moneyForSpending)}</span>
-      <span>Typed so far</span><span class="n" id="typed">${money(r.moneyForSpending - r.leftNow)}</span>
+      <span>Typed so far</span><span class="n" id="typed">${money(r.spendsTotal + r.potsOver)}</span>
       <span class="eq">Left now</span><span class="n eq" id="leftnow">${money(r.leftNow)}</span>
     </div>
   </div>`;
@@ -89,7 +95,7 @@
         `).join('');
     return `<div class="card" data-id="card" data-card="card">
     <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot zused"></i> Credit card<button type="button" class="fold" title="Fold">▾</button></h2>
-    ${err === 'card' ? `<div class="error fade">${ERRORS.card}</div>` : ''}
+    ${errorBox(err, 'card')}
 
     <form class="inline" method="post" action="/card/add">
       <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="40" aria-label="Amount">
@@ -111,32 +117,49 @@
   </div>`;
   }
 
+  const INFO = {
+    paid: 'Check your bank app. If it came out, tick the box.',
+    stopped: 'Not counted until you choose Count it again in ⋯.',
+    left: 'Check your bank app for what is really left. Please check this each month.',
+  };
+  const infoBtn = tip => `<button type="button" class="info" aria-label="What is this?" data-tip="${esc(tip)}">ⓘ</button>`;
+
+  // grey line under a bill: avg, due day, then Paid ⓘ ☐ once the due day has gone (ticked by the person, never by itself)
+  function billSub(b) {
+    const nm = F.tagsplit(b.name), tags = nm[1].map(t => `${esc(t)} · `).join('');
+    let line = b.blank ? `${tags}no amount yet` : `${tags}avg ${money(b.avg)}`;
+    if (b.dueText) line += ` · due ${b.dueText}`;
+    if (b.stopped) line += ` · <span class="bstop">Stopped ${infoBtn(INFO.stopped)}</span>`;
+    else if (b.duePassed && b.paid) line += ` · <span class="bpaid done">✓ Paid <input type="checkbox" class="paidbox" aria-label="Paid: ${esc(b.name)}" checked></span>`;
+    else if (b.duePassed) line += ` · <span class="bpaid">Paid ${infoBtn(INFO.paid)} <input type="checkbox" class="paidbox" aria-label="Paid: ${esc(b.name)}"></span>`;
+    return line;
+  }
+
   function billRow(b) {
-    const nm = F.tagsplit(b.name), dflt = b.last > 0 ? b.last : b.avg;
-    const tags = nm[1].map(t => `${esc(t)} · `).join('');
-    const tone = b.diff !== null && b.diff < -0.005 ? 'good' : (b.diff !== null && b.diff > 0.005 ? 'bad' : 'muted');
+    const nm = F.tagsplit(b.name), dflt = b.saved !== null ? b.saved : b.used;
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.last <= 0 ? 1 : 0}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="${b.new ? 1 : 0}" data-stopped="${b.stopped ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-due="${b.due || ''}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span><b class="bbase">${esc(nm[0])}</b>
-          <span class="bsub">${tags}avg ${money(b.avg)}${b.new ? ' · <span class="bnew">new</span>' : ''}${b.stopped ? ' · <span class="bstop">stopped</span>' : ''}</span>
+          <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
         <td class="n bavg">${money(b.avg)}</td>
         <td class="n bamt">
-          <button type="button" class="link ${b.estimated ? 'muted' : ''}" title="Change it for this pay cycle">${money(b.used)}${b.estimated ? '*' : ''}</button>
-          <input class="amount billbox" type="text" inputmode="decimal" value="${f2(b.used)}" aria-label="New amount for ${esc(b.name)}" hidden>
+          <button type="button" class="link ${b.blank ? 'muted' : ''}" title="Change the amount">${b.blank ? 'Add' : money(b.used)}</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="${b.blank ? '' : f2(b.used)}" aria-label="New amount for ${esc(b.name)}" hidden>
           <button type="button" class="small x" title="Put it back" ${b.changed ? '' : 'hidden'}>✖</button>
         </td>
-        <td class="n diff ${tone}">${F.diff(b.diff)}</td>
+        <td class="n diff ${b.diff !== null && b.diff < -0.005 ? 'good' : (b.diff !== null && b.diff > 0.005 ? 'bad' : 'muted')}">${F.diff(b.diff)}</td>
         <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop ${esc(nm[0])}">⋯</button></td></tr>
     `;
   }
 
-  function billsCard(r) {
+  function billsCard(r, err) {
     const bd = r.billsDiff, tone = bd < -0.005 ? 'good' : (bd > 0.005 ? 'bad' : '');
     return `<div class="card" data-id="bills" data-card="bills">
   <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot bill"></i> Bills (every month)<button type="button" class="fold" title="Fold">▾</button></h2>
+  ${errorBox(err, 'bill')}
   <table id="bills" class="dbills">
     <thead><tr><th>Bill</th><th class="n">${r.cycles}-mth avg</th><th class="n">Last month</th><th class="n">Diff</th><th></th></tr></thead>
     <tbody data-sort="bills">
@@ -146,11 +169,106 @@
     <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg ${money(r.billsAvg)}</span></td><td class="n bavg">${money(r.billsAvg)}</td><td class="n bamt" id="btotal">${money(r.billsTotal)}</td>
       <td class="n diff ${tone}" id="bdiff">${F.diff(bd)}</td><td></td></tr></tbody>
   </table>
-  <div class="labels bnote">
-    ${r.anyEstimated ? '* not paid last month, average used<br>' : ''}
-    ⋯ → Change amount = this pay cycle only (or tap the blue amount). Spare cash updates as you type.
-  </div>
+  <form class="inline" method="post" action="/bill/add" style="margin-top:12px">
+    <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.99" aria-label="Amount">
+    <input class="name" type="text" name="name" placeholder="New bill" aria-label="Bill name">
+    <button type="submit">Add</button>
+  </form>
+  <div class="labels bnote">Tap an amount to change it: it carries over to next month. Spare cash updates as you type.</div>
 </div>`;
+  }
+
+  // ---------- pots ----------
+  function potBlock(p) {
+    const status = p.blank ? `<button type="button" class="link muted potset">Set an amount</button>`
+      : (p.over > 0.004 ? `<span class="bad">${money(p.over)} over</span>` : `<span class="good">${money(p.left)} left</span>`);
+    const line = p.blank ? (p.spent > 0 ? `${money(p.spent)} spent so far` : '') : `${money(p.spent)} of ${money(p.amount)}`;
+    return `
+    <div class="pot" data-key="${esc(p.key)}" data-name="${esc(p.name)}" data-amount="${p.blank ? '' : f2(p.amount)}">
+      <div class="potrow"><b>${esc(p.name)}</b><span class="potside">${status}<span class="potmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or delete ${esc(p.name)}">⋯</button></span></span></div>
+      <div class="potbar"><i class="${p.over > 0.004 ? 'over' : ''}" style="width:${p.blank ? 0 : p.pct}%"></i></div>
+      <div class="labels">${line}</div>
+    </div>`;
+  }
+
+  function potsCard(r, err) {
+    return `<div class="card" data-id="pots" data-card="pots">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot pot"></i> Monthly pots<button type="button" class="fold" title="Fold">▾</button></h2>
+    ${errorBox(err, 'pot')}
+    ${r.pots.map(potBlock).join('')}
+    <form class="inline" method="post" action="/pot/add" style="margin-top:12px">
+      <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="400" aria-label="Amount">
+      <input class="name" type="text" name="name" placeholder="New pot" aria-label="Pot name">
+      <button type="submit">Add</button>
+    </form>
+    <div class="labels bnote">Spends in a pot's category fill it. Over comes off spare.</div>
+  </div>`;
+  }
+
+  // ---------- history cards (from the months saved at payday) ----------
+  const FIRST = '<div class="labels">Fills in at your first payday.</div>';
+  const head = (id, title) => `<h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> ${title}<button type="button" class="fold" title="Fold">▾</button></h2>`;
+  const pill = x => Math.abs(x) < 0.005 ? '' : (x > 0 ? 'bad' : 'good');
+  const chev = n => `<button type="button" class="chev" aria-expanded="false" aria-label="Show the shops"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>${n}</span></button>`;
+
+  function lastMonthCard(r) {
+    const m = r.lastMonth;
+    if (!m) return `<div class="card" data-id="lastmonth" data-card="lastmonth">${head('lastmonth', "Last month's spending")}${FIRST}</div>`;
+    const rows = m.cats.map(c => `
+      <tr data-id="cat:${esc(c.cat)}"><td><b class="bbase">${esc(c.cat)}</b>
+          <span class="bsub">${c.items.slice(0, 3).map(i => esc(i.name)).join(', ')}${c.items.length > 3 ? ' …' : ''}</span></td>
+        <td class="n lamt">${money(c.total)}</td>
+        <td class="n diff"></td>
+        <td class="lchev">${c.items.length > 1 ? chev(c.items.length) : ''}</td></tr>
+      ${c.items.length > 1 ? c.items.map(i => `<tr class="item" data-cat="cat:${esc(c.cat)}" hidden><td>${esc(i.name)}</td><td class="n">${money(i.total)}</td><td class="n"></td><td></td></tr>`).join('') : ''}
+    `).join('');
+    return `<div class="card" data-id="lastmonth" data-card="lastmonth">
+  ${head('lastmonth', "Last month's spending")}
+  <div class="sub">${F.day(m.start)} to ${F.day(m.end)}</div>
+  <table class="dlast">
+    <tbody>
+      <tr class="lbills"><td><b class="bbase"><i class="dot bill"></i>Bills</b><span class="bsub">In the Bills card</span></td>
+        <td class="n lamt k-bill">${money(m.bills)}</td>
+        <td class="n diff"></td><td></td></tr>
+    </tbody>
+    <tbody data-sort="lastmonth">${rows}</tbody>
+    <tbody><tr class="total"><td><b class="bbase">Total</b></td><td class="n lamt">${money(m.total)}</td>
+      <td class="n diff"></td><td></td></tr></tbody>
+  </table>
+</div>`;
+  }
+
+  function catsCard(r) {
+    if (!r.hasHistory) return `<div class="card" data-id="cats" data-card="cats">${head('cats', 'Spending by category')}${FIRST}</div>`;
+    const now = {};
+    r.spends.forEach(x => { const c = x.cat || 'Unsorted'; (now[c] = now[c] || []).push(x); });
+    const rows = r.cats.map(c => `
+      <details data-id="cat:${esc(c.cat)}"><summary><span class="what">${esc(c.cat)}<span class="note">now ${money(c.now)} · usual ${money(c.avg)}</span></span>
+        <span class="val ${pill(c.diff)}">${F.diff(c.diff)}</span></summary>
+        <div class="inside">${(now[c.cat] || []).map(x => `<div><span>${esc(x.name)}</span><span>${money(x.amount)}</span></div>`).join('') || '<div>Nothing this month.</div>'}</div></details>
+    `).join('');
+    return `<div class="card" data-id="cats" data-card="cats">
+    ${head('cats', 'Spending by category')}
+    <div class="sub">This month so far vs the average of your saved months. Tap one to see inside.</div>
+    <div data-sort="cats">${rows}</div>
+  </div>`;
+  }
+
+  function periodsCard(r) {
+    if (!r.hasHistory) return `<div class="card" data-id="periods" data-card="periods">${head('periods', '6 months, 12 months and this year')}${FIRST}</div>`;
+    const P = r.periods, cols = [P.six, P.twelve, P.ytd];
+    const cell = (f, cls) => cols.map(c => `<td class="n ${cls ? cls(c) : ''}">${money(f(c))}</td>`).join('');
+    const lab = c => `<span class="labels">${c.months} saved month${c.months === 1 ? '' : 's'}</span>`;
+    return `<div class="card" data-id="periods" data-card="periods">
+    ${head('periods', '6 months, 12 months and this year')}
+    <div class="scroll"><table class="periods">
+      <tr><th></th><th class="n">Last 6 months${lab(P.six)}</th><th class="n">Last 12 months${lab(P.twelve)}</th><th class="n">${P.year} so far${lab(P.ytd)}</th></tr>
+      <tr><td>Wage</td>${cell(c => c.wage)}</tr>
+      <tr><td>Bills</td>${cell(c => c.bills)}</tr>
+      <tr><td>Spending</td>${cell(c => c.spending)}</tr>
+      <tr class="total"><td>Left over</td>${cell(c => c.left, c => c.left < 0 ? 'bad' : 'good')}</tr>
+    </table></div>
+  </div>`;
   }
 
   // ---------- put it on the page ----------
@@ -159,25 +277,28 @@
     if (el) el.outerHTML = html;
   }
 
-  function render(state, err) {
-    const r = M.compute(state);
-    // PAGE: the numbers the page script starts from (live writes the same four into its script)
-    root.LITE_PAGE = {bills: r.billsTotal, left: r.left, typed: r.spendsTotal, wage: r.pay};
+  function render(state, err, today) {
+    const r = M.compute(state, today);
+    // PAGE: the numbers the page script starts from (live writes the same four into its script; Go A adds the pots)
+    root.LITE_PAGE = {bills: r.billsTotal, left: r.left, typed: r.spendsTotal, wage: r.pay,
+                      pots: r.potsTotal, potsSet: r.potsSet, potsOver: r.potsOver};
 
     // an error from the last form (live: /?error=CODE)
-    if (err && ERRORS[err] && err !== 'spend' && err !== 'card') {
+    if (err && ERRORS[err] && !INLINE.includes(err)) {
       const quick = document.getElementById('quick');
       if (quick) quick.insertAdjacentHTML('beforebegin', `<div class="error fade">${ERRORS[err]}</div>\n\n  `);
     }
 
-    // New payday panel: Pay and Left values
+    // New payday panel: Pay, and Left filled in with what was really left at the end of the month
+    const spare = M.monthEndSpare(state), fill = spare > 0 ? f2(spare) : '';
     const pf = document.getElementById('payform');
     if (pf) {
-      pf.dataset.spends = r.spends.length ? '1' : '0';
       pf.dataset.pay = f2(r.pay);
-      pf.dataset.left = r.left ? f2(r.left) : '';
+      pf.dataset.left = fill;
       document.getElementById('qpay').setAttribute('value', f2(r.pay));
-      document.getElementById('qleft').setAttribute('value', r.left ? f2(r.left) : '');
+      document.getElementById('qleft').setAttribute('value', fill);
+      const lh = document.getElementById('lhval');
+      if (lh) lh.textContent = money(spare);
     }
 
     // spare cash statement
@@ -187,10 +308,14 @@
 
     // cards
     swap('#cards > [data-card="spend"]', spendCard(r, err));
+    swap('#cards > [data-card="pots"]', potsCard(r, err));
     swap('#cards > [data-card="card"]', cardCard(r, err));
-    swap('#cards > [data-card="bills"]', billsCard(r));
+    swap('#cards > [data-card="bills"]', billsCard(r, err));
+    swap('#cards > [data-card="lastmonth"]', lastMonthCard(r));
+    swap('#cards > [data-card="cats"]', catsCard(r));
+    swap('#cards > [data-card="periods"]', periodsCard(r));
     return r;
   }
 
-  root.LiteRender = {render, ERRORS, spendCard, cardCard, billsCard, zopaTile, statementRows};
+  root.LiteRender = {render, ERRORS, INFO, spendCard, potsCard, cardCard, billsCard, zopaTile, statementRows};
 })(window);

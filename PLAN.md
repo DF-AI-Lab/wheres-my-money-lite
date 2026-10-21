@@ -27,6 +27,7 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 ## Steps done
 1. **Look** ✅ 21 Oct: LOOK LOCKED (Darren agreed). docs/look.css never changes.
 2. **Maths** ✅ 21 Oct (v0.04): spare cash, spends, credit card, bills in JS. Saved for the tab only.
+3. **Go A = build steps 1-4** ✅ 21 Oct (v0.07): saving (localStorage) + backup file, bills (add/name/due/Paid/Stop/delete/template), payday + history cards, pots. ?demo=1 = fake data for the tab only.
 
 ## Agreed design (grill, 21 Oct, Darren said "agreed")
 **Basics**
@@ -72,11 +73,11 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 **Settings:** Save / Load backup, Google Drive, Move & rename (like live), 🔄 Update, 💡 Ideas & feedback, Cards open.
 
 ## Build order (one step at a time, Darren says go)
-1. 💾 Saving on the phone + backup file ⬅️ NEXT
-2. 🧾 Bills (add, name, due day, Paid ⓘ, Stop ⓘ, delete, template)
-3. 📅 Payday + history (save the month, Left filled in, last month, categories, 6/12 months)
-4. 🟠 Pots
-5. 💳 Several credit cards + the Zopa question
+1. 💾 Saving on the phone + backup file ✅
+2. 🧾 Bills (add, name, due day, Paid ⓘ, Stop ⓘ, delete, template) ✅
+3. 📅 Payday + history (save the month, Left filled in, last month, categories, 6/12 months) ✅
+4. 🟠 Pots ✅
+5. 💳 Several credit cards + the Zopa question ⬅️ NEXT
 6. 🔒 Fingerprint + passcode + 10 codes + scrambled backup
 7. ✏️ Move & rename + Update + Ideas
 8. 📲 Install + works offline
