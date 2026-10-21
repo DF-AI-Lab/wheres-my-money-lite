@@ -46,7 +46,7 @@ test('backup file: export wraps the state, import gives it back; junk is refused
   assert.strictEqual(file.saved, '2024-11-08');
   assert.ok(typeof file.version === 'string' && file.version.length > 0);
   const back = M.importBackup(JSON.parse(JSON.stringify(file)));
-  assert.deepStrictEqual(back, s);
+  assert.deepStrictEqual(back, M.migrate(JSON.parse(JSON.stringify(s))));   // v2 comes back as v3 (step 5)
   assert.notStrictEqual(back, s);                                   // a copy, not the same object
   assert.strictEqual(M.importBackup({app: 'something else', state: s}), null);
   assert.strictEqual(M.importBackup({app: 'wheres-my-money-lite'}), null);

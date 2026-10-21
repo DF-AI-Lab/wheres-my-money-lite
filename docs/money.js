@@ -3,14 +3,15 @@
    saved months (history) and the backup file. Pure functions: no page, no storage, no network.
    Works in the browser (window.Money) and in node (module.exports). Fake data only.
 
-   State v2: {v:2, pay, left, payday (ISO start of this pay month, may be missing),
-              bills:[{key,name,cat,amount (number|null), due (1-31|null), paid, stopped}],
+   State v3: {v:3, pay, left, payday (ISO start of this pay month, may be missing),
+              bills:[{key,name,cat,amount (number|null), due (1-31|null), paid, stopped,
+                      card (a card key | '' = none | missing = linked by name), asked (pay month start the card question was answered)}],
               pots:[{key,name,cat,amount (number|null)}],
               spends:[{id,date,amount,name,cat}], history:[saved months],
-              card:{limit,carry,next,items:[{id,date,amount,name,kind}]}}
+              cards:[{key,name,limit,carry,next,items:[{id,date,amount,name,kind}]}]}
    A saved month: {start,end,pay,left,spare,bills:[{key,name,cat,amount,stopped}],spends:[...],pots:[{key,name,cat,amount,spent}]}
    Dates are ISO text (YYYY-MM-DD). Every mutator changes the state it is given and returns null when it worked,
-   or an error code ('pay' | 'spend' | 'card' | 'bill' | 'pot') exactly where live redirects to /?error=CODE. */
+   or an error code ('pay' | 'spend' | 'card' | 'newcard' | 'bill' | 'pot') exactly where live redirects to /?error=CODE. */
 (function (root) {
   'use strict';
 
@@ -141,8 +142,7 @@
     }
   }
 
-  function cardOf(s) {                                   // make sure the card has all its fields
-    const c = s.card || (s.card = {});
+  function fixCard(c) {                                  // make sure a card has all its fields
     if (c.limit === undefined) c.limit = 500;
     if (c.carry === undefined) c.carry = 0;
     if (!Array.isArray(c.items)) c.items = [];
@@ -150,10 +150,39 @@
     if (c.next === undefined) c.next = Math.max(0, ...c.items.map(i => i.id)) + 1;
     return c;
   }
+  const templateCard = () => ({key: 'Credit card', name: 'Credit card', limit: 500, carry: 0, next: 1, items: []});
+  function cardsOf(s) {                                  // the list of cards (an old single "card" becomes the Zopa card)
+    if (!Array.isArray(s.cards)) {
+      const old = s.card;
+      s.cards = old ? [Object.assign({key: 'Zopa', name: 'Zopa'}, old)] : [templateCard()];
+      delete s.card;
+      s.v = 3;
+    }
+    s.cards.forEach(fixCard);
+    return s.cards;
+  }
+  // the card a key names ('' or missing = the first card); null when there is none
+  function cardOf(s, key) {
+    const cards = cardsOf(s);
+    return key === undefined || key === null || key === '' ? (cards[0] || null) : (cards.find(c => c.key === key) || null);
+  }
   const cardUsed = c => r2(c.carry + sum(c.items.map(i => i.amount)));
+  const cardLabel = c => (/\bcard\b/i.test(c.name) ? c.name : c.name + ' credit card');
+  const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // the first card whose name is a whole word in the bill's name ('Zopa Credit Cards DD' -> Zopa), else null
+  function autoCard(cards, billName) {
+    for (const c of cards) {
+      if (c.name && new RegExp('(?<![A-Za-z0-9])' + escRe(c.name) + '(?![A-Za-z0-9])', 'i').test(billName)) return c.key;
+    }
+    return null;
+  }
+  function billCardKey(cards, b) {                       // the card key a bill pays, or null
+    if (b.card === '') return null;                      // explicitly none
+    if (typeof b.card === 'string' && cards.some(c => c.key === b.card)) return b.card;
+    return autoCard(cards, b.name === undefined ? b.key : b.name);
+  }
 
-  function addCard(s, iso, amount, name, kind) {
-    const c = cardOf(s);
+  function addCard(c, iso, amount, name, kind) {
     amount = r2(Number(amount));
     c.items.push({id: c.next, date: iso, amount, name: String(name).trim().slice(0, 60),
                   kind: kind || (amount > 0 ? 'spend' : 'paid')});
@@ -202,11 +231,12 @@
   // ---------- compute: everything the page shows ----------
   // today (ISO) is optional: without it no bill is "past its due day" and "this year" is the newest saved year.
   function compute(s, today) {
-    if (!s || s.v !== 2) s = migrate(clone(s || {}));
+    if (!s || s.v !== 3) s = migrate(clone(s || {}));
     const history = byStart(s.history || []);
 
     // bills
     const start = s.payday || (today ? today.slice(0, 8) + '01' : null);
+    const cardList = cardsOf(s);
     const bills = (s.bills || []).map(b => {
       const blank = typeof b.amount !== 'number', stopped = !!b.stopped;
       const amount = blank ? null : b.amount;
@@ -221,6 +251,7 @@
               saved: was && typeof was.amount === 'number' ? was.amount : null,
               changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
               due, dueText: due ? ordinal(due) : '', duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
+              card: billCardKey(cardList, b), asked: b.asked === start,
               diff: (blank || stopped) ? null : used - avg};
     });
     bills.forEach((b, i) => { b.i = i; });
@@ -254,11 +285,15 @@
     const pct = {bills: r0(100 * f(billsTotal)), pots: r0(100 * f(potsTotal)), spends: r0(100 * f(spendsTotal)),
                  spare: r0(100 * f(spareRing))};
 
-    const c = cardOf(s);
-    const rows = allocate(c.items, c.carry).map(r => Object.assign(r, {removable: r.status !== 'paid'}));
-    const used = cardUsed(c);
-    const pc = c.limit ? 100 * used / c.limit : 0;
-    const card = {limit: c.limit, carry: c.carry, used, free: r2(c.limit - used), pc, pctUsed: r0(pc), rows};
+    const cards = cardList.map(c => {
+      const rows = allocate(c.items, c.carry).map(r => Object.assign(r, {removable: r.status !== 'paid'}));
+      const used = cardUsed(c), pc = c.limit ? 100 * used / c.limit : 0;
+      // the question: a bill that pays this card, due day gone (or no due day), not answered this pay month
+      const asks = bills.filter(b => b.card === c.key && !b.stopped && b.amount > 0 && (!b.due || b.duePassed) && !b.asked)
+        .map(b => ({key: b.key, name: b.name, amount: b.amount, dueText: b.dueText}));
+      return {key: c.key, name: c.name, label: cardLabel(c), limit: c.limit, carry: c.carry, used, free: r2(c.limit - used),
+              pc, pctUsed: r0(pc), rows, asks};
+    });
 
     // history cards (all from the months saved at payday)
     const cycles = Math.max(1, history.length);
@@ -293,7 +328,7 @@
                      ytd: sums(history.filter(m => m.start.slice(0, 4) === year)), year};
 
     return {pay, left, bills, billsTotal, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
-            pots, potsSet, potsOver, potsTotal, moneyForSpending, leftNow, spare: leftNow, pct, card,
+            pots, potsSet, potsOver, potsTotal, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
             anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
 
@@ -310,26 +345,27 @@
   const newPot = (name, amount) => ({key: name, name, cat: name, amount});
 
   function TEMPLATE() {                                          // a new person: the usual bills, amounts blank, no fake numbers
-    return {v: 2, pay: 0, left: 0, bills: TEMPLATE_BILLS.map(n => newBill(n, null)), pots: TEMPLATE_POTS.map(n => newPot(n, null)),
-            spends: [], history: [], card: {limit: 500, carry: 0, next: 1, items: []}};
+    return {v: 3, pay: 0, left: 0, bills: TEMPLATE_BILLS.map(n => newBill(n, null)), pots: TEMPLATE_POTS.map(n => newPot(n, null)),
+            spends: [], history: [], cards: [templateCard()]};
   }
 
-  // v1 (step 2: avg / last / change) -> v2. A state that is already v2 comes back untouched.
+  // v1 / v2 -> v3 (v2: one "card", now cards:[...]; the old card is the Zopa card). A v3 state comes back untouched.
   function migrate(old) {
-    if (old && old.v === 2) return old;
+    if (old && old.v === 3) return old;
     old = old || {};
+    if (old.v === 2) { cardsOf(old); return old; }
     const s = {v: 2, pay: old.pay || 0, left: old.left || 0,
       bills: (old.bills || []).map(b => ({key: b.key, name: b.name === undefined ? b.key : b.name, cat: b.cat || 'Unsorted',
         amount: b.change !== undefined && b.change !== null ? b.change : (b.last > 0 ? b.last : (typeof b.avg === 'number' ? b.avg : null)),
         due: null, paid: false, stopped: !!b.stopped})),
       pots: TEMPLATE_POTS.map(n => newPot(n, null)), spends: old.spends || [], history: [], card: old.card};
     if (old.payday) s.payday = old.payday;
-    if (!s.card) s.card = {limit: 500, carry: 0, next: 1, items: []};
+    cardsOf(s);
     return s;
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.09';
+  const APP = 'wheres-my-money-lite', VERSION = '0.10';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -494,39 +530,93 @@
                             spent: sum(spends.filter(x => x.cat === p.cat).map(x => x.amount))})),
     });
     s.payday = day; s.pay = pay; s.left = left; s.spends = [];
-    (s.bills || []).forEach(b => { b.paid = false; });
+    (s.bills || []).forEach(b => { b.paid = false; delete b.asked; });
     return null;
   }
-  function cardAdd(s, iso, amountText, nameText, paid) {         // POST /card/add
+  function cardAdd(s, iso, amountText, nameText, paid, cardKey) {   // POST /card/add
+    const c = cardOf(s, cardKey);
+    if (!c) return 'unknown';
     const amount = parseMoney(amountText);
     const name = String(nameText == null ? '' : nameText).trim() || (paid ? 'Paid off' : '');
     if (amount === null || !name) return 'card';
-    addCard(s, iso, paid ? -amount : amount, name);
+    addCard(c, iso, paid ? -amount : amount, name);
     return null;
   }
-  function cardRemove(s, idText) {                               // POST /card/remove
+  function cardRemove(s, idText, cardKey) {                      // POST /card/remove
+    const c = cardOf(s, cardKey);
+    if (!c) return 'unknown';
     if (!/^\s*-?\d+\s*$/.test(String(idText))) return null;
-    const c = cardOf(s), id = Number(idText), keep = c.items.filter(i => i.id !== id);
+    const id = Number(idText), keep = c.items.filter(i => i.id !== id);
     if (keep.length !== c.items.length) { c.items = keep; tidy(c); }
     return null;
   }
-  function cardLimit(s, text) {                                  // POST /card/limit
+  function cardLimit(s, text, cardKey) {                         // POST /card/limit
+    const c = cardOf(s, cardKey);
+    if (!c) return 'unknown';
     const v = parseMoney(text);
     if (v === null) return 'pay';
-    const c = cardOf(s);
     c.limit = v;
     tidy(c);
     return null;
   }
-  function setUsed(s, iso, amount) {                             // creditcard.set_used: a Correction line makes the total match
-    const c = cardOf(s), d = r2(Number(amount) - cardUsed(c));
-    if (d !== 0) addCard(s, iso, d, 'Correction', 'correction');
+  function setUsed(s, iso, amount, cardKey) {                    // creditcard.set_used: a Correction line makes the total match
+    const c = cardOf(s, cardKey);
+    if (!c) return 'unknown';
+    const d = r2(Number(amount) - cardUsed(c));
+    if (d !== 0) addCard(c, iso, d, 'Correction', 'correction');
+    return null;
   }
-  function cardBalance(s, iso, text) {                           // POST /card/balance (the Used box)
+  function cardBalance(s, iso, text, cardKey) {                  // POST /card/balance (the Used box)
+    if (!cardOf(s, cardKey)) return 'unknown';
     text = String(text == null ? '' : text).trim();
     const amount = isZeroText(text) ? 0 : parseMoney(text);
     if (amount === null) return 'pay';
-    setUsed(s, iso, amount);
+    return setUsed(s, iso, amount, cardKey);
+  }
+
+  // ---------- several credit cards ----------
+  function addCreditCard(s, nameText, limitText) {               // POST /card/new
+    const name = String(nameText == null ? '' : nameText).trim().slice(0, 40), limit = parseMoney(limitText);
+    if (!name || limit === null) return 'newcard';
+    const cards = cardsOf(s);
+    cards.push({key: uniqueKey(cards, name), name, limit, carry: 0, next: 1, items: []});
+    return null;
+  }
+  function renameCreditCard(s, key, nameText) {                  // POST /card/name
+    const c = cardsOf(s).find(x => x.key === key), name = String(nameText == null ? '' : nameText).trim().slice(0, 40);
+    if (!c) return 'unknown';
+    if (!name) return 'newcard';
+    c.name = name;
+    return null;
+  }
+  function deleteCreditCard(s, key) {                            // POST /card/delete (the last one can go too)
+    if (!cardsOf(s).some(x => x.key === key)) return 'unknown';
+    s.cards = s.cards.filter(x => x.key !== key);
+    return null;
+  }
+  function setBillCard(s, key, text) {                           // POST /bill/card ('' = this bill pays no card)
+    const b = findBill(s, key);
+    if (!b) return 'unknown';
+    text = String(text == null ? '' : text).trim();
+    if (text === '') { b.card = ''; return null; }
+    const lower = text.toLowerCase(), cards = cardsOf(s);
+    const c = cards.find(x => x.key.toLowerCase() === lower) || cards.find(x => x.name.toLowerCase() === lower);
+    if (!c) return 'bill';
+    b.card = c.key;
+    return null;
+  }
+  // POST /card/ask: did the bill that pays a card come out? yes = take its amount off, other = a typed amount, no = nothing
+  function cardAsk(s, today, billKey, answer, amountText) {
+    const b = findBill(s, billKey), cards = cardsOf(s);
+    const c = b ? cards.find(x => x.key === billCardKey(cards, b)) : null;
+    if (!b || !c) return 'unknown';
+    if (answer === 'yes') addCard(c, today, -(typeof b.amount === 'number' ? b.amount : 0), 'Paid off', 'paid');
+    else if (answer === 'other') {
+      const v = parseMoney(amountText);
+      if (v === null) return 'card';
+      addCard(c, today, -v, 'Paid off', 'paid');
+    }
+    b.asked = s.payday || today.slice(0, 8) + '01';
     return null;
   }
 
@@ -557,7 +647,7 @@
               bills: bl, spends: sp, pots: pl};
     };
     return {
-      v: 2, pay: 2500, left: 0, payday: '2024-10-25',
+      v: 3, pay: 2500, left: 0, payday: '2024-10-25',
       bills: bills(), pots: pots(),
       spends: [
         {id: 1, date: '2024-10-25', amount: 12.5, name: 'Costa', cat: 'Unsorted'},
@@ -569,8 +659,8 @@
         month('2024-08-25', '2024-09-24', 152.9, [[225, 'Tesco', 'Food shopping'], [64, 'Shell', 'Fuel'], [120, 'Amazon', 'Shopping'], [45, 'The Red Lion pub', 'Going out'], [9.5, 'Costa', 'Unsorted']]),
         month('2024-09-25', '2024-10-24', 157.12, [[216, 'Tesco', 'Food shopping'], [22, 'Aldi', 'Food shopping'], [81, 'Shell', 'Fuel'], [60, 'Amazon', 'Shopping'], [28, 'Nandos', 'Going out'], [12.5, 'Costa', 'Unsorted'], [14, 'Costa', 'Unsorted']]),
       ],
-      card: {limit: 500, carry: 0, next: 2,
-             items: [{id: 1, date: '2024-10-25', amount: 45, name: 'Amazon', kind: 'spend'}]},
+      cards: [{key: 'Zopa', name: 'Zopa', limit: 500, carry: 0, next: 2,
+               items: [{id: 1, date: '2024-10-25', amount: 45, name: 'Amazon', kind: 'spend'}]}],
     };
   }
 
@@ -578,6 +668,7 @@
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
+    addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,
     fmt: {money, diff, day, tagsplit, pyfloat, r0}};
   if (typeof module !== 'undefined' && module.exports) module.exports = Money;
   else root.Money = Money;

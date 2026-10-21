@@ -16,8 +16,9 @@
     card: 'Sorry, type an amount and a name for the credit card, e.g. 40 and Shell.',
     bill: 'Sorry, type a name for the bill (and an amount, e.g. 12.99).',
     pot: 'Sorry, type a name and a monthly amount for the pot, e.g. 400 and Shopping.',
+    newcard: 'Sorry, type a name and a limit for the card, e.g. Zopa and 500.',
   };
-  const INLINE = ['spend', 'card', 'bill', 'pot'];                 // errors shown inside their own card
+  const INLINE = ['spend', 'card', 'newcard', 'bill', 'pot'];                 // errors shown inside their own card
   const errorBox = (err, code) => err === code ? `<div class="error fade">${ERRORS[code]}</div>` : '';
 
   // ---------- the pieces ----------
@@ -33,17 +34,18 @@
     `;
   }
 
-  function zopaTile(r) {
-    const c = r.card, pc = c.pc, pcr = Math.min(Math.max(pc, 0), 100), n = F.r0(pc);
+  // one tile per card; only the first keeps the ids the page script and tests look for
+  function zopaTile(c, first) {
+    const pc = c.pc, pcr = Math.min(Math.max(pc, 0), 100), n = F.r0(pc);
+    const id = (name) => first ? ` id="${name}"` : '';
     return `
 
-
     <div class="tile wide zcard"><div class="zl">
-        <div class="label">Zopa credit card</div>
-        <div class="zrow"><i class="dot zused"></i><span>Used</span><b id="ccused">${money(c.used)}</b></div>
-        <div class="zrow"><i class="dot zfree"></i><span>Free</span><b class="${c.free < 0 ? 'bad' : 'zfreeval'}" id="ccfree">${money(c.free)}</b></div>
+        <div class="label">${esc(c.label)}</div>
+        <div class="zrow"><i class="dot zused"></i><span>Used</span><b${id('ccused')}>${money(c.used)}</b></div>
+        <div class="zrow"><i class="dot zfree"></i><span>Free</span><b class="${c.free < 0 ? 'bad' : 'zfreeval'}"${id('ccfree')}>${money(c.free)}</b></div>
         <div class="zlimit">Limit ${money(c.limit)}</div></div>
-      <svg id="zring" viewBox="0 0 100 100" role="img" aria-label="${n}% of the limit used">
+      <svg${id('zring')} class="zring" viewBox="0 0 100 100" role="img" aria-label="${n}% of the limit used">
         <circle cx="50" cy="50" r="40" class="z-free"/>
         <circle cx="50" cy="50" r="40" class="z-used" transform="rotate(-90 50 50)"
           stroke-dasharray="${Math.max(pcr * 2.5133 - 1.5, 0).toFixed(1)} 251.3"/>
@@ -84,20 +86,30 @@
   </div>`;
   }
 
-  function cardCard(r, err) {
-    const c = r.card;
+  // the question under a card's heading: did the bill that pays it come out?
+  function cardAsk(a) {
+    const hid = (n, v) => `<input type="hidden" name="${n}" value="${esc(v)}">`;
+    const when = a.dueText ? `was due on the ${a.dueText}.` : 'is due this month.';
+    return `<div class="ask cardask" data-bill="${esc(a.key)}"><b>${esc(a.name)} ${money(a.amount)}</b> ${when} Take ${money(a.amount)} off the card?
+      <div class="askbtns"><form method="post" action="/card/ask">${hid('bill', a.key)}${hid('answer', 'yes')}<button type="submit">Yes, ${money(a.amount)}</button></form>
+        <button type="button" class="small askother">Other amount</button>
+        <form method="post" action="/card/ask">${hid('bill', a.key)}${hid('answer', 'no')}<button type="submit" class="small">No</button></form></div></div>`;
+  }
+
+  function cardCard(c, first, err, title) {
+    const key = `<input type="hidden" name="card" value="${esc(c.key)}">`;
     const rows = c.rows.map(x => `
 
           <tr class="drow ${x.status === 'paid' ? 'crossed' : ''}"><td><b>${esc(x.name)}</b><span class="labels">${F.day(x.date)}${x.status === 'part' ? ' · ' + money(x.left) + ' left' : ''}</span></td>
               <td class="n ${x.amount < 0 ? 'good' : ''}">${money(x.amount)}</td>
-              <td class="n">${x.removable ? `<form method="post" action="/card/remove"><input type="hidden" name="id" value="${x.id}"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove ${esc(x.name)}">×</button></form>` : ''}</td></tr>
+              <td class="n">${x.removable ? `<form method="post" action="/card/remove">${key}<input type="hidden" name="id" value="${x.id}"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove ${esc(x.name)}">×</button></form>` : ''}</td></tr>
 
         `).join('');
-    return `<div class="card" data-id="card" data-card="card">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot zused"></i> Credit card<button type="button" class="fold" title="Fold">▾</button></h2>
-    ${errorBox(err, 'card')}
-
-    <form class="inline" method="post" action="/card/add">
+    return `<div class="card" data-id="card:${esc(c.key)}" data-card="card" data-key="${esc(c.key)}" data-name="${esc(c.name)}">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot zused"></i> ${esc(title)}<button type="button" class="fold" title="Fold">▾</button></h2>
+    ${first ? errorBox(err, 'card') + errorBox(err, 'newcard') : ''}
+    ${c.asks.map(cardAsk).join('')}
+    <form class="inline" method="post" action="/card/add">${key}
       <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="40" aria-label="Amount">
       <input class="name" type="text" name="name" placeholder="Shell" aria-label="What">
       <button type="submit">Add</button>
@@ -110,12 +122,31 @@
     ` : ''}
 
     <div class="sum cardsum" style="margin-top:12px">
-      <span>Limit</span><span class="n"><form class="inline" method="post" action="/card/limit"><input class="amount" type="text" name="amount" inputmode="decimal" value="${f2(c.limit)}" aria-label="Limit"><button class="small" type="submit">Change</button></form></span>
-      <span>Used <span class="labels">type the Zopa app's amount to make it exact</span></span><span class="n"><form class="inline" method="post" action="/card/balance" id="ccbalform"><input class="amount" type="text" name="amount" id="ccused2" inputmode="decimal" value="${f2(c.used)}" aria-label="What the Zopa card owes now"><button class="small" type="submit">Change</button></form></span>
-      <span class="eq">Free</span><span class="n eq" id="ccfree2">${money(c.free)}</span>
+      <span>Limit</span><span class="n"><form class="inline" method="post" action="/card/limit">${key}<input class="amount" type="text" name="amount" inputmode="decimal" value="${f2(c.limit)}" aria-label="Limit"><button class="small" type="submit">Change</button></form></span>
+      <span>Used <span class="labels">type the ${esc(c.name)} app's amount to make it exact</span></span><span class="n"><form class="inline" method="post" action="/card/balance"${first ? ' id="ccbalform"' : ''}>${key}<input class="amount" type="text" name="amount"${first ? ' id="ccused2"' : ''} inputmode="decimal" value="${f2(c.used)}" aria-label="What the ${esc(c.name)} card owes now"><button class="small" type="submit">Change</button></form></span>
+      <span class="eq">Free</span><span class="n eq ccfree2"${first ? ' id="ccfree2"' : ''}>${money(c.free)}</span>
     </div>
+    <div class="cardfoot"><span class="potmore cardmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or remove ${esc(c.name)}">⋯</button></span></div>
   </div>`;
   }
+
+  // no cards at all: one box to add the first
+  function noCardBox(err) {
+    return `<div class="card" data-id="card" data-card="card">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot zused"></i> Credit card<button type="button" class="fold" title="Fold">▾</button></h2>
+    ${errorBox(err, 'card')}${errorBox(err, 'newcard')}
+    <div class="labels">No credit cards yet.</div>
+    <form class="inline" method="post" action="/card/new" style="margin-top:12px">
+      <input class="name" type="text" name="name" placeholder="Zopa" aria-label="Card name">
+      <input class="amount" type="text" name="limit" inputmode="decimal" placeholder="500" aria-label="Limit">
+      <button type="submit">Add</button>
+    </form>
+  </div>`;
+  }
+
+  // one card = live's heading 'Credit card'; several = each card's own name
+  const cardCards = (r, err) => r.cards.length
+    ? r.cards.map((c, i) => cardCard(c, i === 0, err, r.cards.length === 1 ? 'Credit card' : c.label)).join('') : noCardBox(err);
 
   const INFO = {
     due: 'The due day has gone. Check your bank app that it came out.',
@@ -129,6 +160,7 @@
     const nm = F.tagsplit(b.name), tags = [b.cat || 'Unsorted', ...nm[1]].map(t => `${esc(t)} · `).join('');
     let line = b.blank ? `${tags}no amount yet` : `${tags}avg ${money(b.avg)}`;
     if (b.dueText) line += ` · due ${b.dueText}`;
+    if (b.cardName) line += ` · pays ${esc(b.cardName)}`;
     if (b.stopped) line += ` · <span class="bstop">Stopped ${infoBtn(INFO.stopped)}</span>`;
     else if (b.duePassed) line += ` ${infoBtn(INFO.due)}`;
     return line;
@@ -139,7 +171,7 @@
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span><b class="bbase">${esc(nm[0])}</b>
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
@@ -279,9 +311,12 @@
 
   function render(state, err, today) {
     const r = M.compute(state, today);
+    const cardName = {};
+    r.cards.forEach(c => { cardName[c.key] = c.name; });
+    r.bills.forEach(b => { b.cardName = b.card ? cardName[b.card] : ''; });
     // PAGE: the numbers the page script starts from (live writes the same four into its script; Go A adds the pots)
     root.LITE_PAGE = {bills: r.billsTotal, left: r.left, typed: r.spendsTotal, wage: r.pay,
-                      pots: r.potsTotal, potsSet: r.potsSet, potsOver: r.potsOver};
+                      pots: r.potsTotal, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name)};
 
     // an error from the last form (live: /?error=CODE)
     if (err && ERRORS[err] && !INLINE.includes(err)) {
@@ -304,12 +339,12 @@
     // spare cash statement
     document.getElementById('spare-big').textContent = money(r.leftNow);
     document.querySelector('.st-rows').innerHTML = statementRows(r);
-    document.querySelector('.st-side').innerHTML = zopaTile(r);
+    document.querySelector('.st-side').innerHTML = r.cards.map((c, i) => zopaTile(c, i === 0)).join('');
 
     // cards
     swap('#cards > [data-card="spend"]', spendCard(r, err));
     swap('#cards > [data-card="pots"]', potsCard(r, err));
-    swap('#cards > [data-card="card"]', cardCard(r, err));
+    swap('#cards > [data-card="card"]', cardCards(r, err));
     swap('#cards > [data-card="bills"]', billsCard(r, err));
     swap('#cards > [data-card="lastmonth"]', lastMonthCard(r));
     swap('#cards > [data-card="cats"]', catsCard(r));
@@ -317,5 +352,5 @@
     return r;
   }
 
-  root.LiteRender = {render, ERRORS, INFO, spendCard, potsCard, cardCard, billsCard, zopaTile, statementRows};
+  root.LiteRender = {render, ERRORS, INFO, spendCard, potsCard, cardCards, billsCard, zopaTile, statementRows};
 })(window);

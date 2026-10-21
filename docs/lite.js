@@ -73,10 +73,15 @@
     '/pot/name': (s, get) => quiet(M.renamePot(s, get('key'), get('name'))),
     '/pot/delete': (s, get) => quiet(M.deletePot(s, get('key'))),
     '/payday': (s, get) => M.newPayday(s, today(), get('pay'), get('left')),
-    '/card/add': (s, get) => M.cardAdd(s, today(), get('amount'), get('name'), get('paid') === '1'),
-    '/card/remove': (s, get) => M.cardRemove(s, get('id')),
-    '/card/limit': (s, get) => M.cardLimit(s, get('amount')),
-    '/card/balance': (s, get) => M.cardBalance(s, today(), get('amount')),
+    '/card/add': (s, get) => quiet(M.cardAdd(s, today(), get('amount'), get('name'), get('paid') === '1', get('card'))),
+    '/card/remove': (s, get) => quiet(M.cardRemove(s, get('id'), get('card'))),
+    '/card/limit': (s, get) => quiet(M.cardLimit(s, get('amount'), get('card'))),
+    '/card/balance': (s, get) => quiet(M.cardBalance(s, today(), get('amount'), get('card'))),
+    '/card/new': (s, get) => M.addCreditCard(s, get('name'), get('limit')),
+    '/card/name': (s, get) => quiet(M.renameCreditCard(s, get('card'), get('name'))),
+    '/card/delete': (s, get) => quiet(M.deleteCreditCard(s, get('card'))),
+    '/bill/card': (s, get) => quiet(M.setBillCard(s, get('key'), get('card'))),
+    '/card/ask': (s, get) => quiet(M.cardAsk(s, today(), get('bill'), get('answer'), get('amount'))),
   };
   const pathOf = url => { try { return new URL(url, location.href).pathname; } catch (e) { return ''; } };
   const getter = data => name => { const v = data.get(name); return v === null || v === undefined ? '' : String(v); };

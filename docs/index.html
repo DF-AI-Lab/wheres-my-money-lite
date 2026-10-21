@@ -15,9 +15,9 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.09"></script>
-<script src="render.js?v=0.09"></script>
-<script src="lite.js?v=0.09"></script>
+<script src="money.js?v=0.10"></script>
+<script src="render.js?v=0.10"></script>
+<script src="lite.js?v=0.10"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -174,8 +174,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.09">
-<link rel="stylesheet" href="lite.css?v=0.09">
+<link rel="stylesheet" href="look.css?v=0.10">
+<link rel="stylesheet" href="lite.css?v=0.10">
 </head>
 <body class="demo">
 
@@ -193,7 +193,7 @@
           <button type="button" class="small" id="loadbackup">📂 Load backup</button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
         </div></div>
-      <div class="appver">v0.09</div></div>
+      <div class="appver">v0.10</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -411,6 +411,10 @@
         const cat = prompt('Category, e.g. ' + Money.CATEGORIES.slice(0, 4).join(', '), row.dataset.cat); if (cat !== null) send('/bill/cat', {key, cat}); }]);
       items.push(['📅 Due day', '', () => {
         const day = prompt('Due day (1-31), empty = none', row.dataset.due); if (day !== null) send('/bill/due', {key, day}); }]);
+      items.push(['💳 Pays a credit card', '', () => {
+        const names = (window.LITE_PAGE && window.LITE_PAGE.cards) || [];
+        const card = prompt('Which credit card does this bill pay? (' + names.join(', ') + '; empty = none)', row.dataset.card);
+        if (card !== null) send('/bill/card', {key, card}); }]);
       items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
       items.push(['🗑 Delete', 'stop', () => { if (confirm('Delete ' + row.dataset.name + '?')) send('/bill/delete', {key}); }]);
       menu(btn, items);
@@ -428,6 +432,21 @@
                  ['🗑 Delete', 'stop', () => { if (confirm('Delete the ' + pot.dataset.name + ' pot?')) send('/pot/delete', {key: pot.dataset.key}); }]]);
     }));
     document.querySelectorAll('.pot .potset').forEach(btn => btn.addEventListener('click', () => askPot(btn.closest('.pot'), 'amount')));
+
+    // credit cards: ⋯ = change name / add another card / remove this one; "Other amount" in the question
+    document.querySelectorAll('.cardmore .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const box = btn.closest('[data-card="card"]'), card = box.dataset.key, name = box.dataset.name;
+      menu(btn, [['✏️ Change name', '', () => {
+                    const v = prompt('Name of the card', name); if (v !== null) send('/card/name', {card, name: v}); }],
+                 ['＋ Add another card', '', () => {
+                    const n = prompt('Name of the new card'); if (n === null) return;
+                    const limit = prompt('Its limit, e.g. 500'); if (limit !== null) send('/card/new', {name: n, limit}); }],
+                 ['🗑 Remove card', 'stop', () => { if (confirm('Remove the ' + name + ' card and its lines?')) send('/card/delete', {card}); }]]);
+    }));
+    document.querySelectorAll('.cardask .askother').forEach(btn => btn.addEventListener('click', () => {
+      const amount = prompt('How much did you pay off the card?'); if (amount !== null) send('/card/ask', {bill: btn.closest('.cardask').dataset.bill, answer: 'other', amount});
+    }));
 
     // ⓘ: a small bubble under the line, closed by the next tap
     document.addEventListener('click', e => {

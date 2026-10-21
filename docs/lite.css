@@ -46,3 +46,13 @@ body.demo [data-card="bills"] table.dbills .bsub { overflow-wrap: anywhere; }
 
 /* Last month's spending has no diff: no empty grey pills */
 body.demo [data-card="lastmonth"] td.diff:empty { display: none; }
+
+/* several credit cards: extra top tiles look like the first (look.css only styles #zring), Free colour, the ⋯ line */
+.zring { width: 96px; height: 96px; flex: none; align-self: flex-start; }
+.zring circle { fill: none; stroke-width: 6; }
+.zring .z-free { stroke: var(--zfree); } .zring .z-used { stroke: var(--zused); }
+.zring .z-pc { fill: var(--text); font: 800 20px "Manrope", system-ui, sans-serif; }
+.zring .z-sub { fill: var(--muted); font: 600 10px "Manrope", system-ui, sans-serif; }
+@media (max-width: 420px) { .zring { width: 80px; height: 80px; } }
+.demo [data-card="card"] .ccfree2 { color: var(--zfreetext); }
+.cardfoot { display: flex; justify-content: flex-end; margin-top: 6px; }

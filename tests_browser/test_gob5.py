@@ -30,7 +30,7 @@ def add_card(page, name, limit):
 def test_demo_keeps_the_one_zopa_card_like_live(page, base):
     page.goto(base + DEMO)
     assert page.locator(".st-side .zcard").count() == 1
-    assert page.locator(".st-side .zcard .label").inner_text() == "Zopa credit card"
+    assert page.locator(".st-side .zcard .label").text_content() == "Zopa credit card"
     assert page.locator(CC).count() == 1
     assert page.locator("#ccused").inner_text() == "£45.00"
     assert not page.errors
@@ -39,10 +39,10 @@ def test_demo_keeps_the_one_zopa_card_like_live(page, base):
 def test_template_has_one_card_and_you_can_add_more(page, base):
     page.goto(base + TODAY)
     assert page.locator(CC).count() == 1 and page.locator(".st-side .zcard").count() == 1
-    assert page.locator(".st-side .zcard .label").inner_text() == "Credit card"
+    assert page.locator(".st-side .zcard .label").text_content() == "Credit card"
     add_card(page, "Barclaycard", "1200")
     assert page.locator(CC).count() == 2
-    tiles = page.locator(".st-side .zcard .label").all_inner_texts()
+    tiles = page.locator(".st-side .zcard .label").all_text_contents()
     assert tiles == ["Credit card", "Barclaycard credit card"]                  # one top tile per card
     assert "Limit £1,200.00" in page.locator(".st-side .zcard").nth(1).inner_text()
     assert [c["name"] for c in stored(page)["cards"]] == ["Credit card", "Barclaycard"]
@@ -68,7 +68,7 @@ def test_rename_and_remove_a_card(page, base):
     page.goto(base + TODAY)
     add_card(page, "Barclaycard", "1200")
     card_menu(page, "Barclaycard", "Change name", ["Barclays"])
-    assert "Barclays credit card" in page.locator(".st-side").inner_text()
+    assert "Barclays credit card" in page.locator(".st-side").text_content()
     card_menu(page, "Barclaycard", "Remove card")
     assert page.locator(CC).count() == 1
     assert [c["name"] for c in stored(page)["cards"]] == ["Credit card"]
@@ -83,7 +83,7 @@ def test_no_cards_left_shows_an_add_a_card_box(page, base):
     assert box.count() == 1 and box.locator('form[action="/card/new"]').count() == 1
     post(page, 'form[action="/card/new"]', {"name": "Zopa", "limit": "500"})
     assert [c["name"] for c in stored(page)["cards"]] == ["Zopa"]
-    assert page.locator(".st-side .zcard .label").inner_text() == "Zopa credit card"
+    assert page.locator(".st-side .zcard .label").text_content() == "Zopa credit card"
 
 
 def zopa_setup(page, base, due):
