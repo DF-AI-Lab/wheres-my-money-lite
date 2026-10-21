@@ -16,7 +16,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 * (Add more here.)
 
 ## Decided for ticket #25 (Bill details)
-* Each bill has a due day (Darren, 21 Oct: yes).
+* Each bill has a due day (Darren, 21 Oct: yes). BUILT v0.03: kept for good (kv bill_due), set from the bill's ⋯ menu → Due day…, shown as 'due 5th' under the name. 543 tests pass.
 * Still to decide: bill added mid-month, stopping (this month or next, restart?), amount change (one month or for good), yearly bills in Lite.
 
 ## History (copied from the main app's notes; kept for now)

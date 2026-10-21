@@ -72,6 +72,16 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
             tags.insert(0, tag)
         return name, tags
 
+    @app.template_filter('ordinal')
+    def filter_ordinal(n):
+        """1 -> '1st', 2 -> '2nd', 11 -> '11th', 22 -> '22nd'."""
+        n = int(n)
+        if n % 100 in (11, 12, 13):
+            suffix = "th"
+        else:
+            suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+        return f"{n}{suffix}"
+
     @app.template_filter('diff')
     def filter_diff(x):
         """Format a difference as +£12.00 / -£20.83 / £0.00."""
@@ -406,6 +416,23 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         except Exception:
             conn.close()
             return redirect(home_url(), code=303)
+        conn.close()
+        return redirect(home_url(), code=303)
+
+    @app.route("/due", methods=["POST"])
+    def due():
+        from fintrack.billchange import set_due
+        key = request.form.get("key", "")
+        day = request.form.get("day", "")
+        conn = open_db(db_path)
+        d = home_data(conn, wage_payer=wage_payer, today=today)
+        if not d["ready"] or key not in [b["key"] for b in d["pay"]["bills"]]:
+            conn.close()
+            return redirect(home_url(), code=303)
+        try:
+            set_due(conn, key, day)
+        except ValueError:
+            pass                                              # a bad day is ignored, nothing changes
         conn.close()
         return redirect(home_url(), code=303)
 

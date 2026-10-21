@@ -7,7 +7,7 @@ from tests.test_web import ACME, client, db  # noqa: F401  (fixtures)
 
 pytest.importorskip("flask")
 
-FORMS = ["/add", "/card/add", "/card/balance", "/card/limit", "/card/remove", "/layout/reset", "/left", "/pay",
+FORMS = ["/add", "/card/add", "/card/balance", "/card/limit", "/card/remove", "/due", "/layout/reset", "/left", "/pay",
          "/remove", "/stopped"]
 
 

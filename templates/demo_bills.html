@@ -10,8 +10,9 @@
       {% set nm = b.name|tagsplit %}
       <tr class="bill{{ ' stopped' if b.stopped else '' }}" data-id="{{ b.id }}" data-key="{{ b.key }}" data-avg="{{ b.avg if not b.stopped else 0 }}" data-avg0="{{ b.avg }}" data-default="{{ dflt if not b.stopped else 0 }}" data-default0="{{ dflt }}" data-estimated="{{ 1 if b.last <= 0 else 0 }}" data-changed="{{ 1 if b.changed else 0 }}" data-used="{{ b.used }}" data-new="{{ 1 if b.new else 0 }}" data-stopped="{{ 1 if b.stopped else 0 }}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="{{ b.id }}" data-orig="{{ b.orig }}">{{ b.name }}</span><b class="bbase">{{ nm[0] }}</b>
-          <span class="bsub">{% for t in nm[1] %}{{ t }} · {% endfor %}avg {{ b.avg|money }}{% if b.new %} · <span class="bnew">new</span>{% endif %}{% if b.stopped %} · <span class="bstop">stopped</span>{% endif %}</span>
-          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="{{ b.key }}"><input type="hidden" name="stopped" value="{{ '0' if b.stopped else '1' }}"><button class="small stopbtn" type="submit">{{ 'Undo' if b.stopped else 'Stop' }}</button></form></td>
+          <span class="bsub">{% for t in nm[1] %}{{ t }} · {% endfor %}{% if b.due is not none %}due {{ b.due|ordinal }} · {% endif %}avg {{ b.avg|money }}{% if b.new %} · <span class="bnew">new</span>{% endif %}{% if b.stopped %} · <span class="bstop">stopped</span>{% endif %}</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="{{ b.key }}"><input type="hidden" name="stopped" value="{{ '0' if b.stopped else '1' }}"><button class="small stopbtn" type="submit">{{ 'Undo' if b.stopped else 'Stop' }}</button></form>
+          <form method="post" action="/due" class="dueform" hidden><input type="hidden" name="key" value="{{ b.key }}"><label>Due day <input type="number" name="day" min="1" max="31" value="{{ b.due if b.due is not none else '' }}" aria-label="Due day for {{ b.name }}"></label> <button class="small" type="submit">Save</button></form></td>
         <td class="n bavg">{{ b.avg|money }}</td>
         <td class="n bamt">
           <button type="button" class="link {{ 'muted' if b.estimated else '' }}" title="Change it for this pay cycle">{{ b.used|money }}{% if b.estimated %}*{% endif %}</button>
@@ -34,7 +35,8 @@
 <script>
   // ⋯ menu for each bill: Change amount (opens the same box), Put back (the same ✖), Stop / Undo (the same form)
   document.addEventListener('DOMContentLoaded', () => {
-    const close = () => document.querySelectorAll('.bmenu, .bswap').forEach(m => m.remove());
+    const close = () => { document.querySelectorAll('.bmenu, .bswap').forEach(m => m.remove());
+      document.querySelectorAll('form.dueform').forEach(f => { f.hidden = true; }); };
     const SWAP = {{ {'on': cloud|default(false), 'join': d.pay.bills|selectattr('joinable')|map(attribute='key')|list,
                      'split': d.pay.bills|selectattr('swapped')|map(attribute='key')|list}|tojson }};
     const post = (url, key) => { const f = document.createElement('form'); f.method = 'post'; f.action = url; f.className = 'bswap';
@@ -52,6 +54,7 @@
       add(stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit());
       // v3 (fintrack/v3/billswap.py): this bill replaces another one (joins it), or undo that
       const others = [...document.querySelectorAll('.dbills tr.bill')].filter(r => r !== row && SWAP.join.includes(r.dataset.key));
+      add('📅 Due day…', '', () => { const f = row.querySelector('form.dueform'); f.hidden = false; f.querySelector('input').focus(); });
       if (SWAP.on && SWAP.join.includes(row.dataset.key) && others.length) add('🔁 Replaces…', '', () => {
         const f = post('/bill/join', row.dataset.key), sel = document.createElement('select'), go = document.createElement('button');
         sel.name = 'into'; sel.required = true; sel.setAttribute('aria-label', 'Which bill it replaces'); sel.add(new Option('Pick the bill ▾', ''));
@@ -62,6 +65,7 @@
       if (SWAP.on && SWAP.split.includes(row.dataset.key)) add('↔ Split back out', '', () => post('/bill/split', row.dataset.key).submit());
       btn.parentElement.appendChild(m); m.querySelector('button').focus();
     }));
+    document.querySelectorAll('form.dueform').forEach(f => f.addEventListener('click', ev => ev.stopPropagation()));
     document.addEventListener('click', close);
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
   });

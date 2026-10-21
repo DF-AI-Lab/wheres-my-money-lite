@@ -4,6 +4,7 @@ Kept in the kv table under "bill_changes" with the start of the cycle it is for,
 when a new payday starts a new cycle. The bills (items, rules) are never changed.
 """
 import json
+import re
 from datetime import date
 from typing import Dict
 
@@ -78,3 +79,40 @@ def set_stopped(conn, key: str, on: bool, today: date) -> None:
     stopped = get_stopped(conn)
     stopped[key] = today.isoformat() if on else "no"
     set_value(conn, STOPPED_KEY, json.dumps(stopped))
+
+
+# Due day (Darren, 21 Oct 2026, ticket #25): the day of the month a bill is due, 1-31. Kept for good (no cycle).
+# Stored as JSON in kv table under "bill_due": {bill key: day}. Never changes an amount.
+DUE_KEY = "bill_due"
+
+
+def get_due(conn) -> dict:
+    """{bill key: day of the month (int)}; {} when none are set."""
+    try:
+        saved = json.loads(get_value(conn, DUE_KEY) or "{}")
+    except ValueError:
+        return {}
+    return saved if isinstance(saved, dict) else {}
+
+
+def set_due(conn, key: str, day) -> None:
+    """day None or "" clears the due day. Otherwise an int 1-31, or an all-digit string 1-31 (e.g. "12").
+    Anything else raises ValueError and changes nothing."""
+    if day is None or day == "":
+        value = None
+    elif isinstance(day, bool):
+        raise ValueError("due day must be a number 1-31")
+    elif isinstance(day, int):
+        value = day
+    elif isinstance(day, str) and re.fullmatch(r"[0-9]+", day):
+        value = int(day)
+    else:
+        raise ValueError("due day must be a number 1-31")
+    if value is not None and not 1 <= value <= 31:
+        raise ValueError("due day must be a number 1-31")
+    due = get_due(conn)
+    if value is None:
+        due.pop(key, None)
+    else:
+        due[key] = value
+    set_value(conn, DUE_KEY, json.dumps(due))

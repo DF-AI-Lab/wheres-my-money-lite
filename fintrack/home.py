@@ -85,9 +85,12 @@ def home_data(conn, wage_payer, wage=None, today=None) -> dict:
                     changes=get_changes(conn, cycles[-1].start), left=get_left(conn, cycles[-1].start),
                     stopped=get_stopped(conn))
     swapped = {s["bill"] for s in get_swaps(conn)}
+    from fintrack.billchange import get_due
+    dues = get_due(conn)
     for b in pay["bills"]:
         b["swapped"] = b["key"] in swapped                   # ⋯ menu: Split back out
         b["joinable"] = bool(items_of(answers, b["key"]))    # ⋯ menu: Replaces…
+        b["due"] = dues.get(b["key"])                        # day of the month it is due (None = not set)
 
     # Get last cycle check
     last = last_cycle_check(cycles, answers=answers, rules=rules)
