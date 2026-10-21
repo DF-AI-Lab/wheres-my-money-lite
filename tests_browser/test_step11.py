@@ -76,3 +76,25 @@ def test_a_fuel_spend_takes_actual_spare_down(page, base):
     assert page.locator("#leftnow").inner_text() == "£1,189.57"
     page.reload()
     assert page.locator("#spare-big").inner_text() == "£1,189.57"
+
+
+def test_show_makes_the_item_pulse(page, base):
+    """Darren, 21 Oct evening: after Show jumps to an item, it pulses so you can see where it is."""
+    page.goto(base + DEMO)
+    page.click("#bellbtn")
+    page.locator('#bellmenu .remind[data-key="Rent"] .remgo').click()
+    page.wait_for_timeout(700)
+    rent = page.locator('tr.bill[data-key="Rent"]')
+    assert "pulse" in rent.get_attribute("class")
+    assert rent.evaluate("e => getComputedStyle(e).animationName") not in ("", "none")
+    page.wait_for_timeout(3500)
+    assert "pulse" not in rent.get_attribute("class")                 # stops by itself
+
+
+def test_show_payday_pulses_the_panel(page, base):
+    page.goto(base + "?demo=1&today=2024-11-25")
+    page.click("#bellbtn")
+    page.locator('#bellmenu .remind[data-kind="payday"] .remgo').click()
+    page.wait_for_timeout(700)
+    assert page.locator("#quick").is_visible()
+    assert "pulse" in page.locator("#quick").get_attribute("class")
