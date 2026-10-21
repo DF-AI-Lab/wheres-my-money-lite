@@ -85,7 +85,7 @@ def test_the_payday_panel_offers_a_backup_not_a_pdf_drop(page, base):
     page.click("#quicktab")
     assert page.locator("#dropbar").count() == 0
     assert page.locator("#quick #qsave").is_visible()
-    assert "Save a backup?" in page.locator("#quick").inner_text()
+    assert "Save a backup" in page.locator("#quick").inner_text()   # step 10: mock B
 
 
 # ---------- step 2: bills ----------
@@ -136,10 +136,10 @@ def test_bill_shows_and_changes_its_category(page, base):
     page.goto(base + DEMO)
     gym = 'tr.bill[data-key="Gym Club"]'
     assert page.locator(f"{gym} .bsub").inner_text().startswith("Subscriptions")
-    page.once("dialog", lambda d: d.accept("Car"))
     page.click(f"{gym} .more")
+    page.click(".bmenu [role=menuitem]:has-text('Category')")          # step 10: a pick list
     with page.expect_navigation():
-        page.click(".bmenu [role=menuitem]:has-text('Category')")
+        page.click(".bmenu.catmenu [role=menuitem]:has-text('Car')")
     page.wait_for_load_state()
     assert page.locator(f"{gym} .bsub").inner_text().startswith("Car")
 
