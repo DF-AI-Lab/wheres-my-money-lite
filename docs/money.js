@@ -346,11 +346,16 @@
 
   function TEMPLATE() {                                          // a new person: the usual bills, amounts blank, no fake numbers
     return {v: 3, pay: 0, left: 0, bills: TEMPLATE_BILLS.map(n => newBill(n, null)), pots: TEMPLATE_POTS.map(n => newPot(n, null)),
-            spends: [], history: [], cards: [templateCard()]};
+            spends: [], history: [], cards: [templateCard()], ideas: []};
   }
 
   // v1 / v2 -> v3 (v2: one "card", now cards:[...]; the old card is the Zopa card). A v3 state comes back untouched.
-  function migrate(old) {
+  function migrate(old) {                                        // upgrade, and every state has an ideas list
+    const s = upgrade(old);
+    if (!Array.isArray(s.ideas)) s.ideas = [];
+    return s;
+  }
+  function upgrade(old) {
     if (old && old.v === 3) return old;
     old = old || {};
     if (old.v === 2) { cardsOf(old); return old; }
@@ -365,7 +370,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.11';
+  const APP = 'wheres-my-money-lite', VERSION = '0.12';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -661,7 +666,55 @@
       ],
       cards: [{key: 'Zopa', name: 'Zopa', limit: 500, carry: 0, next: 2,
                items: [{id: 1, date: '2024-10-25', amount: 45, name: 'Amazon', kind: 'spend'}]}],
+      ideas: [],
     };
+  }
+
+  // ---------- Move & rename (fintrack/layout.py): the saved order of the boxes ----------
+  const SORTS = ['cards', 'bills', 'lastmonth', 'cats'];
+  function setLayout(s, sort, ids) {                             // POST /layout (junk is ignored)
+    if (SORTS.indexOf(sort) < 0 || !Array.isArray(ids)) return null;
+    s.layout = s.layout || {};
+    s.layout[sort] = ids.filter(x => typeof x === 'string').slice(0, 200);
+    return null;
+  }
+  function resetLayout(s) { delete s.layout; return null; }      // POST /layout/reset
+  function order(items, ids, idOf) {                             // saved ones first, in the saved order; the rest keep theirs
+    if (!Array.isArray(ids)) return items.slice();
+    const at = x => { const i = ids.indexOf(idOf(x)); return i < 0 ? Infinity : i; };
+    return items.map((x, i) => [x, i]).sort((a, b) => (at(a[0]) - at(b[0])) || (a[1] - b[1]) || 0).map(p => p[0]);
+  }
+  function renameRow(s, id, nameText) {                          // POST /name (only a bill row can be renamed)
+    const m = /^bill:(.*)$/s.exec(String(id == null ? '' : id));
+    if (m) renameBill(s, m[1], nameText);                        // empty or unknown: nothing happens
+    return null;
+  }
+
+  // ---------- Ideas & feedback (fintrack/v3/ideas.py) ----------
+  const IDEA_TAGS = {idea: '\u{1F4A1} Idea', odd: '\u{1F41E} Something odd', love: '\u2764\uFE0F Love this'};
+  const IDEA_BUTTONS = {idea: '\u{1F4A1} Idea', odd: '\u{1F41E} Odd', love: '\u2764\uFE0F Love it'};
+  function addIdea(s, text, tag, atIso) {                        // POST /ideas/add
+    const t = String(text == null ? '' : text).split(/\s+/).filter(Boolean).join(' ').slice(0, 1000);
+    if (!t) return 'idea';
+    s.ideas = s.ideas || [];
+    s.ideas.push({id: Math.max(0, ...s.ideas.map(n => n.id)) + 1, text: t, tag: IDEA_TAGS[tag] ? tag : 'idea', at: atIso, done: false});
+    return null;
+  }
+  const findIdea = (s, idText) => (s.ideas || []).find(n => String(n.id) === String(idText).trim());
+  function toggleIdea(s, idText) {                               // POST /ideas/done (done <-> not done)
+    const n = findIdea(s, idText);
+    if (n) n.done = !n.done;
+    return null;
+  }
+  function removeIdea(s, idText) {                               // POST /ideas/remove
+    const n = findIdea(s, idText);
+    if (n) s.ideas = s.ideas.filter(x => x !== n);
+    return null;
+  }
+  function ideasCopy(s, version, todayIso) {                     // the open notes as text for a chat with Claude, oldest first
+    const lines = ["Where's My Money? Lite ideas & feedback (v" + version + ', copied ' + day(todayIso) + ')', ''];
+    (s.ideas || []).forEach(n => { if (!n.done) lines.push('- ' + IDEA_TAGS[n.tag] + ' (' + day(n.at) + '): ' + n.text); });
+    return lines.join('\n').replace(/\n+$/, '');
   }
 
   const Money = {FAKE, TEMPLATE, CATEGORIES, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
@@ -669,6 +722,7 @@
     addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,
+    setLayout, resetLayout, order, renameRow, IDEA_TAGS, IDEA_BUTTONS, addIdea, toggleIdea, removeIdea, ideasCopy, VERSION,
     fmt: {money, diff, day, tagsplit, pyfloat, r0}};
   if (typeof module !== 'undefined' && module.exports) module.exports = Money;
   else root.Money = Money;

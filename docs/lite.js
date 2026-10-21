@@ -84,9 +84,21 @@
     '/card/delete': (s, get) => quiet(M.deleteCreditCard(s, get('card'))),
     '/bill/card': (s, get) => quiet(M.setBillCard(s, get('key'), get('card'))),
     '/card/ask': (s, get) => quiet(M.cardAsk(s, today(), get('bill'), get('answer'), get('amount'))),
+    '/layout': (s, get) => M.setLayout(s, get('sort'), get('ids')),
+    '/name': (s, get) => M.renameRow(s, get('id'), get('name')),
+    '/layout/reset': (s) => M.resetLayout(s),
+    '/ideas/add': (s, get) => M.addIdea(s, get('text'), get('tag'), nowLocal()),
+    '/ideas/done': (s, get) => M.toggleIdea(s, get('id')),
+    '/ideas/remove': (s, get) => M.removeIdea(s, get('id')),
   };
+  const QUIET_204 = ['/layout', '/name'];                         // live answers these fetch calls with 204 (no reload)
+  function nowLocal() {                                           // 'YYYY-MM-DDTHH:MM' on this phone's clock
+    const d = new Date(), z = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;
+  }
   const pathOf = url => { try { return new URL(url, location.href).pathname; } catch (e) { return ''; } };
-  const getter = data => name => { const v = data.get(name); return v === null || v === undefined ? '' : String(v); };
+  // a field of a form or JSON body; a list (the saved order's ids) comes back as it is
+  const getter = data => name => { const v = data.get(name); return v === null || v === undefined ? '' : (Array.isArray(v) ? v : String(v)); };
 
   // Run a route on the state and save it. Returns {error, unknownBill}.
   function run(path, data) {
@@ -108,7 +120,9 @@
       u.searchParams.set('error', error);
       location.assign(u.toString());
     } else {
-      location.replace(location.href);              // a fresh load at the top, like live's redirect after a POST
+      const u = new URL(location.href);               // a fresh load at the top, like live's redirect after a POST (?view= stays)
+      if (u.hash) { u.hash = ''; history.replaceState(null, '', u.toString()); location.reload(); }   // a #hash alone would not reload
+      else location.replace(u.toString());
     }
   }
 
@@ -183,13 +197,21 @@
     const body = opts.body;
     if (body instanceof URLSearchParams) data = body;
     else if (typeof FormData !== 'undefined' && body instanceof FormData) data = body;
-    else if (typeof body === 'string') data = new URLSearchParams(body);
+    else if (typeof body === 'string') {
+      const type = opts.headers && (opts.headers['Content-Type'] || opts.headers['content-type']);
+      if (type && /json/.test(type)) {                  // a JSON body: get(name) gives the value as it is
+        let obj = {};
+        try { obj = JSON.parse(body) || {}; } catch (e) { /* not JSON: empty */ }
+        data = {get: name => (obj && typeof obj === 'object' ? obj[name] : undefined)};
+      } else data = new URLSearchParams(body);
+    }
     const quiet = opts.headers && (opts.headers['X-Requested-With'] === 'fetch');
     const r = run(path, data);
     if (path === '/bill' && quiet) {                 // live: 400 for a bad amount, 204 saved, no reload
       const bad = r && r.error;
       return Promise.resolve(bad ? new Response('', {status: 400}) : (r && r.unknown ? new Response('', {status: 200}) : new Response(null, {status: 204})));
     }
+    if (QUIET_204.indexOf(path) >= 0) return Promise.resolve(new Response(null, {status: 204}));
     return Promise.resolve(new Response('', {status: 200}));   // live redirects here; fetch just follows it
   };
 

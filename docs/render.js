@@ -303,6 +303,88 @@
   </div>`;
   }
 
+  // ---------- Move & rename: the saved order (fintrack/layout.py) ----------
+  // A box's rows as groups: a row with a data-id starts one; a category's hidden shop rows (tr.item) stay right after it.
+  function groups(box) {
+    const gs = [];
+    Array.from(box.children).forEach(c => {
+      const home = !c.dataset.id && c.dataset.cat && gs.find(g => g[0].dataset.id === c.dataset.cat);
+      if (home) home.push(c);
+      else if (c.dataset.id || !gs.length) gs.push([c]);
+      else gs[gs.length - 1].push(c);
+    });
+    return gs;
+  }
+  function regroup(box, ids) {
+    const gs = groups(box);
+    (ids ? M.order(gs, ids, g => g[0].dataset.id) : gs).forEach(g => g.forEach(el => box.appendChild(el)));
+  }
+  function applyLayout(state) {
+    document.querySelectorAll('[data-sort]').forEach(box => {
+      const ids = state.layout && state.layout[box.dataset.sort];
+      if (Array.isArray(ids)) regroup(box, ids);
+    });
+  }
+
+  // ---------- views: ?view=ideas / ?view=invite show one box in place of the home page parts ----------
+  // The same address without ?view= (demo / today / ... stay), or with another view.
+  function viewUrl(view) {
+    const u = new URL(location.href);
+    u.searchParams.delete('error'); u.searchParams.delete('view'); u.hash = '';
+    if (view) u.searchParams.set('view', view);
+    return u.pathname + u.search;
+  }
+  function ideaNote(n, done) {
+    const form = (action, label, extra) => `<form method="post" action="${action}"${extra || ''}><input type="hidden" name="id" value="${n.id}">${label}</form>`;
+    return `<div class="note${done ? ' done' : ''}">
+        <span class="txt">${esc(n.text)}<span class="sub">${esc(M.IDEA_TAGS[n.tag] || M.IDEA_TAGS.idea)} · ${esc(F.day(n.at))}</span></span>
+        ${form('/ideas/done', done ? '<button type="submit">\u21A9 Not done</button>' : '<button type="submit" title="Built or sorted">\u2705 Done</button>')}
+        ${form('/ideas/remove', '<button type="submit" aria-label="Delete">\u00D7</button>', ' data-confirm="Delete this note?"')}
+      </div>`;
+  }
+  function ideasView(state, today) {
+    const notes = (state.ideas || []).slice().reverse(), open = notes.filter(n => !n.done), done = notes.filter(n => n.done);
+    const tags = Object.keys(M.IDEA_BUTTONS).map((k, i) =>
+      `<input type="radio" name="tag" id="tag-${k}" value="${k}"${i === 0 ? ' checked' : ''}><label for="tag-${k}">${M.IDEA_BUTTONS[k]}</label>`).join('');
+    return `<a class="back" href="${esc(viewUrl(''))}">\u2039 Home</a>
+  <h1>\u{1F4A1} Ideas &amp; feedback</h1>
+  <p class="hint">Jot anything down as it comes to you. When you're ready, copy them all into a chat with Claude.</p>
+  <div class="card">
+    <form class="new" method="post" action="/ideas/add">
+      <textarea name="text" maxlength="1000" placeholder="What's on your mind?" required aria-label="Your note"></textarea>
+      <div class="tags" role="radiogroup" aria-label="Kind of note">${tags}</div>
+      <button class="go" type="submit">Save note</button>
+    </form>
+  </div>
+  <h2>Open (${open.length})</h2>
+  <div class="card">${open.map(n => ideaNote(n, false)).join('') || '<p class="empty">No notes yet.</p>'}</div>
+  ${open.length ? `<p><button type="button" class="go" id="copybtn">\u{1F4CB} Copy all for Claude</button><span class="copied" id="copied" hidden>Copied \u2705</span></p>
+  <textarea id="copytext" readonly aria-hidden="true" tabindex="-1">${esc(M.ideasCopy(state, M.VERSION, today))}</textarea>` : ''}
+  ${done.length ? `<details><summary>Done (${done.length})</summary><div class="card">${done.map(n => ideaNote(n, true)).join('')}</div></details>` : ''}`;
+  }
+  function showView(state, today) {
+    const view = new URLSearchParams(location.search).get('view'), body = document.body;
+    document.querySelectorAll('a[data-view]').forEach(a => { a.href = viewUrl(a.dataset.view); });
+    const home = document.querySelector('#invite a.back');
+    if (home) home.href = viewUrl('');
+    if (view !== 'ideas' && view !== 'invite') return;
+    body.dataset.view = view;                                    // lite.css hides the home page parts
+    const box = document.getElementById(view);
+    if (!box) return;
+    if (view === 'ideas') {
+      box.innerHTML = ideasView(state, today);
+      box.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => { if (!confirm(f.dataset.confirm)) e.preventDefault(); }));
+      const btn = document.getElementById('copybtn');
+      if (btn) btn.addEventListener('click', async () => {
+        const text = document.getElementById('copytext');
+        try { await navigator.clipboard.writeText(text.value); }
+        catch (e) { text.select(); document.execCommand('copy'); }
+        document.getElementById('copied').hidden = false;
+      });
+    }
+    box.hidden = false;
+  }
+
   // ---------- put it on the page ----------
   function swap(selector, html) {
     const el = document.querySelector(selector);
@@ -349,8 +431,10 @@
     swap('#cards > [data-card="lastmonth"]', lastMonthCard(r));
     swap('#cards > [data-card="cats"]', catsCard(r));
     swap('#cards > [data-card="periods"]', periodsCard(r));
+    applyLayout(state);
+    showView(state, today);
     return r;
   }
 
-  root.LiteRender = {render, ERRORS, INFO, spendCard, potsCard, cardCards, billsCard, zopaTile, statementRows};
+  root.LiteRender = {render, regroup, ERRORS, INFO, spendCard, potsCard, cardCards, billsCard, zopaTile, statementRows};
 })(window);

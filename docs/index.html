@@ -7,7 +7,7 @@
   const realFetch = window.fetch.bind(window);
   window.fetch = function (url, opts) {
     const u = new URL(typeof url === 'string' ? url : url.url, location.href);
-    if (u.origin !== location.origin || /\/(look\.css|icon-\d+\.png|manifest\.json)$/.test(u.pathname)) return realFetch(url, opts);
+    if (u.origin !== location.origin || /\/(look\.css|icon-\d+\.png|manifest\.json|version\.json)$|\.svg$/.test(u.pathname)) return realFetch(url, opts);
     // /stamp must answer with JSON, or the page's own check would throw; the same stamp each time = no reload.
     if (u.pathname === '/stamp') return Promise.resolve(new Response('{"stamp":"static"}', {status: 200}));
     return Promise.resolve(new Response(null, {status: 204}));
@@ -15,11 +15,11 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.11"></script>
-<script src="render.js?v=0.11"></script>
-<script src="lite.js?v=0.11"></script>
-<script src="lock.js?v=0.11"></script>
-<script src="lockui.js?v=0.11"></script>
+<script src="money.js?v=0.12"></script>
+<script src="render.js?v=0.12"></script>
+<script src="lite.js?v=0.12"></script>
+<script src="lock.js?v=0.12"></script>
+<script src="lockui.js?v=0.12"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -176,8 +176,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.11">
-<link rel="stylesheet" href="lite.css?v=0.11">
+<link rel="stylesheet" href="look.css?v=0.12">
+<link rel="stylesheet" href="lite.css?v=0.12">
 </head>
 <body class="demo">
 
@@ -251,7 +251,7 @@
       
       <div class="setmenu" id="setmenu" hidden>
         <div class="v3links">
-          <div class="grp"><a class="small" href="/ideas">💡 Ideas &amp; feedback</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
+          <div class="grp"><a class="small" href="?view=ideas" data-view="ideas">💡 Ideas &amp; feedback</a><a class="small" href="?view=invite" data-view="invite">📱 Invite</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
           <div class="grp"><button type="button" class="small" id="savebackup">💾 Save backup</button>
           <button type="button" class="small" id="loadbackup">📂 Load backup</button>
           <button type="button" class="small" id="newcodes">🔑 New backup codes</button>
@@ -259,7 +259,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="appver">v0.11</div></div>
+      <div class="appver">v0.12</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -291,7 +291,7 @@
 
   
   <div class="editbar">
-    <button type="button" class="small" id="updbtn" title="Get the latest version from GitHub">🔄 Update</button>
+    <button type="button" class="small" id="updbtn" title="Get the newest files">🔄 Update</button>
     <button type="button" class="small" id="editbtn">✏️ Move &amp; rename</button>
     <form method="post" action="/layout/reset" class="onlyedit"><button class="small" type="submit">↺ Put the order back</button></form>
   </div>
@@ -301,6 +301,17 @@
   
 
   
+
+<div id="ideas" hidden></div>
+<div id="invite" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>📱 Invite a friend</h1>
+  <p class="tag">Let a friend scan this with their phone camera. They get their own copy of the app, with their own money. It holds the link only, never any of your data.</p>
+  <img class="qr" src="invite-qr.svg" alt="QR code for the Lite link" width="240" height="240">
+  <p class="invlink">https://df-ai-lab.github.io/wheres-my-money-lite/</p>
+  <div class="invbtns"><button type="button" id="sharebtn">📤 Share</button><button type="button" id="copylink">📋 Copy link</button></div>
+  <p class="invmsg" id="sharemsg" role="status" hidden>✅ Link copied</p>
+</div>
 
 <div class="card quick" id="quick" hidden>
   <div class="q-pay">
@@ -789,6 +800,7 @@
     while (next && !next.dataset.id) next = e.key === 'ArrowUp' ? next.previousElementSibling : next.nextElementSibling;
     if (!next) return;
     box.insertBefore(picked, e.key === 'ArrowUp' ? next : next.nextSibling);
+    LiteRender.regroup(box);
     picked.scrollIntoView({block: picked.classList.contains('card') ? 'start' : 'center'});
     post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
   });
@@ -825,26 +837,54 @@
     box.addEventListener('dragend', () => {
       if (!dragEl || dragEl.parentElement !== box) return;
       dragEl.classList.remove('dragging'); dragEl.draggable = false; dragEl = null;
+      LiteRender.regroup(box);
       post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
     });
   });
 
-  // 🔄 Update (3 Oct 2026): get the latest code from GitHub; the page restarts itself and reloads.
+  // 🔄 Update: this is a static site, so "update" = get the newest files (version.json says which version they are)
   const updBtn = document.getElementById('updbtn');
   if (updBtn) updBtn.addEventListener('click', async () => {
-    if (!confirm('Get the latest version from GitHub?\n\nYour statements and data are not touched.')) return;
+    if (!confirm('Get the latest version?\n\nYour money and notes on this phone are not touched.')) return;
     updBtn.disabled = true; updBtn.textContent = '⏳ Updating...';
     const back = () => { updBtn.disabled = false; updBtn.textContent = '🔄 Update'; };
-    let r;
-    try { r = await (await fetch('/update', {method: 'POST'})).json(); }
-    catch (e) { alert('Sorry, the update did not work. Try update.bat in the code folder.'); back(); return; }
-    if (!r.ok) { alert('Sorry, the update did not work (' + r.error + ').\nCheck the internet, or try update.bat in the code folder.'); back(); return; }
-    if (!r.changed) { updBtn.textContent = '✅ Up to date'; setTimeout(back, 3000); return; }
+    let latest;
+    try {
+      const r = await fetch('version.json?t=' + Date.now(), {cache: 'no-store'});
+      if (!r.ok) throw new Error('not ok');
+      latest = String((await r.json()).version);
+    } catch (e) { alert("Sorry, the update didn't work. Check the internet and try again."); back(); return; }
+    if (latest === Money.VERSION) { updBtn.textContent = '✅ Up to date'; setTimeout(back, 3000); return; }
     updBtn.textContent = '✅ Updated! Restarting...';
-    const wait = () => fetch('/', {cache: 'no-store'}).then(x => { if (x.ok) location.reload(); else setTimeout(wait, 1000); })
-                                                      .catch(() => setTimeout(wait, 1000));
-    setTimeout(wait, 3000);
+    try {                                       // a service worker (step 8) fetches the new files first
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.update();
+    } catch (e) { /* no worker: a plain reload is enough */ }
+    location.reload();
   });
+
+  // 📱 Invite: share or copy the link of the Lite site (the QR code holds the link only)
+  (function () {
+    const LINK = 'https://df-ai-lab.github.io/wheres-my-money-lite/', msg = document.getElementById('sharemsg');
+    async function copyLink() {
+      try { await navigator.clipboard.writeText(LINK); }
+      catch (e) {
+        const i = document.createElement('input'); i.value = LINK; document.body.appendChild(i); i.select();
+        try { document.execCommand('copy'); } catch (e2) { /* nothing more to try */ }
+        i.remove();
+      }
+      if (msg) msg.hidden = false;
+    }
+    const share = document.getElementById('sharebtn'), copy = document.getElementById('copylink');
+    if (copy) copy.addEventListener('click', copyLink);
+    if (share) share.addEventListener('click', async () => {
+      if (navigator.share) {
+        try { await navigator.share({title: "Where's My Money? Lite", text: 'Payday to payday. Your own copy, on your phone.', url: LINK}); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      copyLink();
+    });
+  })();
 </script>
 
 

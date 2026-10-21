@@ -86,3 +86,47 @@ html.lockon .wrap { display: none; }
 .box .fpbtn { width: 100%; font-size: 19px; padding: 16px; }
 .box .or { color: var(--muted); margin: 14px 0 10px; }
 .box ul.codes li { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; }
+
+/* views (Go B step 7): ?view=ideas / ?view=invite replace the home page parts; the header stays */
+body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[data-view] .footer, body[data-view] #quicktab { display: none; }
+#ideas[hidden], #invite[hidden] { display: none; }
+
+/* 💡 Ideas & feedback: live's ideas.html styles, all under #ideas so the home page is not touched */
+#ideas { margin-bottom: 18px; }
+#ideas .back, #invite .back { color: var(--accent); font-weight: 700; text-decoration: none; }
+#ideas h1 { font-size: 24px; font-weight: 800; margin: 12px 0 4px; }
+#ideas h2 { font-size: 15px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+#ideas .hint { color: var(--muted); font-size: 16px; margin: 0 0 16px; }
+#ideas .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; margin-bottom: 0; }
+#ideas form.new { display: grid; gap: 12px; }
+#ideas textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--border);
+                  border-radius: 10px; padding: 10px 12px; min-height: 90px; resize: vertical; width: 100%; box-sizing: border-box; }
+#ideas .tags { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#ideas .tags input { position: absolute; opacity: 0; pointer-events: none; }
+#ideas .tags label { text-align: center; padding: 8px 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+                     font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+#ideas .tags input:checked + label { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+#ideas .tags input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.demo #ideas button.go { justify-self: start; padding: 10px 24px; border: 0; font-size: 15px; cursor: pointer; }
+#ideas .note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--border); }
+#ideas .note:first-child { border-top: 0; }
+#ideas .note .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#ideas .note .sub { display: block; color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+#ideas .note form { margin: 0; }
+.demo #ideas .note button { padding: 4px 10px; font-size: 13px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+#ideas .note.done .txt { color: var(--muted); text-decoration: line-through; }
+#ideas .empty { color: var(--muted); margin: 0; }
+#ideas #copytext { position: absolute; left: -9999px; }
+#ideas .copied { color: var(--good); font-weight: 700; margin-left: 8px; }
+#ideas details { border-bottom: 0; }
+#ideas details summary { cursor: pointer; color: var(--muted); font-weight: 700; margin: 24px 0 8px; padding: 0; display: list-item; }
+#ideas details summary::before { content: none; }
+
+/* 📱 Invite: the lock's .box, with a QR code on a white rounded square */
+#invite { margin: 8px auto 18px; }
+#invite .back { display: block; text-align: left; }
+#invite .qr { display: block; width: 240px; height: 240px; max-width: 100%; margin: 4px auto 14px; border-radius: 16px; background: #fff; padding: 10px; box-sizing: content-box; }
+#invite .invlink { margin: 0 0 16px; font-weight: 700; overflow-wrap: anywhere; user-select: all; }
+#invite .invbtns { display: flex; gap: 10px; }
+#invite .invbtns button { flex: 1; }
+#invite .invmsg { color: var(--good); font-weight: 700; margin: 12px 0 0; }

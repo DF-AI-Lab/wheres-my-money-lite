@@ -163,7 +163,7 @@ test('the Zopa question: Yes = a Paid off line for the bill amount; Other = type
 
 test('backup + FAKE: cards travel in the backup file; the demo has the Zopa card', () => {
   const s = two();
-  assert.deepStrictEqual(M.importBackup(JSON.parse(JSON.stringify(M.exportBackup(s, TODAY)))), s);
+  assert.deepStrictEqual(M.importBackup(JSON.parse(JSON.stringify(M.exportBackup(s, TODAY)))), M.migrate(s));   // + ideas: [] (step 7)
   const f = M.FAKE();
   assert.strictEqual(f.v, 3);
   assert.deepStrictEqual(f.cards.map(c => [c.name, c.limit]), [['Zopa', 500]]);
