@@ -27,8 +27,9 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 ## Steps
 1. **Look** - one static page (`docs/index.html`) with fake data, live on GitHub Pages.
    No maths, no saving. ✅ DONE 21 Oct: LOOK LOCKED (Darren agreed). From now on docs/look.css never changes.
-2. **Maths** - turn the Python rules (cycles, bills, spare cash) into JavaScript. ⬅️ NEXT
-3. **Saving** - your data in localStorage (+ download / load a backup file).
+2. **Maths** - turn the Python rules (cycles, bills, spare cash) into JavaScript. ✅ DONE 21 Oct (v0.04): spare cash,
+   spends, credit card, bills. Saved for the tab only. Not yet: payday cycles, bill Stop rules (#2), statement cards.
+3. **Saving** - your data in localStorage (+ download / load a backup file). ⬅️ NEXT
 4. **Statements** - read the bank PDF in the browser (no upload anywhere).
 5. Then: Bill details (Lite issue #2) and the rest of the map (Lite issue #1).
 

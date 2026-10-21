@@ -10,11 +10,14 @@
     if (u.origin !== location.origin || /\/(look\.css|icon-\d+\.png|manifest\.json)$/.test(u.pathname)) return realFetch(url, opts);
     // /stamp must answer with JSON, or the page's own check would throw; the same stamp each time = no reload.
     if (u.pathname === '/stamp') return Promise.resolve(new Response('{"stamp":"static"}', {status: 200}));
-    return Promise.resolve(new Response('', {status: 204}));
+    return Promise.resolve(new Response(null, {status: 204}));
   };
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
+<script src="money.js?v=0.04"></script>
+<script src="render.js?v=0.04"></script>
+<script src="lite.js?v=0.04"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -171,7 +174,7 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.03">
+<link rel="stylesheet" href="look.css?v=0.04">
 </head>
 <body class="demo">
 
@@ -192,7 +195,7 @@
           <a class="small" href="/passkey/setup">👆 Fingerprint</a></div>
           <div class="grp"><form method="post" action="/signout"><button class="small" type="submit">🚪 Sign out</button></form></div>
         </div></div>
-      <div class="appver">v0.03</div></div>
+      <div class="appver">v0.04</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday / add statements"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -849,6 +852,7 @@
   
 </div>
 
+<script>Lite.start();</script>
 <script>
   // Fold cards: toggle folded class and save/load from localStorage (user, 5 Oct 2026)
   var folded = [];
@@ -1005,7 +1009,7 @@
 <script>
   // Change a bill for this pay cycle only (3 Oct 2026): spare cash, Diff and Total update as you type,
   // and each change is saved quietly (POST /bill) as a temp note until the next payday. Bills are never changed.
-  const PAGE = {"bills": 1183.73, "left": 0.0, "typed": 46.700000000000045, "wage": 2500.0};
+  const PAGE = window.LITE_PAGE;
   const money = x => (x < 0 ? '-£' : '£') + Math.abs(x).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   const diff = x => Math.abs(x) < 0.005 ? '£0.00' : (x > 0 ? '+' : '') + money(x);
   const tone = (el, x) => { el.classList.remove('good', 'bad', 'muted'); if (x === null) el.classList.add('muted');

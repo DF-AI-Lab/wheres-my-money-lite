@@ -16,6 +16,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   script that stops server calls/forms). Checked: phone-width screenshots, light + dark, pixel diff = tagline line only.
   LOOK LOCKED (Darren agreed 21 Oct). Live at https://df-ai-lab.github.io/wheres-my-money-lite/
   (Pages = this branch, /docs). Next: step 2 maths in JS. Reference: run live `live` branch copy in a scratch dir with tests/data fake PDFs (see git log of this step).
+- **21 Oct STEP 2 BUILT (v0.04, Sonnet built, I checked):** docs/money.js (maths, node + browser), render.js (ports the
+  Jinja for top card, Zopa tile, Add a spend, Credit card, Bills), lite.js (in-browser 'server': routes -> state in
+  sessionStorage 'lite_state_v1' (Store, step 3 = localStorage), reload like live's redirect; ?today=YYYY-MM-DD).
+  Checks: `node --test tests_js/money.test.js` (4 pass) and `tools/lite_compare.py LIVE_COPY OUT` (9 scenarios, Lite vs
+  live pixel compare: all OK). Darren's real numbers (21 Oct: spare 53.66, card 293.36) checked PRIVATELY in scratch:
+  all match. REPO + PAGES ARE PUBLIC: never commit real data. Bills sort by avg (no Move & rename order yet).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
