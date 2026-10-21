@@ -14,7 +14,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **21 Oct STEP 1 BUILT (v0.02): `docs/` = the GitHub Pages site** (index.html = live v3.62's rendered page on fake data,
   look.css/icons byte-copies of live; only changes: '· Lite' in the tagline, version text, relative paths, a small
   script that stops server calls/forms). Checked: phone-width screenshots, light + dark, pixel diff = tagline line only.
-  Reference: run live `live` branch copy in a scratch dir with tests/data fake PDFs (see git log of this step).
+  LOOK LOCKED (Darren agreed 21 Oct). Live at https://df-ai-lab.github.io/wheres-my-money-lite/
+  (Pages = this branch, /docs). Next: step 2 maths in JS. Reference: run live `live` branch copy in a scratch dir with tests/data fake PDFs (see git log of this step).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

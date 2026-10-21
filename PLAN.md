@@ -26,11 +26,12 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 
 ## Steps
 1. **Look** - one static page (`docs/index.html`) with fake data, live on GitHub Pages.
-   No maths, no saving. ⬅️ NOW
-2. **Maths** - turn the Python rules (cycles, bills, spare cash) into JavaScript.
+   No maths, no saving. ✅ DONE 21 Oct: LOOK LOCKED (Darren agreed). From now on docs/look.css never changes.
+2. **Maths** - turn the Python rules (cycles, bills, spare cash) into JavaScript. ⬅️ NEXT
 3. **Saving** - your data in localStorage (+ download / load a backup file).
 4. **Statements** - read the bank PDF in the browser (no upload anywhere).
 5. Then: Bill details (Lite issue #2) and the rest of the map (Lite issue #1).
 
 ## GitHub Pages (Darren does once)
 Repo must be public. Settings → Pages → Branch = the branch Claude names, folder `/docs` → Save.
+DONE 21 Oct: https://df-ai-lab.github.io/wheres-my-money-lite/ (branch claude/jolly-bardeen-j3jk6i, /docs).
