@@ -80,12 +80,6 @@ def test_last_month_rows_and_bill_buttons(client):
     assert table.count('class="item"') == table.count('class="small tobill"') > 0   # every shop row has its → Bill
 
 
-def test_phone_page_keeps_the_old_look(db):
-    import web
-    html = web.phone_page(db, wage_payer=ACME)
-    assert "Where's My Money?" not in html and "💳 Credit card" in html
-
-
 def test_tags_are_split_off_the_bill_name():
     import web
     app = web.create_app(":memory:")

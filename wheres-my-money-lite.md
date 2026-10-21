@@ -6,8 +6,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - `/` = templates/ + static/ (the v3 page + a 'Lite' badge). `/demo` = demo/templates + demo/static (a copy to try
   changes on first; web.home(folder=...)). Changes made on /demo go back to /demo.
 - Version: fintrack/appversion.py, starts at 0.01, +0.01 per push.
-- Plan: map = financial-tracker issue #22. Next: trim what Lite doesn't need (PC .bat files, v2 phone parts,
-  prototypes), then ticket #25 Bill details. Not online yet (later: same PythonAnywhere site at /lite).
+- v0.02 (21 Oct): TRIMMED. Removed PC .bat/.vbs files, v2 phone copy (cloud/, fintrack/phone.py, downloads.py, push code in web.py/run.py),
+  prototype/, screenshots, PHONE_SETUP.md, V3_PLAN.md. 512 tests pass. Left for later: leftover `phone` flags in templates/home.html and demo/.
+- Plan: map = financial-tracker issue #22. Next: ticket #25 Bill details. Not online yet (later: same PythonAnywhere site at /lite).
 - Everything below is the main app's history, kept for now.
 
 ## History (copied from the main app's notes; kept for now)

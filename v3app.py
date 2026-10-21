@@ -104,7 +104,7 @@ def make_app(data_dir, wage_payer=None, today=None, updater=None, restart=None):
 
     app = web.create_app(data_dir / "tracker.db", wage_payer=wage_payer or WAGE_PAYER, today=today,
                          updater=updater, restart=restart, statements_dir=data_dir / "statements",
-                         phone_http=None, cloud=True, setup=None)
+                         cloud=True, setup=None)
     app.secret_key = settings["secret_key"]
     app.config["V3_SETTINGS"] = settings
     app.config["V3_DATA_DIR"] = data_dir

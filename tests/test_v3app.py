@@ -37,11 +37,8 @@ def test_settings_file_is_made_with_a_secret_key(tmp_path):
 
 def test_v3_app_has_no_phone_copy_and_keeps_no_pdfs(data_dir, monkeypatch):
     import web
-    sent = []
-    monkeypatch.setattr(web.phone, "sync_once", lambda *a, **k: sent.append("sync") or 0)
     app = v3app.make_app(data_dir, wage_payer=ACME, today=date(2024, 10, 25))
     assert app.config["CLOUD"] is True and app.secret_key
-    assert sent == []
     pdf = (DATA / "statement_2024_10.pdf").read_bytes()
     from fintrack.inbox import import_pdf
     from fintrack.store import open_db

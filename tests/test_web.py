@@ -373,10 +373,3 @@ def test_the_page_can_be_installed_as_an_app(client):
     assert 'rel="manifest"' in client.get("/").get_data(as_text=True)
 
 
-def test_silent_start_files():
-    from pathlib import Path
-    root = Path(web.__file__).parent
-    assert "server.bat" in (root / "hidden.vbs").read_text() and ", 0," in (root / "hidden.vbs").read_text()
-    assert "FT_QUIET" in (root / "server.bat").read_text() and "pause" not in (root / "server.bat").read_text()
-    assert "hidden.vbs" in (root / "setup.bat").read_text() and (root / "static" / "app.ico").exists()
-    assert "web.py" in (root / "stop.bat").read_text()

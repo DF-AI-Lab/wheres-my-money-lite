@@ -7,13 +7,11 @@ import pytest
 
 import run
 from fintrack import creditcard as cc
-from fintrack import phone
 from fintrack.store import open_db
 from tests.conftest import DATA
 
 flask = pytest.importorskip("flask")
 import web  # noqa: E402
-from cloud import flask_app  # noqa: E402
 
 ACME = "ACME MOTORS PLC"
 
@@ -104,44 +102,6 @@ def test_page_refuses_bad_amounts(client, db):
     assert card["items"] == [] and card["limit"] == 500.0
 
 
-def test_phone_card_changes(db):
-    c = open_db(db)
-    n = phone.apply_changes(c, [
-        {"cid": "1", "type": "card", "action": "add", "date": "2026-10-04", "amount": 40.0, "name": "Shell"},
-        {"cid": "2", "type": "card", "action": "add", "date": "2026-10-04", "amount": -10.0, "name": "Paid off"},
-        {"cid": "3", "type": "card", "action": "add", "date": "2026-10-04", "amount": 0, "name": "Zero"},
-        {"cid": "4", "type": "card", "action": "limit", "amount": 550.0},
-    ], wage_payer=ACME)
-    assert n == 3
-    card = cc.get_card(c)
-    assert card["used"] == pytest.approx(30.0) and card["limit"] == 550.0
-    first = card["items"][0]["id"]
-    assert phone.apply_changes(c, [{"cid": "5", "type": "card", "action": "remove", "id": first}], wage_payer=ACME) == 1
-    assert cc.get_card(c)["used"] == pytest.approx(-10.0)
-
-
-def test_phone_page_carries_the_card(db):
-    import json
-    cc.add_card(open_db(db), date(2024, 10, 20), 12.5, "Costa")
-    html = web.phone_page(db, wage_payer=ACME, today=date(2024, 10, 25), stamp="1")
-    data = json.loads(html.split('<script id="pcdata" type="application/json">')[1].split("</script>")[0])
-    assert data["card"]["limit"] == 500.0
-    assert [(i["name"], i["amount"]) for i in data["card"]["items"]] == [("Costa", 12.5)]
-    assert 'id="cardform"' in html
-
-
-def test_site_accepts_card_changes(tmp_path):
-    app = flask_app.create_app(tmp_path / "online", secure=False)
-    app.testing = True
-    site = app.test_client()
-    salt = "salt"
-    site.post("/api/upload", json={"html": "<p>x</p>", "pin_salt": salt, "pin_hash": phone.hash_pin("4821", salt)},
-              headers={"X-Key": "k" * 32})
-    site.post("/login", data={"pin": "4821"})
-    ch = {"cid": "c1", "type": "card", "action": "add", "date": "2026-10-04", "amount": 9.99, "name": "Shell"}
-    assert site.post("/send", json={"changes": [ch]}).status_code == 200
-
-
 def rows(conn):
     return [(r["name"], r["amount"], r["status"], r["left"]) for r in cc.get_card(conn)["rows"]]
 
@@ -223,34 +183,3 @@ def test_page_used_box_is_in_the_card_not_the_tiles(client, db):
     page = client.get("/").data.decode()
     assert "crossed" in page                                     # Tyres is paid: line through
 
-
-def test_phone_balance_change_is_a_correction(db):
-    c = open_db(db)
-    cc.add_card(c, date(2026, 10, 1), 50.0, "Shell")
-    assert phone.apply_changes(c, [{"cid": "b", "type": "card", "action": "balance", "date": "2026-10-05",
-                                    "amount": 75.0}], wage_payer=ACME) == 1
-    card = cc.get_card(c)
-    assert card["used"] == 75.0 and [r["name"] for r in card["rows"]] == ["Shell", "Correction"]
-
-
-def test_phone_page_carries_the_carry(db):
-    import json
-    html = web.phone_page(db, wage_payer=ACME, today=date(2024, 10, 25), stamp="1")
-    data = json.loads(html.split('<script id="pcdata" type="application/json">')[1].split("</script>")[0])
-    assert data["card"]["carry"] == 0
-
-
-# ---- the phone follows the PC's card order and names straight away --------------------------------
-
-@pytest.mark.parametrize("path,body", [("/layout", {"sort": "cards", "ids": ["card", "spend"]}),
-                                       ("/name", {"id": "bill:X", "name": "Rent"})])
-def test_moving_or_renaming_sends_a_fresh_copy_up(db, path, body):
-    c = open_db(db)
-    phone.connect(c, "https://x.pythonanywhere.com")
-    from tests.test_phone import FakeOnline
-    online = FakeOnline([])
-    app = web.create_app(db, wage_payer=ACME, today=date(2024, 10, 25), phone_http=online)
-    app.testing = True
-    app.test_client().post(path, json=body)
-    web.wait_for_push()
-    assert any(name == "upload" for _, name, _ in online.calls)

@@ -19,118 +19,17 @@ from fintrack.left import parse_money
 from fintrack.typed import parse_add
 from fintrack.categories import guess_category
 from fintrack.cycles import WAGE_PAYER
-from fintrack import phone
-
-
-def phone_page(db_path, wage_payer=WAGE_PAYER, today=None, now=None, stamp=None):
-    """Step 10: the same home page in phone mode (spends added/removed by the page itself), for upload."""
-    if stamp is None:
-        import time
-        stamp = str(time.time())
-    app = create_app(db_path, wage_payer=wage_payer, today=today)
-    conn = open_db(db_path)
-    d = home_data(conn, wage_payer=wage_payer, today=today)
-    conn.close()
-    pcdata = {"money": d.get("money_for_spending", 0),
-              "wage": d["pay"]["wage"] if d.get("ready") else 0, "left": d["pay"].get("left", 0) if d.get("ready") else 0,
-              "spends": [{"id": s["id"], "date": s["date"].isoformat(), "amount": s["amount"], "name": s["name"],
-                          "category": s["category"] or ""} for s in d.get("spends", [])],
-              "card": {"limit": d["card"]["limit"], "carry": d["card"]["carry"],
-                       "items": [{"id": i["id"], "date": i["date"].isoformat(), "amount": i["amount"], "name": i["name"],
-                                  "kind": i["kind"]} for i in d["card"]["items"]]}
-                      if d.get("ready") else {"limit": 0, "carry": 0, "items": []},
-              "stamp": stamp}
-    if now is None:
-        now = f"{datetime.now():%a} {datetime.now().day} {datetime.now():%b, %H:%M}"
-    import base64
-    png = Path(__file__).parent / "static" / "icon-192.png"
-    icon = "data:image/png;base64," + base64.b64encode(png.read_bytes()).decode() if png.exists() else ""
-    with app.app_context():
-        return render_template("home.html", d=d, error=None, phone=True, updated=now, icon=icon,
-                               pcdata=json.dumps(pcdata).replace("</", "<\\/"))
-
-
-def push(db_path, wage_payer=WAGE_PAYER, today=None, http=phone.http_json) -> bool:
-    """Send a fresh copy up if the phone copy is set up. Never raises. http=None (v3, the website itself): nothing."""
-    if http is None:
-        return False
-    try:
-        import time
-        stamp = str(time.time())
-        conn = open_db(db_path)
-        ready = phone.settings(conn) is not None
-        if ready:
-            html = phone_page(db_path, wage_payer, today, stamp=stamp)
-            ready = phone.upload(conn, html, http=http, stamp=stamp)
-        conn.close()
-        return ready
-    except Exception:
-        return False
-
-
-_push_timer = None
-
-
-def push_soon(db_path, wage_payer=WAGE_PAYER, today=None, http=phone.http_json, delay=2.0) -> None:
-    """Send a fresh copy up a moment later, once (moving cards, renaming, typing in a bill box send many quick
-    changes; the page answers at once and the phone gets the last one)."""
-    global _push_timer
-    if http is None:                                      # v3: the website is the only copy, nothing to send
-        return
-    if _push_timer is not None:
-        _push_timer.cancel()
-    _push_timer = threading.Timer(delay, push, args=(db_path, wage_payer, today), kwargs={"http": http})
-    _push_timer.daemon = True
-    _push_timer.start()
-
-
-def wait_for_push() -> None:
-    """Tests: send the waiting copy now."""
-    global _push_timer
-    t, _push_timer = _push_timer, None
-    if t is not None:
-        t.cancel()
-        t.function(*t.args, **t.kwargs)
-
-
-def engine_tick(db_path, wage_payer=WAGE_PAYER, statements_dir=None, downloads_dir=None, http=phone.http_json, today=None) -> dict:
-    """Sync phone changes and scan downloads once. Returns {"changes": int, "imported": [names]}.
-    Never raises."""
-    try:
-        from fintrack.downloads import scan_downloads
-
-        db_path = Path(db_path)
-        if statements_dir is None:
-            statements_dir = db_path.parent / "statements"
-        else:
-            statements_dir = Path(statements_dir)
-        if downloads_dir is None:
-            downloads_dir = Path.home() / "Downloads"
-        else:
-            downloads_dir = Path(downloads_dir)
-
-        conn = open_db(db_path)
-        n = phone.sync_once(conn, wage_payer, http) or 0
-        imported = scan_downloads(conn, downloads_dir, statements_dir)
-        conn.close()
-
-        if n or imported:
-            push(db_path, wage_payer, today, http=http)
-
-        return {"changes": n, "imported": imported}
-    except Exception:
-        return {"changes": 0, "imported": []}
 
 
 def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart=None, statements_dir=None,
-               phone_http=phone.http_json, cloud=False, setup=None):
+               cloud=False, setup=None):
     """Create and configure the Flask app.
 
     Args:
         db_path: path to the database file
         wage_payer: the wage payer name
         today: optional reference date for home_data
-        cloud: v3 (the website on PythonAnywhere): no phone copy (pass phone_http=None), PDFs are read and not kept
+        cloud: v3 (the website on PythonAnywhere): no phone copy, PDFs are read and not kept
         setup: optional setup(app) called last (v3 adds sign-in, backups, Fix an item: v3app.py)
 
     Returns:
@@ -218,8 +117,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
             open_db(db_path).close()                    # an empty database, so PDFs can be dropped on the page
 
         conn = open_db(db_path)
-        # Sync phone changes first
-        n = (phone.sync_once(conn, wage_payer, http=phone_http) or 0) if phone_http else 0
         d = home_data(conn, wage_payer=wage_payer, today=today)
 
         # Get error message from query string
@@ -236,9 +133,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         version = vfile.read_text().strip() if vfile.exists() else None
         conn.close()
 
-        # If we did phone changes, push the update up
-        if n and n > 0:
-            push(db_path, wage_payer, today, http=phone_http)
 
         ctx = dict(d=d, error=error, error_at=error_code, version=version, demo=demo, app_version=APP_VERSION, cloud=cloud)
         if folder:
@@ -263,7 +157,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
             from fintrack.store import clear_spends
             clear_spends(conn)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
 
         return redirect(home_url(), code=303)
 
@@ -285,7 +178,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         category = guess_category(name)
         add_spend(conn, date.today() if today is None else today, amount, name, category)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
 
         return redirect(home_url(), code=303)
 
@@ -302,7 +194,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         add_card(conn, date.today() if today is None else today, -amount if paid else amount, name)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     @app.route("/card/remove", methods=["POST"])
@@ -315,7 +206,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         remove_card(conn, item_id)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     @app.route("/card/balance", methods=["POST"])
@@ -328,7 +218,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         set_balance(conn, date.today() if today is None else today, amount)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     @app.route("/card/limit", methods=["POST"])
@@ -340,7 +229,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         set_limit(conn, amount)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     # POST /bill: change a bill for this pay cycle only (empty amount = put it back)
@@ -367,7 +255,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
                 return redirect(home_url(error="pay"), code=303)
             set_change(conn, d["cycle_start"], key, amount)
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         if request.headers.get("X-Requested-With") == "fetch":
             return ("", 204)                         # saved quietly by the page script, no reload
         return redirect(home_url(), code=303)
@@ -391,7 +278,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
                 return redirect(home_url(error="pay"), code=303)
             set_left(conn, d["cycle_start"], amount)
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     # Layout (page only, kept for good): POST /layout {"sort", "ids"} after a drag, POST /name {"id", "name"},
@@ -405,7 +291,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         save_order(conn, data["sort"], data["ids"])
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return ("", 204)
 
     @app.route("/name", methods=["POST"])
@@ -417,7 +302,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         set_name(conn, data["id"], str(data.get("name", ""))[:60])
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return ("", 204)
 
     @app.route("/layout/reset", methods=["POST"])
@@ -426,7 +310,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         reset_order(conn)
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     # The app icon (3 Oct 2026): Chrome / Edge can install the page as an app ('Install Wage Tracker')
@@ -461,7 +344,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
                     r[k] = f"{r[k].day} {r[k]:%b %Y}"
             results.append(r)
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return {"results": results}
 
     @app.route("/sort/parse", methods=["POST"])
@@ -481,7 +363,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         txns, paydays, payers = txns_and_paydays(conn, wage_payer)
         answer(conn, request.get_json(silent=True) or {}, txns, paydays, payers=payers)
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return ("", 204)
 
     @app.route("/sort/save", methods=["POST"])
@@ -491,7 +372,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         conn = open_db(db_path)
         save_answers(conn, data.get("answers") or [])
         conn.close()
-        push_soon(db_path, wage_payer, today, http=phone_http)
         return ("", 204)
 
     # POST /remove
@@ -504,7 +384,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
             conn = open_db(db_path)
             delete_spend(conn, spend_id)
             conn.close()
-            push(db_path, wage_payer, today, http=phone_http)
         except (ValueError, TypeError):
             # Ignore bad id
             pass
@@ -528,7 +407,6 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
             conn.close()
             return redirect(home_url(), code=303)
         conn.close()
-        push(db_path, wage_payer, today, http=phone_http)
         return redirect(home_url(), code=303)
 
     if setup is not None:
@@ -547,23 +425,10 @@ def main():
     db_path = pick_folder(sys.argv[1:]).parent / "tracker.db"
     statements_dir = pick_folder(sys.argv[1:])
 
-    if push(db_path):
-        print("Sent a fresh copy to your phone.")
     print("Opening your home page... (close this window to stop it)")
 
     # Create the app
     app = create_app(db_path, wage_payer=WAGE_PAYER, statements_dir=statements_dir)
-
-    # Start a daemon thread to sync phone changes and downloads every 300 seconds
-    def engine_loop():
-        while True:
-            import time
-            time.sleep(300)
-            engine_tick(db_path, wage_payer=WAGE_PAYER, statements_dir=statements_dir)
-
-    engine_thread = threading.Thread(target=engine_loop)
-    engine_thread.daemon = True
-    engine_thread.start()
 
     # Open browser after a short delay (not after an update: the page is already open and reloads itself)
     import os

@@ -65,7 +65,7 @@ Current status and history: `wheres-my-money-lite.md` (read "Where we are" first
 
 ### What the app is
 A personal tool (me only) for one HSBC current account. Statement PDFs in, bills / payday-to-payday cycles / Common-Random-One-off / "what's left" out. Python 3 + pdfplumber + SQLite + Flask. Older project (do not build on it): `python-finance-tracker`.
-Docs: `SPEC.md`, `DECISIONS.md` (everything I said yes to; overrides anything else), `FUTURE_FEATURES.md`, `README.md`, `PHONE_SETUP.md`, `V3_PLAN.md`, `V3_SETUP.md`.
+Docs: `SPEC.md`, `DECISIONS.md` (everything I said yes to; overrides anything else), `FUTURE_FEATURES.md`, `README.md`, `V3_SETUP.md`.
 Real PDFs and `tracker.db` live outside the repo. **Never commit PDFs or .db files.**
 
 ### How it runs (my PC, Windows)

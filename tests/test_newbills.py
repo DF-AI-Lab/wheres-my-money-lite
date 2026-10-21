@@ -8,7 +8,6 @@ from datetime import date
 import pytest
 
 import run
-from fintrack import phone
 from fintrack.common import analyse
 from fintrack.cycles import build_cycles
 from fintrack.models import Txn
@@ -133,18 +132,6 @@ def test_pc_page_stopped_button(db):
     assert 'class="bstop">stopped' in page
     client.post("/stopped", data={"key": key, "stopped": "0"})
     assert get_stopped(open_db(db))[key] == "no"
-
-
-def test_phone_can_tap_stopped(db):
-    from fintrack.billchange import get_stopped
-    import web
-    c = open_db(db)
-    key = web.home_data(c, wage_payer="ACME MOTORS PLC", today=date(2024, 10, 25))["pay"]["bills"][0]["key"]
-    assert phone.apply_changes(c, [{"cid": "s", "type": "bill", "key": key, "stopped": True}],
-                               wage_payer="ACME MOTORS PLC") == 1
-    assert key in get_stopped(c)
-    phone.apply_changes(c, [{"cid": "t", "type": "bill", "key": key, "stopped": False}], wage_payer="ACME MOTORS PLC")
-    assert get_stopped(c)[key] == "no"
 
 
 def test_not_stopped_beats_the_automatic_stop():
