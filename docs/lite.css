@@ -170,3 +170,22 @@ body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[d
 #drive button { display: block; width: 100%; margin: 0 0 10px; }
 #drive .driveok { color: var(--good); font-weight: 700; margin: 12px 0 0; }
 #drive .err { margin: 12px 0 0; }
+
+/* Show (bell) makes the item pulse so you can see where it is (v0.18) */
+@keyframes litepulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent); background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+  70%  { box-shadow: 0 0 0 8px transparent; background-color: color-mix(in srgb, var(--accent) 12%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
+}
+@keyframes litepulse-bg {
+  0%, 100% { background-color: transparent; outline-color: transparent; }
+  30% { background-color: color-mix(in srgb, var(--accent) 40%, transparent); outline-color: var(--accent); }
+}
+@keyframes litepulse-calm {
+  0%, 100% { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+}
+.pulse { animation: litepulse 0.9s ease-out 3; border-radius: 10px; }
+tr.pulse { animation: litepulse-bg 0.9s ease-out 3; box-shadow: none; border-radius: 0; outline: 2px solid transparent; outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) {
+  .pulse, tr.pulse { animation: litepulse-calm 2.5s linear 1; }
+}
