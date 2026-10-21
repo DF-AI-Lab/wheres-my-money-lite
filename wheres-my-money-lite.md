@@ -11,6 +11,14 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - Plan: map = financial-tracker issue #22. Next: ticket #25 Bill details. Not online yet (later: same PythonAnywhere site at /lite).
 - Everything below is the main app's history, kept for now.
 
+## Ideas list (parked on purpose: get it up and looking right first, then build on it)
+* Paid tick on each bill (tap to mark paid this month; the statement could tick it too). Darren 21 Oct: leave until the bills are mostly done.
+* (Add more here.)
+
+## Decided for ticket #25 (Bill details)
+* Each bill has a due day (Darren, 21 Oct: yes).
+* Still to decide: bill added mid-month, stopping (this month or next, restart?), amount change (one month or for good), yearly bills in Lite.
+
 ## History (copied from the main app's notes; kept for now)
 # Financial Tracker (main app notes)
 
