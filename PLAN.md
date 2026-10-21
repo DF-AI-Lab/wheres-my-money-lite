@@ -69,7 +69,9 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
   (forgot passcode = a code + load backup + new passcode). The app's code is public, so no secret key in the app.
 - Optional ☁️ Google Drive copy in the user's own Drive (Darren sets up the Google side once; test after).
 
-**Settings:** Save / Load backup, Google Drive, Move & rename (like live), 🔄 Update, 💡 Ideas & feedback, Cards open.
+**Settings:** Save / Load backup, Google Drive, Move & rename (like live), 🔄 Update, 💡 Ideas & feedback, Cards open,
+📱 **Invite** (a QR code + Share button for the Lite link, so a friend can scan it and install their own copy; it
+holds the link only, never any data. Added by Darren 21 Oct).
 
 ## Build order (one step at a time, Darren says go)
 1. 💾 Saving on the phone + backup file ⬅️ NEXT
@@ -78,7 +80,7 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 4. 🟠 Pots
 5. 💳 Several credit cards + the Zopa question
 6. 🔒 Fingerprint + passcode + 10 codes + scrambled backup
-7. ✏️ Move & rename + Update + Ideas
+7. ✏️ Move & rename + Update + Ideas + 📱 Invite QR code
 8. 📲 Install + works offline
 9. ☁️ Google Drive (optional)
 Then the rest of the map (Lite issue #1); Bill details (#2) is mostly covered by step 2.
