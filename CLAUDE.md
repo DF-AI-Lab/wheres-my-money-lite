@@ -48,6 +48,10 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   scrolls + Clear all (/reminders/clear: due bills paid=true, s.snooze=today hides payday/card/backup that day); a bill in
   a pot's category (pot with an amount) is paid FROM the pot (bill.pot; out of billsTotal, into pot spent; billsAll for
   monthEndSpare). Tests 62 node + 97 browser.
+- **21 Oct v0.17 (Darren chose it):** ACTUAL SPARE = REAL MONEY LEFT = pay + left − every bill − every spend (pot spends
+  too) = monthEndSpare. Starting spare = the plan (pay + left − own bills − pots set). Top rows: ... Starting spare, + Pots
+  not spent yet (potsLeft), − Pots over, − Spends (not in a pot), Actual spare. Ring pots slice = potsSpent. Add a spend
+  card: mfs = pay + left − billsAll, typed = every spend. Tests 61 node + 98 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

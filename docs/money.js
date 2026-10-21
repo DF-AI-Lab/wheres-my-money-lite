@@ -279,15 +279,20 @@
     });
     const potsSet = sum(pots.map(p => p.amount || 0)), potsOver = sum(pots.map(p => p.over));
     const potsTotal = potsSet + potsOver;
+    const potsSpent = sum(pots.filter(p => !p.blank).map(p => p.spent)), potsLeft = sum(pots.map(p => p.left));
+    const potBills = billsAll - billsTotal;
     const shown = spends.map(x => Object.assign({}, x, {pot: potOf[x.cat] ? potOf[x.cat].name : null}));
     const spendsTotal = sum(shown.filter(x => !x.pot).map(x => x.amount));
     const moneyForSpending = pay + left - billsTotal - potsSet;
-    const leftNow = pay + left - billsTotal - potsTotal - spendsTotal;
+    const startSpare = moneyForSpending;
+    const spendsAll = sum(shown.map(x => x.amount));             // every spend, pot spends too
+    // Actual spare = the real money left in the bank (21 Oct evening): pot spends and pot bills come off it
+    const leftNow = startSpare + potsLeft - potsOver - spendsTotal;
 
     const total = pay + left;                                    // the ring: pay + left split four ways
     const f = x => total > 0 ? Math.max(x, 0) / total : 0;
-    const spareRing = Math.max(total - billsTotal - potsTotal - spendsTotal, 0);
-    const pct = {bills: r0(100 * f(billsTotal)), pots: r0(100 * f(potsTotal)), spends: r0(100 * f(spendsTotal)),
+    const spareRing = Math.max(leftNow, 0);
+    const pct = {bills: r0(100 * f(billsTotal)), pots: r0(100 * f(potsSpent)), spends: r0(100 * f(spendsTotal)),
                  spare: r0(100 * f(spareRing))};
 
     const cards = cardList.map(c => {
@@ -333,7 +338,7 @@
                      ytd: sums(history.filter(m => m.start.slice(0, 4) === year)), year};
 
     return {pay, left, startSpare: moneyForSpending, bills, billsTotal, billsAll, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
-            pots, potsSet, potsOver, potsTotal, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
+            pots, potsSet, potsOver, potsTotal, potsSpent, potsLeft, potBills, spendsAll, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
             anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
 
@@ -375,7 +380,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.16';
+  const APP = 'wheres-my-money-lite', VERSION = '0.17';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;

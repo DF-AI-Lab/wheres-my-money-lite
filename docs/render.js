@@ -30,8 +30,9 @@
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">${money(r.billsTotal)}</span></div>
       <div class="r"><span><i class="dot pot"></i>− Pots</span><span class="k-pot" id="st-pots">${money(r.potsSet)}</span></div>
       <div class="r start"><span>Starting spare</span><span id="st-start">${money(r.startSpare)}</span></div>
-      <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
+      <div class="r"><span><i class="dot pot"></i>+ Pots not spent yet</span><span class="k-pot" id="st-potleft">${money(r.potsLeft)}</span></div>
       ${r.potsOver > 0.004 ? `<div class="r"><span><i class="dot pot"></i>− Pots over</span><span class="k-pot" id="st-over">${money(r.potsOver)}</span></div>` : ''}
+      <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
       <div class="r tot"><span>Actual spare</span><span id="st-spare">${money(r.leftNow)}</span></div>
     `;
   }
@@ -81,8 +82,8 @@
     ` : ''}
 
     <div class="sum" style="margin-top:12px">
-      <span>Money for spending</span><span class="n" id="mfs">${money(r.moneyForSpending)}</span>
-      <span>Typed so far</span><span class="n" id="typed">${money(r.spendsTotal + r.potsOver)}</span>
+      <span>Money for spending</span><span class="n" id="mfs">${money(r.pay + r.left - r.billsAll)}</span>
+      <span>Typed so far</span><span class="n" id="typed">${money(r.spendsAll)}</span>
       <span class="eq">Left now</span><span class="n eq" id="leftnow">${money(r.leftNow)}</span>
     </div>
   </div>`;
@@ -413,7 +414,7 @@
     r.bills.forEach(b => { b.cardName = b.card ? cardName[b.card] : ''; });
     // PAGE: the numbers the page script starts from (live writes the same four into its script; Go A adds the pots)
     root.LITE_PAGE = {bills: r.billsTotal, left: r.left, typed: r.spendsTotal, wage: r.pay,
-                      pots: r.potsTotal, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name)};
+                      pots: r.potsSpent, potBills: r.potBills, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name)};
 
     // an error from the last form (live: /?error=CODE)
     if (err && ERRORS[err] && !INLINE.includes(err)) {

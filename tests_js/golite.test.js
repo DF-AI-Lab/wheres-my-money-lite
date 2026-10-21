@@ -235,7 +235,7 @@ test('newPayday: saves the month, starts a new one, bills carry over, paid reset
   assert.ok(s.bills.every(b => b.paid === false));
   assert.deepStrictEqual(s.bills.map(b => b.amount), [600, 30, null]);
   assert.deepStrictEqual(s.pots.map(p => p.amount), [200, 100, null]);
-  assert.ok(before.spare < realSpare);
+  near(before.spare, realSpare, 'actual spare = the real money left at month end (21 Oct evening)');
   // errors: a bad pay = 'pay'; a bad left = 'pay'; blank left = 0
   assert.strictEqual(M.newPayday(s, '2024-12-25', 'abc', ''), 'pay');
   assert.strictEqual(s.history.length, 1);

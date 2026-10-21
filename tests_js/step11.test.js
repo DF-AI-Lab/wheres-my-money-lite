@@ -7,10 +7,6 @@ const M = require('../docs/money.js');
 const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.005, `${what}: ${a} != ${b}`);
 const pot = (r, key) => r.pots.find(p => p.key === key);
 
-test('version 0.16', () => {
-  assert.strictEqual(M.VERSION, '0.16');
-});
-
 test('a bill in a pot\'s category is paid out of that pot, not counted again as a bill', () => {
   const s = M.FAKE();
   assert.strictEqual(M.addBill(s, '50', 'Fuel card'), null);
