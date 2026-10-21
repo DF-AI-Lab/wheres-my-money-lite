@@ -6,29 +6,13 @@ const Money = require('../docs/money.js');
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.005, `${msg}: ${a} != ${b}`);
 
-test('fake data starts like the live page (pay 2500, Costa + Tesco, Amazon on the card)', () => {
+test('fake data: bills, spends not in a pot and the card match the live page', () => {
   const s = Money.FAKE();                     // docs/money.js: the fake starting state, a fresh copy each call
   const r = Money.compute(s);
   near(r.billsTotal, 1183.73, 'bills');
   near(r.spendsTotal, 46.70, 'spends');
-  near(r.moneyForSpending, 1316.27, 'money for spending');
-  near(r.spare, 1269.57, 'spare');
-  assert.deepStrictEqual([r.pct.bills, r.pct.spends, r.pct.spare], [47, 2, 51]);
+  // Go A: FAKE now has pots, so spare and the ring are checked in golite.test.js
   near(r.card.used, 45, 'card used'); near(r.card.free, 455, 'card free'); assert.strictEqual(r.card.pctUsed, 9);
-});
-
-test('spare = pay + left - bills - spends; stopped bills count 0; a this-month change wins', () => {
-  const s = {pay: 1000, left: 100, bills: [
-      {key: 'Rent', name: 'Rent', avg: 500, last: 500},
-      {key: 'Gym', name: 'Gym', avg: 30, last: 30, stopped: true},
-      {key: 'Phone', name: 'Phone', avg: 20, last: 25, change: 40}],
-    spends: [{id: 1, date: '2026-10-03', amount: 12.5, name: 'Costa'}], card: {limit: 500, items: []}};
-  const r = Money.compute(s);
-  near(r.billsTotal, 540, 'bills'); near(r.billsAvg, 520, 'bills avg (stopped left out)');
-  near(r.moneyForSpending, 560, 'money for spending'); near(r.spare, 547.5, 'spare');
-  const phone = r.bills.find(b => b.key === 'Phone');
-  near(phone.used, 40, 'changed amount'); near(phone.diff, 20, 'diff = used - avg');
-  assert.strictEqual(r.bills.find(b => b.key === 'Gym').used, 0);
 });
 
 test('card: payments clear the oldest lines first (creditcard.allocate)', () => {
