@@ -13,7 +13,8 @@ test('starting spare = pay + left - bills - pots (set amounts); actual spare = w
   near(r.billsTotal, 1183.73, 'bills');
   near(r.potsSet, 550, 'pots');
   near(r.startSpare, 2500 - 1183.73 - 550, 'starting spare');          // 766.27
-  near(r.leftNow, 766.27 - 12.5 - 34.2, 'actual spare');               // 719.57 (Shell is in the Fuel pot)
+  near(r.leftNow, 2500 - 1183.73 - (12.5 + 34.2 + 60), 'actual spare = real money left');   // 1,209.57 (21 Oct evening)
+  near(r.leftNow, r.startSpare + r.potsLeft - r.potsOver - r.spendsTotal, 'the statement rows add up');
   near(r.spare, r.leftNow, 'spare = actual spare');
 });
 
@@ -23,7 +24,8 @@ test('starting spare does not move when a pot goes over; actual spare does', () 
   const r = M.compute(s, '2024-11-08');
   near(r.startSpare, 766.27, 'starting spare');
   near(r.potsOver, 10, 'over');
-  near(r.leftNow, 766.27 - 46.7 - 10, 'actual spare');
+  near(r.leftNow, 2500 - 1183.73 - 206.7, 'actual spare');            // 1,109.57
+  near(r.leftNow, r.startSpare + r.potsLeft - r.potsOver - r.spendsTotal, 'the statement rows add up');
 });
 
 // ---------- 4. payday date: the same day each month, a weekend moves it to the Friday before ----------

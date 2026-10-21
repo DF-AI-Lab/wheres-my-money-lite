@@ -20,7 +20,7 @@ test('a bill in a pot\'s category is paid out of that pot, not counted again as 
   near(pot(r, 'Fuel').spent, 60 + 50, 'Fuel pot spent = Shell 60 + the bill 50');
   near(pot(r, 'Fuel').left, 40, 'Fuel pot left');
   near(r.startSpare, 766.27, 'starting spare unchanged');
-  near(r.leftNow, 719.57, 'actual spare unchanged (still inside the pot)');
+  near(r.leftNow, 1159.57, 'actual spare: real money, so the £50 bill comes off');
   const b = r.bills.find(x => x.key === 'Fuel card');
   assert.strictEqual(b.pot, 'Fuel', 'the bill knows its pot');
 });
@@ -31,7 +31,7 @@ test('a pot bill that takes the pot over comes off spare like any over', () => {
   const r = M.compute(s, '2024-11-08');
   near(pot(r, 'Fuel').over, 10, 'over');
   near(r.potsOver, 10, 'pots over');
-  near(r.leftNow, 709.57, 'actual spare');
+  near(r.leftNow, 1109.57, 'actual spare');
 });
 
 test('no pot for the category (or a blank pot, or a stopped bill): a normal bill', () => {

@@ -179,10 +179,11 @@ test('pots: a set pot comes off spare like a bill; over comes off too; spends in
   assert.strictEqual(r.pots.find(p => p.key === 'Going out').blank, true);
   near(r.spendsTotal, 35, '− Spends = not in a pot (Costa + Pub)');
   near(r.billsTotal, 630, 'bills');
-  near(r.spare, 2000 + 100 - 630 - 330 - 35, 'spare = pay + left - bills - pots - spends');
+  near(r.spare, 2000 + 100 - 630 - (50 + 130) - 35, 'spare = real money left: pay + left - bills - every spend (21 Oct evening)');
+  near(r.potsSpent, 180, 'spent from pots'); near(r.potsLeft, 150, 'pot money not spent yet');
   near(r.moneyForSpending, 2100 - 630 - 300, 'money for spending = after bills and pots set aside');
   near(r.leftNow, r.spare, 'left now = spare');
-  assert.deepStrictEqual(r.pct, {bills: 30, pots: 16, spends: 2, spare: 53});
+  assert.deepStrictEqual(r.pct, {bills: 30, pots: 9, spends: 2, spare: 60});   // pots slice = spent from pots
 });
 
 test('pots: add, change amount, rename, delete; a spend goes in by its category', () => {
@@ -318,7 +319,7 @@ test('FAKE (the ?demo=1 page): new shape, a saved month, pots set, numbers that 
   assert.ok(s.pots.some(p => p.amount > 0), 'a pot with an amount');
   assert.ok(s.bills.every(b => b.due >= 1 && b.due <= 31), 'every fake bill has a due day');
   const r = M.compute(s, '2024-11-08');
-  near(r.spare, r.pay + r.left - r.billsTotal - r.potsTotal - r.spendsTotal, 'adds up');
+  near(r.spare, r.pay + r.left - r.billsTotal - r.potsSpent - r.spendsTotal, 'adds up');
   assert.ok(r.lastMonth && r.lastMonth.cats.length > 0);
   assert.notStrictEqual(M.FAKE(), M.FAKE());
 });

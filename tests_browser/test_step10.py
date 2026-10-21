@@ -54,7 +54,7 @@ def test_pots_are_counted_once(page, base):
     assert page.locator("#btotal").inner_text() == "£1,733.73"        # bills 1,183.73 + pots 550 (the card adds up)
     assert page.locator("#st-bills").inner_text() == "£1,183.73"      # the top card: bills alone
     assert page.locator("#st-pots").inner_text() == "£550.00"
-    assert page.locator("#spare-big").inner_text() == "£719.57"       # not taken off twice
+    assert page.locator("#spare-big").inner_text() == "£1,209.57"     # real money left: not taken off twice
 
 
 def test_typing_a_bill_keeps_the_pots_in_the_total(page, base):
@@ -65,7 +65,7 @@ def test_typing_a_bill_keeps_the_pots_in_the_total(page, base):
     page.wait_for_timeout(100)
     assert page.locator("#btotal").inner_text() == "£1,783.73"
     assert page.locator("#st-start").inner_text() == "£716.27"
-    assert page.locator("#st-spare").inner_text() == "£669.57"
+    assert page.locator("#st-spare").inner_text() == "£1,159.57"
 
 
 def test_a_pot_row_amount_changes_the_pot(page, base):
@@ -86,7 +86,8 @@ def test_top_card_shows_starting_and_actual_spare(page, base):
     assert "Starting spare" in rows and "Actual spare" in rows
     assert page.locator("#st-start").inner_text() == "£766.27"        # 2,500 - 1,183.73 - 550
     tot = page.locator(".st-rows .r.tot").inner_text()
-    assert "Actual spare" in tot and "£719.57" in tot
+    assert "Actual spare" in tot and "£1,209.57" in tot
+    assert page.locator("#st-potleft").inner_text() == "£490.00"         # pot money not spent yet (400 + 90)
     assert page.locator("#st-over").count() == 0                      # no pot over
 
 
@@ -95,8 +96,8 @@ def test_a_pot_going_over_shows_its_own_line_and_the_rows_add_up(page, base):
     post(page, 'form[action="/add"]', {"amount": "100", "name": "Shell"})   # Fuel pot 160 of 150
     assert page.locator("#st-start").inner_text() == "£766.27"
     assert page.locator("#st-over").inner_text() == "£10.00"
-    assert page.locator("#st-spare").inner_text() == "£709.57"
-    assert page.locator("#spare-big").inner_text() == "£709.57"
+    assert page.locator("#st-spare").inner_text() == "£1,109.57"
+    assert page.locator("#spare-big").inner_text() == "£1,109.57"
 
 
 # ---------- 4. 📅 payday date (mock B) ----------
