@@ -5,6 +5,9 @@
 - Each person's data saves in **their own browser** (localStorage). Darren never sees anyone's data.
 - No Python server, no PythonAnywhere. The Python code stays in the repo **as a guide only**.
 
+## Tickets
+In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#25 = old, read only.)
+
 ## Rules
 1. **The look = 100% the LIVE site, v3.62** (branch `live` of DF-AI-Lab/financial-tracker).
    Not the Lite /demo. The ONLY change is the word "Lite".
@@ -27,7 +30,7 @@
 2. **Maths** - turn the Python rules (cycles, bills, spare cash) into JavaScript.
 3. **Saving** - your data in localStorage (+ download / load a backup file).
 4. **Statements** - read the bank PDF in the browser (no upload anywhere).
-5. Then: ticket #25 Bill details and the rest of the map (financial-tracker issue #22).
+5. Then: Bill details (Lite issue #2) and the rest of the map (Lite issue #1).
 
 ## GitHub Pages (Darren does once)
 Repo must be public. Settings → Pages → Branch = the branch Claude names, folder `/docs` → Save.

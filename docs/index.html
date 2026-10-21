@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// Step 1 (look only): no server, nothing is saved yet.
+(function () {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    const u = new URL(typeof url === 'string' ? url : url.url, location.href);
+    if (u.origin !== location.origin || /\/(look\.css|icon-\d+\.png|manifest\.json)$/.test(u.pathname)) return realFetch(url, opts);
+    // /stamp must answer with JSON, or the page's own check would throw; the same stamp each time = no reload.
+    if (u.pathname === '/stamp') return Promise.resolve(new Response('{"stamp":"static"}', {status: 200}));
+    return Promise.resolve(new Response('', {status: 204}));
+  };
+  document.addEventListener('submit', e => e.preventDefault(), true);
+})();
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where&#39;s My Money?</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Money">
+<link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0f6e5c">
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1a1a1a; --muted: #666; --border: #e2e4e8;
+    --row: #f6f7f9; --accent: #0b63ce; --good: #1f8a3b; --bad: #c62828; --warn-bg: #fff3cd; --warn: #7a5a00;
+    --hero: #0b63ce; --hero-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --card: #1f2226; --text: #f2f2f2; --muted: #a8abb0; --border: #33373d;
+      --row: #262a2f; --accent: #5aa2ff; --good: #5fd27a; --bad: #ff7a7a; --warn-bg: #3a3420; --warn: #ffcf5a;
+      --hero: #1d4f8f; --hero-text: #ffffff;
+    }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: hidden; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 16px; width: 100%; box-sizing: border-box; overflow: hidden; }
+  h1 { font-size: 22px; margin: 8px 0 2px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+  .card h2 { font-size: 17px; margin: 0 0 12px; }
+  .hero { background: var(--hero); color: var(--hero-text); border-radius: 14px; padding: 22px; margin-bottom: 14px; text-align: center; }
+  .hero .label { font-size: 14px; letter-spacing: .6px; text-transform: uppercase; opacity: .9; }
+  .hero .big { font-size: 48px; font-weight: 800; line-height: 1.1; margin: 6px 0; }
+  .hero .how { font-size: 14px; opacity: .9; }
+  .tiles.toprow { grid-template-columns: 1.4fr 1fr 1fr; }
+  .paybox { justify-content: center; margin-top: 6px; flex-wrap: nowrap; }
+  .paybox form { flex-wrap: nowrap; }
+  .paybox button[type=submit]:not(.small) { width: 110px; }          /* 'Work it out' and 'Add/Change' the same width */
+  .leftrow { position: relative; display: flex; justify-content: center; }
+  .leftrow .leftx { position: absolute; top: 50%; transform: translateY(-50%); left: calc(50% + 120px); margin: 0; } /* x to the right, boxes stay in line */
+  @media (max-width: 640px) { .tiles.toprow { grid-template-columns: 1fr; } }
+  /* Credit card (5 Oct 2026): the pay box spans 2 rows, 4 half-height tiles fill the right (2 x 2) */
+  .tiles.toprow .paytile { grid-row: span 2; }
+  .tiles.toprow .half { padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; }
+  .tiles.toprow .half .num { font-size: 21px; line-height: 1.2; }
+  tr.crossed td { text-decoration: line-through; opacity: .55; }
+  .cardsum .inline { justify-content: flex-end; flex-wrap: nowrap; }
+  .cardsum input.amount { width: 100px; padding: 5px 8px; text-align: right; }
+  @media (max-width: 640px) { .tiles.toprow { grid-template-columns: 1fr 1fr; } .tiles.toprow .paytile { grid-row: auto; grid-column: 1 / -1; } }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+  .tile .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .tile .num { font-size: 26px; font-weight: 700; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+  form.inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input[type=text] { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 16px; min-width: 0; }
+  input.amount { width: 110px; } input.name { flex: 1; min-width: 140px; }
+  button { padding: 9px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 15px; cursor: pointer; }
+  button.small { padding: 4px 10px; font-size: 13px; background: var(--row); color: var(--text); border: 1px solid var(--border); }
+  .error, .warn { padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 15px; }
+  .error { background: var(--bad); color: #fff; }
+  .warn { background: var(--warn-bg); color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr.total td { font-weight: 700; border-bottom: 0; }
+  .labels { display: block; font-size: 13px; color: var(--muted); }
+  details { border-bottom: 1px solid var(--border); }
+  details:last-of-type { border-bottom: 0; }
+  summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; padding: 10px 2px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--muted); margin-right: 6px; }
+  details[open] summary::before { content: "▾"; }
+  summary .what { flex: 1; } summary .note { display: block; font-size: 13px; color: var(--muted); }
+  summary .val { font-weight: 700; white-space: nowrap; }
+  .inside { padding: 0 2px 10px 22px; font-size: 14px; }
+  .inside div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; color: var(--muted); }
+  .sum { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; font-size: 15px; }
+  .sum .n { text-align: right; white-space: nowrap; }
+  .sum .eq { font-weight: 700; border-top: 1px solid var(--border); padding-top: 4px; }
+  .against { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px; color: var(--muted); font-size: 14px; }
+  .addsup { display: flex; justify-content: space-between; font-weight: 700; padding-top: 8px; }
+  .scroll { overflow-x: auto; }
+  @media (max-width: 520px) { table.periods { font-size: 13px; } table.periods th, table.periods td { padding: 6px 3px; } }
+  .card.folded > :not(h2) { display: none; }
+  .card h2 .fold { float: right; background: none; border: 0; color: var(--muted); font-size: 18px; padding: 0 4px; line-height: 1; }
+  [data-card] table tr.item { border: 0; padding: 2px 14px; margin: 0; }
+  [data-card] table tr.item td { border: 0; padding: 2px 0; }
+  @media (max-width: 640px) {
+    /* Card mode on narrow screens (user, 4 Oct 2026): each row is a card, the name on top, the numbers side by side
+       with their column name above them (data-label, copied from the header by the script at the bottom). */
+    [data-card]:not([data-card="spend"]) table thead,
+    [data-card]:not([data-card="spend"]) table tr:has(th) { display: none; }
+    [data-card]:not([data-card="spend"]) table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px;
+      padding: 10px 14px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; }
+    [data-card]:not([data-card="spend"]) table tr.total { border-width: 2px; }
+    [data-card]:not([data-card="spend"]) table tr.item { display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; border: 0; padding: 3px 14px 3px 26px; margin: 0 0 2px; }
+    [data-card]:not([data-card="spend"]) table tr.item[hidden] { display: none; }
+    [data-card]:not([data-card="spend"]) table tr.item td:first-child { font-weight: 400; }
+    [data-card]:not([data-card="spend"]) table tr.item td.n:empty { display: none; }
+    [data-card]:not([data-card="spend"]) table tr.item td.n::before { content: none; }
+    [data-card]:not([data-card="spend"]) table td { display: block; border: 0; padding: 0; min-width: 0; text-align: left; white-space: normal; }
+    [data-card]:not([data-card="spend"]) table td:first-child { grid-column: 1 / -1; font-weight: 700; }
+    [data-card]:not([data-card="spend"]) table td .x { margin-left: 4px; padding: 2px 7px; }
+    [data-card]:not([data-card="spend"]) table td.n::before { content: attr(data-label); display: block; font-size: 11px;
+      color: var(--muted); text-transform: uppercase; font-weight: 600; white-space: normal; }
+  }
+
+  button.link { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  button.link.muted { color: var(--muted); }
+  input.billbox { width: 90px; padding: 4px 6px; text-align: right; }
+  input.billbox.badval { border-color: var(--bad); }
+  td button.small.x { padding: 0 6px; margin-left: 4px; }
+  tr.bill.stopped td { opacity: .55; }
+  form.stopform { float: right; margin-left: 8px; }
+  button.stopbtn { padding: 1px 8px; font-size: 12px; color: var(--muted); }
+  .handle, .onlyedit { display: none; }
+  body.editing .handle { display: inline-block; cursor: grab; color: var(--muted); margin-right: 6px; user-select: none; }
+  body.editing .onlyedit { display: inline-block; }
+  body.editing div.onlyedit { display: block; }
+  .editbar { display: flex; justify-content: flex-end; gap: 8px; margin: -12px 0 12px; }
+  .hint { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  body.editing .rname { outline: 1px dashed var(--border); border-radius: 4px; padding: 0 3px; cursor: text; }
+  body.editing .card { outline: 1px dashed var(--border); }
+  .dragging { opacity: .4; }
+  .picked { outline: 2px solid var(--accent) !important; background: var(--row); }
+  .dropbar { display: block; border: 2px dashed var(--border); border-radius: 12px; padding: 14px; text-align: center;
+             color: var(--muted); cursor: pointer; margin-bottom: 14px; }
+  .dropbar:hover, body.dragover .dropbar { border-color: var(--accent); color: var(--text); background: var(--row); }
+  .dropresult { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; font-size: 15px; }
+  .sortcard { border-color: var(--accent); }
+  .sortbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { background: var(--bg); color: var(--text); border: 0; border-right: 1px solid var(--border); border-radius: 0; padding: 6px 10px; font-size: 14px; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  input.sname { width: calc(100% - 34px); padding: 4px 6px; font-size: 15px; }
+  .sortrow td:first-child b { display: inline-block; width: 28px; }
+  input.scat { width: 150px; padding: 4px 6px; font-size: 15px; }
+  textarea { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: 14px/1.4 system-ui, sans-serif; }
+  tr.filled td { background: var(--row); }
+  .ask { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ask:last-child { border-bottom: 0; }
+  .askbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  input.asklabel { width: 140px; padding: 4px 6px; }
+  .phonebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 14px; font-size: 14px; color: var(--muted); }
+  .phonebar button { font-size: 16px; }
+  .state { display: block; font-size: 13px; color: var(--warn); }
+  #spendlist td:first-child { white-space: nowrap; }
+  .gone td { text-decoration: line-through; color: var(--muted); }
+  .phonebox label { display: flex; gap: 10px; align-items: center; padding: 6px 0; font-family: ui-monospace, monospace; font-size: 14px; }
+  .footer { color: var(--muted); font-size: 13px; text-align: center; margin: 20px 0 30px; }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="look.css?v=0.02">
+</head>
+<body class="demo">
+
+<div class="wrap">
+  
+  
+  <header class="demohead">
+    <a class="brand" href="./" title="Back to the top"><img src="icon-192.png" alt=""><div><h1>Where's My Money?</h1><div class="tagline">Payday to payday · Lite</div></div></a>
+    <div class="settings"><button type="button" class="small" id="setbtn" aria-expanded="false" aria-controls="setmenu">⚙ Settings</button>
+      
+      <div class="setmenu" id="setmenu" hidden>
+        <div class="v3links">
+          <div class="grp"><a class="small" href="/ideas">💡 Ideas &amp; feedback</a><a class="small" href="/fix">🛠 Fix an item</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
+          <div class="grp"><a class="small" href="/backup/download">💾 Download backup</a>
+          <a class="small" href="/backup/restore">♻️ Restore a backup</a>
+          <form method="post" action="/settings/codes"><button class="small" type="submit">🔑 New backup codes</button></form>
+          <form method="post" action="/settings/pin"><button class="small" type="submit">🔢 Change passcode</button></form>
+          <a class="small" href="/passkey/setup">👆 Fingerprint</a></div>
+          <div class="grp"><form method="post" action="/signout"><button class="small" type="submit">🚪 Sign out</button></form></div>
+        </div></div>
+      <div class="appver">v0.02</div></div>
+    <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday / add statements"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
+  </header>
+  <script>
+    // Settings (14 Oct 2026, order 15 Oct): the Update and Move & rename buttons live in this menu on the demo page
+    document.addEventListener('DOMContentLoaded', () => {
+      // Home button: glide back to the top (no reload), with a little spin of the icon
+      const home = document.querySelector('.demohead .brand');
+      if (home) home.addEventListener('click', e => {
+        e.preventDefault();
+        const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({top: 0, behavior: calm ? 'auto' : 'smooth'});
+        if (!calm) { home.classList.remove('spin'); void home.offsetWidth; home.classList.add('spin'); }
+      });
+      const btn = document.getElementById('setbtn'), menu = document.getElementById('setmenu');
+      if (!btn) return;
+      const bar = document.querySelector('.editbar');
+      if (bar) menu.prepend(bar); else btn.hidden = true;     // Update + Move & rename first, Sign out last
+      const show = on => { menu.hidden = !on; btn.setAttribute('aria-expanded', on); };
+      btn.addEventListener('click', e => { e.stopPropagation(); show(menu.hidden); });
+      document.addEventListener('click', e => { if (!menu.contains(e.target) && !document.body.classList.contains('editing')) show(false); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.body.classList.contains('editing')) show(false); });
+    });
+  </script>
+  
+  
+  
+
+  
+
+  
+  <div class="editbar">
+    <button type="button" class="small" id="updbtn" title="Get the latest version from GitHub">🔄 Update</button>
+    <button type="button" class="small" id="editbtn">✏️ Move &amp; rename</button>
+    <form method="post" action="/layout/reset" class="onlyedit"><button class="small" type="submit">↺ Put the order back</button></form>
+  </div>
+  <div class="onlyedit hint">Click ⠿ on a card or row, then use the ⬆️ ⬇️ arrow keys to move it (or drag it). Click a name to rename it (empty = the normal name). Press <b>Done</b> when finished.</div>
+  
+
+  
+
+  
+
+<div class="card quick" id="quick" hidden>
+  <div class="q-pay">
+    <div class="q-title">New payday?</div>
+    <form method="post" action="/pay" id="payform" data-spends="1" data-pay="2500.00"
+          data-left="">
+      <input type="hidden" name="clear" value="0">
+      <div class="q-fields">
+        <label>Pay<input class="amount" type="text" name="pay" id="qpay" inputmode="decimal" value="2500.00"></label>
+        <label>Left from last month<span class="lx"><input class="amount" type="text" id="qleft" inputmode="decimal" placeholder="0.00" value="">
+          <button type="button" class="small" id="qleftx" title="Remove what was left">✖</button></span></label>
+      </div>
+      <button type="submit" class="q-go">Work it out</button>
+    </form>
+    <form method="post" action="/left" hidden><input type="hidden" name="amount" value=""></form>
+  </div>
+  <div class="q-drop" id="qdrop"></div>
+</div>
+<div class="st-grid">
+  <div class="card st-sum">
+    <div class="st-head">
+      <div>
+        <div class="label">Spare cash left</div>
+        <div class="big" id="spare-big">£1,269.57</div>
+        <div class="st-key" id="st-key"></div>
+      </div>
+      <svg id="ring" viewBox="0 0 100 100" role="img" aria-label="Where the money went">
+        <circle cx="50" cy="50" r="40" class="ring-bg"/>
+        <circle cx="50" cy="50" r="40" class="seg-bill" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="40" class="seg-spend" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="40" class="seg-spare" transform="rotate(-90 50 50)"/>
+        <text x="50" y="57" text-anchor="middle" id="ring-pc"></text>
+      </svg>
+    </div>
+    <div class="st-rows">
+      <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">£2,500.00</button></div>
+      <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">Add</button></div>
+      <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">£1,183.73</span></div>
+      <div class="r"><span><i class="dot spend"></i>− Spends</span><span class="k-spend" id="st-spends">£46.70</span></div>
+      <div class="r tot"><span>Spare</span><span id="st-spare">£1,269.57</span></div>
+    </div>
+    <div id="spare-how" hidden></div>
+  </div>
+  <div class="st-side">
+    
+    
+    <div class="tile wide zcard"><div class="zl">
+        <div class="label">Zopa credit card</div>
+        <div class="zrow"><i class="dot zused"></i><span>Used</span><b id="ccused">£45.00</b></div>
+        <div class="zrow"><i class="dot zfree"></i><span>Free</span><b class="zfreeval" id="ccfree">£455.00</b></div>
+        <div class="zlimit">Limit £500.00</div></div>
+      <svg id="zring" viewBox="0 0 100 100" role="img" aria-label="9% of the limit used">
+        <circle cx="50" cy="50" r="40" class="z-free"/>
+        <circle cx="50" cy="50" r="40" class="z-used" transform="rotate(-90 50 50)"
+          stroke-dasharray="21.1 251.3"/>
+        <text x="50" y="52" text-anchor="middle" class="z-pc">9%</text>
+        <text x="50" y="67" text-anchor="middle" class="z-sub">used</text>
+      </svg>
+    </div>
+  </div>
+</div>
+<script>
+  // Ring: all money in (pay + left) split into bills, spends and spare. Tap Pay or Left to change them.
+  window.demoTop = function (bills) {
+    if (typeof PAGE === 'undefined' || PAGE.wage === undefined) return;
+    if (bills === undefined) bills = PAGE.bills;
+    const total = PAGE.wage + PAGE.left, spends = PAGE.typed, spare = Math.max(total - bills - spends, 0);
+    const C = 2 * Math.PI * 40, f = x => total > 0 ? Math.max(x, 0) / total : 0;
+    let start = 0;
+    [['seg-bill', f(bills)], ['seg-spend', f(spends)], ['seg-spare', f(spare)]].forEach(([cls, part]) => {
+      const el = document.querySelector('#ring .' + cls), len = Math.min(part, 1 - start) * C;
+      el.setAttribute('stroke-dasharray', (len > 2 ? len - 1.5 : len) + ' ' + C);
+      el.setAttribute('stroke-dashoffset', -start * C);
+      start += part;
+    });
+    const pc = x => Math.round(100 * f(x)) + '%';
+    document.getElementById('ring-pc').textContent = pc(spare);
+    // each dot stays with its word when the line wraps (15 Oct 2026)
+    document.getElementById('st-key').innerHTML = '<span><i class="dot bill"></i>Bills ' + pc(bills) + '</span> · <span><i class="dot spend"></i>Spends ' +
+      pc(spends) + '</span> · <span><i class="dot spare"></i>Spare ' + pc(spare) + '</span>';
+    const set = (id, x) => { const el = document.getElementById(id); if (el) el.textContent = money(x); };
+    set('st-bills', bills); set('st-spare', total - bills - spends);
+  };
+  document.addEventListener('DOMContentLoaded', () => {
+    demoTop();
+    // The arrow tab on the header line opens / hides the New payday panel (up = hidden, down = open). Starts hidden.
+    const quick = document.getElementById('quick'), tab = document.getElementById('quicktab');
+    const drop = document.getElementById('dropbar'); if (drop) document.getElementById('qdrop').appendChild(drop);
+    // Slides open / shut: height, padding and fade animate together (none if the computer asks for less motion)
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let anim = null;
+    const openQuick = on => {
+      if (on === !quick.hidden && !anim) return;
+      if (tab) tab.setAttribute('aria-expanded', on);                  // the chevron flips by CSS
+      if (anim) anim.cancel();
+      quick.hidden = false;
+      const cs = getComputedStyle(quick);
+      // margin and border slide too, so nothing jumps when the panel is hidden at the end (15 Oct 2026)
+      const full = {height: quick.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, marginTop: cs.marginTop,
+                    marginBottom: cs.marginBottom, borderTopWidth: cs.borderTopWidth, borderBottomWidth: cs.borderBottomWidth, opacity: 1, transform: 'none'};
+      const shut = {height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px',
+                    borderTopWidth: '0px', borderBottomWidth: '0px', opacity: 0, transform: 'translateY(-8px)'};
+      if (on) window.scrollTo({top: 0, behavior: calm ? 'auto' : 'smooth'});
+      if (calm) { quick.hidden = !on; return; }
+      quick.style.overflow = 'hidden';
+      anim = quick.animate(on ? [shut, full] : [full, shut], {duration: on ? 320 : 240, easing: 'cubic-bezier(.22,.8,.24,1)'});
+      anim.onfinish = () => { quick.style.overflow = ''; quick.hidden = !on; anim = null; };
+    };
+    if (tab) tab.addEventListener('click', () => openQuick(quick.hidden));
+    document.querySelectorAll('.tap').forEach(b => b.addEventListener('click', () => {
+      openQuick(true); const i = document.getElementById(b.dataset.edit); i.focus(); i.select();
+    }));
+    document.getElementById('qleftx').addEventListener('click', () => { document.getElementById('qleft').value = ''; });
+    // Work it out: save Left first when it changed (same POST /left as the normal page), then send the pay form
+    const payForm = document.getElementById('payform');
+    payForm.addEventListener('submit', async e => {
+      const left = document.getElementById('qleft').value.trim();
+      if (left === payForm.dataset.left) return;
+      e.preventDefault();
+      await fetch('/left', {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: new URLSearchParams({amount: left})});
+      payForm.submit();
+    });
+  });
+</script>
+
+  
+  <!-- No. 6a: drop statement PDFs anywhere on the page, or click to choose them -->
+  <label class="dropbar" id="dropbar">
+    <input type="file" id="dropfiles" accept=".pdf,application/pdf" multiple hidden>
+    <span id="droptext"><i class="dot "></i> <b>Drop statements here</b> (PDFs), or click to choose them</span>
+  </label>
+  <div id="dropresult" class="dropresult" hidden></div>
+  
+
+  <!-- No. 6b: new items sorted on the page (my guess is picked; change any, then Save) -->
+  
+
+  <!-- No. 6c: the other questions (same bill, rent, typed spends), answered with one click -->
+  
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  <!-- Cards and rows in the user's own order, rows renamed (fintrack/layout.py, 3 Oct 2026) -->
+  <div id="cards" data-sort="cards">
+  
+  <div class="card" data-id="spend" data-card="spend">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot spend"></i> Add a spend<button type="button" class="fold" title="Fold">▾</button></h2>
+    
+    
+    <form class="inline" method="post" action="/add">
+      <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.50" aria-label="Amount">
+      <input class="name" type="text" name="name" placeholder="Costa" aria-label="What">
+      <button type="submit">Add</button>
+    </form>
+    
+      <table style="margin-top:12px">
+        
+          
+          <tr class="drow"><td><b>Costa</b><span class="labels">25 Oct 2024 · Unsorted</span></td><td class="n">£12.50</td>
+              <td class="n"><form method="post" action="/remove"><input type="hidden" name="id" value="1"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove Costa">×</button></form></td></tr>
+          
+        
+          
+          <tr class="drow"><td><b>Tesco</b><span class="labels">25 Oct 2024 · Food shopping</span></td><td class="n">£34.20</td>
+              <td class="n"><form method="post" action="/remove"><input type="hidden" name="id" value="2"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove Tesco">×</button></form></td></tr>
+          
+        
+      </table>
+    
+    
+    <div class="sum" style="margin-top:12px">
+      <span>Money for spending</span><span class="n" id="mfs">£1,316.27</span>
+      <span>Typed so far</span><span class="n" id="typed">£46.70</span>
+      <span class="eq">Left now</span><span class="n eq" id="leftnow">£1,269.57</span>
+    </div>
+  </div>
+  
+  <div class="card" data-id="card" data-card="card">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot zused"></i> Credit card<button type="button" class="fold" title="Fold">▾</button></h2>
+    
+    
+    <form class="inline" method="post" action="/card/add">
+      <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="40" aria-label="Amount">
+      <input class="name" type="text" name="name" placeholder="Shell" aria-label="What">
+      <button type="submit">Add</button>
+      <button type="submit" class="small" name="paid" value="1" title="Money you paid off the card (name can be empty)">Paid off</button>
+    </form>
+    
+      <table style="margin-top:12px">
+        
+          
+          <tr class="drow "><td><b>Amazon</b><span class="labels">25 Oct 2024</span></td>
+              <td class="n ">£45.00</td>
+              <td class="n"><form method="post" action="/card/remove"><input type="hidden" name="id" value="1"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove Amazon">×</button></form></td></tr>
+          
+        
+      </table>
+    
+    
+    <div class="sum cardsum" style="margin-top:12px">
+      <span>Limit</span><span class="n"><form class="inline" method="post" action="/card/limit"><input class="amount" type="text" name="amount" inputmode="decimal" value="500.00" aria-label="Limit"><button class="small" type="submit">Change</button></form></span>
+      <span>Used <span class="labels">type the Zopa app's amount to make it exact</span></span><span class="n"><form class="inline" method="post" action="/card/balance" id="ccbalform"><input class="amount" type="text" name="amount" id="ccused2" inputmode="decimal" value="45.00" aria-label="What the Zopa card owes now"><button class="small" type="submit">Change</button></form></span>
+      <span class="eq">Free</span><span class="n eq" id="ccfree2">£455.00</span>
+    </div>
+  </div>
+  
+  
+<div class="card" data-id="bills" data-card="bills">
+  <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot bill"></i> Bills (every month)<button type="button" class="fold" title="Fold">▾</button></h2>
+  <table id="bills" class="dbills">
+    <thead><tr><th>Bill</th><th class="n">2-mth avg</th><th class="n">Last month</th><th class="n">Diff</th><th></th></tr></thead>
+    <tbody data-sort="bills">
+    
+      
+      
+      <tr class="bill" data-id="bill:Rent" data-key="Rent" data-avg="550.0" data-avg0="550.0" data-default="550.0" data-default0="550.0" data-estimated="0" data-changed="0" data-used="550.0" data-new="0" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Rent" data-orig="Rent">Rent</span><b class="bbase">Rent</b>
+          <span class="bsub">avg £550.00</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Rent"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£550.00</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£550.00</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="550.00" aria-label="New amount for Rent" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Rent">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Council Tax" data-key="Council Tax" data-avg="161.0" data-avg0="161.0" data-default="161.0" data-default0="161.0" data-estimated="0" data-changed="0" data-used="161.0" data-new="1" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Council Tax" data-orig="Council Tax">Council Tax</span><b class="bbase">Council Tax</b>
+          <span class="bsub">avg £161.00 · <span class="bnew">new</span></span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Council Tax"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£161.00</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£161.00</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="161.00" aria-label="New amount for Council Tax" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Council Tax">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Energy Co" data-key="Energy Co" data-avg="157.12" data-avg0="157.12" data-default="157.12" data-default0="157.12" data-estimated="0" data-changed="0" data-used="157.12" data-new="1" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Energy Co" data-orig="Energy Co">Energy Co</span><b class="bbase">Energy Co</b>
+          <span class="bsub">avg £157.12 · <span class="bnew">new</span></span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Energy Co"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£157.12</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£157.12</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="157.12" aria-label="New amount for Energy Co" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Energy Co">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Bills" data-key="Bills" data-avg="150.0" data-avg0="150.0" data-default="150.0" data-default0="150.0" data-estimated="0" data-changed="0" data-used="150.0" data-new="1" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Bills" data-orig="Bills">Bills</span><b class="bbase">Bills</b>
+          <span class="bsub">avg £150.00 · <span class="bnew">new</span></span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Bills"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£150.00</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£150.00</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="150.00" aria-label="New amount for Bills" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Bills">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Gym Club" data-key="Gym Club" data-avg="50.0" data-avg0="50.0" data-default="50.0" data-default0="50.0" data-estimated="0" data-changed="0" data-used="50.0" data-new="0" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Gym Club" data-orig="Gym Club">Gym Club</span><b class="bbase">Gym Club</b>
+          <span class="bsub">avg £50.00</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Gym Club"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£50.00</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£50.00</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="50.00" aria-label="New amount for Gym Club" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Gym Club">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Sky Digital" data-key="Sky Digital" data-avg="46.5" data-avg0="46.5" data-default="46.5" data-default0="46.5" data-estimated="0" data-changed="0" data-used="46.5" data-new="0" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Sky Digital" data-orig="Sky Digital">Sky Digital</span><b class="bbase">Sky Digital</b>
+          <span class="bsub">avg £46.50</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Sky Digital"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£46.50</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£46.50</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="46.50" aria-label="New amount for Sky Digital" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Sky Digital">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Phone Co" data-key="Phone Co" data-avg="40.11" data-avg0="40.11" data-default="40.11" data-default0="40.11" data-estimated="0" data-changed="0" data-used="40.11" data-new="0" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Phone Co" data-orig="Phone Co">Phone Co</span><b class="bbase">Phone Co</b>
+          <span class="bsub">avg £40.11</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Phone Co"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£40.11</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£40.11</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="40.11" aria-label="New amount for Phone Co" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Phone Co">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Water Board" data-key="Water Board" data-avg="15.75" data-avg0="15.75" data-default="15.75" data-default0="15.75" data-estimated="0" data-changed="0" data-used="15.75" data-new="0" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Water Board" data-orig="Water Board">Water Board</span><b class="bbase">Water Board</b>
+          <span class="bsub">avg £15.75</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Water Board"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£15.75</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£15.75</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="15.75" aria-label="New amount for Water Board" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Water Board">⋯</button></td></tr>
+    
+      
+      
+      <tr class="bill" data-id="bill:Tv Licence" data-key="Tv Licence" data-avg="13.25" data-avg0="13.25" data-default="13.25" data-default0="13.25" data-estimated="0" data-changed="0" data-used="13.25" data-new="0" data-stopped="0">
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="bill:Tv Licence" data-orig="Tv Licence">Tv Licence</span><b class="bbase">Tv Licence</b>
+          <span class="bsub">avg £13.25</span>
+          <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="Tv Licence"><input type="hidden" name="stopped" value="1"><button class="small stopbtn" type="submit">Stop</button></form></td>
+        <td class="n bavg">£13.25</td>
+        <td class="n bamt">
+          <button type="button" class="link " title="Change it for this pay cycle">£13.25</button>
+          <input class="amount billbox" type="text" inputmode="decimal" value="13.25" aria-label="New amount for Tv Licence" hidden>
+          <button type="button" class="small x" title="Put it back" hidden>✖</button>
+        </td>
+        <td class="n diff muted">£0.00</td>
+        <td class="bmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or stop Tv Licence">⋯</button></td></tr>
+    
+    </tbody>
+    
+    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg £1,183.73</span></td><td class="n bavg">£1,183.73</td><td class="n bamt" id="btotal">£1,183.73</td>
+      <td class="n diff " id="bdiff">£0.00</td><td></td></tr></tbody>
+  </table>
+  <div class="labels bnote">
+    
+    ⋯ → Change amount = this pay cycle only (or tap the blue amount). Spare cash updates as you type.
+  </div>
+</div>
+<script>
+  // ⋯ menu for each bill: Change amount (opens the same box), Put back (the same ✖), Stop / Undo (the same form)
+  document.addEventListener('DOMContentLoaded', () => {
+    const close = () => document.querySelectorAll('.bmenu, .bswap').forEach(m => m.remove());
+    const SWAP = {"join": ["Rent", "Council Tax", "Energy Co", "Bills", "Gym Club", "Sky Digital", "Phone Co", "Water Board", "Tv Licence"], "on": true, "split": []};
+    const post = (url, key) => { const f = document.createElement('form'); f.method = 'post'; f.action = url; f.className = 'bswap';
+      const k = document.createElement('input'); k.type = 'hidden'; k.name = 'key'; k.value = key; f.appendChild(k);
+      document.body.appendChild(f); return f; };
+    document.querySelectorAll('.dbills tr.bill .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const open = btn.parentElement.querySelector('.bmenu'); close(); if (open) return;
+      const row = btn.closest('tr'), m = document.createElement('div'); m.className = 'bmenu'; m.setAttribute('role', 'menu');
+      const add = (text, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text;
+        if (cls) b.className = cls; b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); m.appendChild(b); };
+      const stopped = row.dataset.stopped === '1';
+      if (!stopped) add('✏️ Change amount', '', () => row.querySelector('button.link').click());
+      if (row.dataset.changed === '1') add('↩ Put back', '', () => row.querySelector('button.x').click());
+      add(stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit());
+      // v3 (fintrack/v3/billswap.py): this bill replaces another one (joins it), or undo that
+      const others = [...document.querySelectorAll('.dbills tr.bill')].filter(r => r !== row && SWAP.join.includes(r.dataset.key));
+      if (SWAP.on && SWAP.join.includes(row.dataset.key) && others.length) add('🔁 Replaces…', '', () => {
+        const f = post('/bill/join', row.dataset.key), sel = document.createElement('select'), go = document.createElement('button');
+        sel.name = 'into'; sel.required = true; sel.setAttribute('aria-label', 'Which bill it replaces'); sel.add(new Option('Pick the bill ▾', ''));
+        others.forEach(r => sel.add(new Option(r.querySelector('.bbase').textContent, r.dataset.key)));
+        go.type = 'submit'; go.className = 'small'; go.textContent = 'Replaces it';
+        f.append(sel, go); f.addEventListener('click', ev => ev.stopPropagation());
+        btn.parentElement.appendChild(f); sel.focus(); });
+      if (SWAP.on && SWAP.split.includes(row.dataset.key)) add('↔ Split back out', '', () => post('/bill/split', row.dataset.key).submit());
+      btn.parentElement.appendChild(m); m.querySelector('button').focus();
+    }));
+    document.addEventListener('click', close);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  });
+</script>
+  
+  
+
+<div class="card" data-id="lastmonth" data-card="lastmonth">
+  <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot"></i> Last month's spending<button type="button" class="fold" title="Fold">▾</button></h2>
+  <table class="dlast">
+    <thead>
+      
+      <tr class="lbills"><td><b class="bbase"><i class="dot bill"></i>Bills</b><span class="bsub">Rent, direct debits, standing orders · in the Bills card · avg £1,183.73</span></td>
+        <td class="n lamt k-bill">£1,183.73</td>
+        <td class="n diff ">£0.00</td><td></td></tr>
+    </thead>
+    <tbody data-sort="lastmonth">
+    
+      
+      
+      <tr data-id="cat:Unsorted"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Unsorted" data-orig="Unsorted">Unsorted</span></b>
+          <span class="bsub">Chiropractor, Cloud Host Aws.example.co, Taco Place · avg £125.10</span></td>
+        <td class="n lamt">£143.58</td>
+        <td class="n diff bad">+£18.48</td>
+        <td class="lchev"><button type="button" class="chev" aria-expanded="false" aria-label="Show the shops in Unsorted"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>6</span></button></td></tr>
+      
+      <tr class="item" data-cat="cat:Unsorted" hidden><td>Chiropractor</td><td class="n">£70.00</td>
+        <td class="n"><button type="button" class="small tobill" data-key="CARD|CHIROPRACTOR|" data-name="Chiropractor">→ Bill</button></td><td></td></tr>
+      
+      <tr class="item" data-cat="cat:Unsorted" hidden><td>Cloud Host Aws.example.co</td><td class="n">£26.59</td>
+        <td class="n"><button type="button" class="small tobill" data-key="CARD|CLOUD HOST AWS.EXAMPLE.CO|" data-name="Cloud Host Aws.example.co">→ Bill</button></td><td></td></tr>
+      
+      <tr class="item" data-cat="cat:Unsorted" hidden><td>Taco Place</td><td class="n">£14.20</td>
+        <td class="n"><button type="button" class="small tobill" data-key="CARD|TACO PLACE|" data-name="Taco Place">→ Bill</button></td><td></td></tr>
+      
+      <tr class="item" data-cat="cat:Unsorted" hidden><td>Stream Video</td><td class="n">£12.99</td>
+        <td class="n"><button type="button" class="small tobill" data-key="CARD|STREAM VIDEO|" data-name="Stream Video">→ Bill</button></td><td></td></tr>
+      
+      <tr class="item" data-cat="cat:Unsorted" hidden><td>Tools</td><td class="n">£10.00</td>
+        <td class="n"><button type="button" class="small tobill" data-key="BP|TOOL SHOP|TOOLS" data-name="Tools">→ Bill</button></td><td></td></tr>
+      
+      <tr class="item" data-cat="cat:Unsorted" hidden><td>Greengrocer</td><td class="n">£9.80</td>
+        <td class="n"><button type="button" class="small tobill" data-key="CARD|GREENGROCER|" data-name="Greengrocer">→ Bill</button></td><td></td></tr>
+      
+    
+      
+      
+      <tr data-id="cat:Food shopping"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Food shopping" data-orig="Food shopping">Food shopping</span></b>
+          <span class="bsub">Food And Bil · avg £80.00</span></td>
+        <td class="n lamt">£90.00</td>
+        <td class="n diff bad">+£10.00</td>
+        <td class="lchev"><button type="button" class="chev" aria-expanded="false" aria-label="Show the shops in Food shopping"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>1</span></button></td></tr>
+      
+      <tr class="item" data-cat="cat:Food shopping" hidden><td>Food And Bil</td><td class="n">£90.00</td>
+        <td class="n"><button type="button" class="small tobill" data-key="BP|SAM PARKER|FOOD AND BIL" data-name="Food And Bil">→ Bill</button></td><td></td></tr>
+      
+    
+      
+      
+      <tr data-id="cat:Cash"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Cash" data-orig="Cash">Cash</span></b>
+          <span class="bsub">Cash Machine · avg £45.00</span></td>
+        <td class="n lamt">£40.00</td>
+        <td class="n diff good">-£5.00</td>
+        <td class="lchev"><button type="button" class="chev" aria-expanded="false" aria-label="Show the shops in Cash"><svg viewBox="0 0 12 8" width="10" height="7" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2"/></svg><span>1</span></button></td></tr>
+      
+      <tr class="item" data-cat="cat:Cash" hidden><td>Cash Machine</td><td class="n">£40.00</td>
+        <td class="n"><button type="button" class="small tobill" data-key="CASH|CASH MACHINE|" data-name="Cash Machine">→ Bill</button></td><td></td></tr>
+      
+    
+      
+      
+      <tr data-id="cat:Car"><td><span class="handle" title="Drag to move">⠿</span><b class="bbase"><span class="rname" data-id="cat:Car" data-orig="Car">Car</span></b>
+          <span class="bsub">avg £35.01</span></td>
+        <td class="n lamt">£0.00</td>
+        <td class="n diff good">-£35.01</td>
+        <td class="lchev"></td></tr>
+      
+    
+    </tbody>
+    
+    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg £1,468.83</span></td>
+      <td class="n lamt">£1,457.31</td>
+      <td class="n diff good">-£11.52</td><td></td></tr></tbody>
+  </table>
+</div>
+<script>
+  // The arrow button opens / shuts a category's shops (the same item rows the normal card opens with ▸ N)
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.dlast .chev').forEach(btn => btn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const id = btn.closest('tr').dataset.id, open = btn.getAttribute('aria-expanded') !== 'true';
+      document.querySelectorAll('.dlast tr.item[data-cat="' + id + '"]').forEach(r => r.hidden = !open);
+      btn.setAttribute('aria-expanded', open);
+    }));
+  });
+</script>
+  
+  
+  <div class="card" data-id="where" data-card="where">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> Where did last cycle's money go?<button type="button" class="fold" title="Fold">▾</button></h2>
+    <div class="sub">30 Aug 2024 to 29 Sep 2024</div>
+    <div class="tiles">
+      <div class="tile"><div class="label">Expected spare</div><div class="num">£3,153.84</div></div>
+      <div class="tile"><div class="label">Actual spare</div><div class="num">£3,203.47</div></div>
+      <div class="tile"><div class="label">Extra</div>
+        <div class="num good">£49.63</div></div>
+    </div>
+    
+      
+        <details><summary><span class="what">Car under normal<span class="note">(0.00 vs usual 70.01)</span></span><span class="val">£70.01</span></summary>
+          <div class="inside">
+            <div>No payments in this cycle.</div>
+          </div></details>
+      
+        <details><summary><span class="what">Other money in</span><span class="val">£26.59</span></summary>
+          <div class="inside">
+            <div><span>18 Sep 2024 · INT&#39;L 0093267280</span><span>£26.59</span></div>
+            
+          </div></details>
+      
+        <details><summary><span class="what">Small bits (under 20 each)</span><span class="val">£21.99</span></summary>
+          <div class="inside">
+            <div><span>9 Sep 2024 · CASH MACHINE</span><span>-£40.00</span></div>
+            
+          </div></details>
+      
+      
+        <div class="against"><span>Spent MORE than normal (Unsorted -48.96, Food shopping -20.00)</span><span>-£68.96</span></div>
+      
+      <div class="addsup"><span>Adds up to</span><span>£49.63 ✅</span></div>
+    
+  </div>
+  
+  
+  <div class="card" data-id="cats" data-card="cats">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> Spending by category<button type="button" class="fold" title="Fold">▾</button></h2>
+    <div class="sub">This cycle so far vs the 2-cycle average. Tap one to see inside.</div>
+    <div data-sort="cats">
+    
+      <details data-id="cat:Household"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Household" data-orig="Household">Household</span><span class="note">now £1,093.62 · usual £625.50</span></span>
+        <span class="val bad">+£468.12</span></summary>
+        <div class="inside">
+          <div><span>Council Tax</span><span>£161.00 now · £0.00 usual</span></div><div><span>Energy Co</span><span>£157.12 now · £0.00 usual</span></div><div><span>Bills</span><span>£150.00 now · £0.00 usual</span></div><div><span>Rent</span><span>£550.00 now · £550.00 usual</span></div><div><span>Sky Digital</span><span>£46.50 now · £46.50 usual</span></div><div><span>Tv Licence</span><span>£13.25 now · £13.25 usual</span></div><div><span>Water Board</span><span>£15.75 now · £15.75 usual</span></div>
+        </div></details>
+    
+      <details data-id="cat:Unsorted"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Unsorted" data-orig="Unsorted">Unsorted</span><span class="note">now £454.93 · usual £215.20</span></span>
+        <span class="val bad">+£239.73</span></summary>
+        <div class="inside">
+          <div><span>Furniture Store</span><span>£279.00 now · £0.00 usual</span></div><div><span>Farm Shop</span><span>£52.44 now · £0.00 usual</span></div><div><span>Print Shop</span><span>£1.49 now · £0.00 usual</span></div><div><span>Taco Place</span><span>£18.90 now · £18.25 usual</span></div><div><span>Gym Club</span><span>£50.00 now · £50.00 usual</span></div><div><span>Phone Co</span><span>£40.11 now · £40.11 usual</span></div><div><span>Stream Video</span><span>£12.99 now · £12.99 usual</span></div><div><span>Tools</span><span>£0.00 now · £5.00 usual</span></div><div><span>Learn Online</span><span>£0.00 now · £6.00 usual</span></div><div><span>Cloud Host Aws.example.co</span><span>£0.00 now · £13.29 usual</span></div><div><span>Greengrocer</span><span>£0.00 now · £34.56 usual</span></div><div><span>Chiropractor</span><span>£0.00 now · £35.00 usual</span></div>
+        </div></details>
+    
+      <details data-id="cat:Car"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Car" data-orig="Car">Car</span><span class="note">now £61.30 · usual £35.01</span></span>
+        <span class="val bad">+£26.29</span></summary>
+        <div class="inside">
+          <div><span>Petrol Station</span><span>£61.30 now · £35.01 usual</span></div>
+        </div></details>
+    
+      <details data-id="cat:Cash"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Cash" data-orig="Cash">Cash</span><span class="note">now £0.00 · usual £45.00</span></span>
+        <span class="val good">-£45.00</span></summary>
+        <div class="inside">
+          <div><span>Cash Machine</span><span>£0.00 now · £45.00 usual</span></div>
+        </div></details>
+    
+      <details data-id="cat:Food shopping"><summary><span class="what"><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="cat:Food shopping" data-orig="Food shopping">Food shopping</span><span class="note">now £30.00 · usual £80.00</span></span>
+        <span class="val good">-£50.00</span></summary>
+        <div class="inside">
+          <div><span>Food And Bil</span><span>£30.00 now · £80.00 usual</span></div>
+        </div></details>
+    
+    </div>
+  </div>
+  
+  <div class="card" data-id="subs" data-card="subs">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> Subscriptions<button type="button" class="fold" title="Fold">▾</button></h2>
+    
+      <table>
+        <thead><tr><th>Still paying</th><th class="n">Monthly price</th><th class="n">Last 12 months</th><th class="n">This year</th></tr></thead>
+        <tbody data-sort="subs-active">
+        <tr data-id="sub:Stream Video"><td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="sub:Stream Video" data-orig="Stream Video">Stream Video</span><button type="button" class="small tobill" data-key="CARD|STREAM VIDEO|" data-name="Stream Video">→ Bill</button><span class="labels">since Aug 2024</span></td><td class="n">£12.99</td><td class="n">£38.97</td><td class="n">£38.97</td></tr>
+        </tbody>
+        
+      </table>
+    
+    
+  </div>
+  
+  <div class="card" data-id="periods" data-card="periods">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot "></i> 6 months, 12 months and this year<button type="button" class="fold" title="Fold">▾</button></h2>
+    
+    <div class="scroll"><table class="periods">
+      <tr><th></th><th class="n">Last 6 months<span class="labels">2 pay cycles</span></th><th class="n">Last 12 months<span class="labels">2 pay cycles</span></th><th class="n">2024 so far<span class="labels">2 pay cycles</span></th></tr>
+      <tr><td>Wage</td><td class="n">£4,798.30</td><td class="n">£4,798.30</td><td class="n">£4,798.30</td></tr>
+      <tr><td>Other money in</td><td class="n">£56.59</td><td class="n">£56.59</td><td class="n">£56.59</td></tr>
+      <tr><td>Bills</td><td class="n">£1,431.22</td><td class="n">£1,431.22</td><td class="n">£1,431.22</td></tr>
+      <tr><td>Spending</td><td class="n">£570.20</td><td class="n">£570.20</td><td class="n">£570.20</td></tr>
+      <tr><td>One-offs</td><td class="n">£0.00</td><td class="n">£0.00</td><td class="n">£0.00</td></tr>
+      <tr class="total"><td>Left over</td><td class="n good">£2,853.47</td><td class="n good">£2,853.47</td><td class="n good">£2,853.47</td></tr>
+    </table></div>
+    
+    <div class="sub" style="margin:14px 0 4px">Six-month picture (averages per pay cycle)</div>
+    <div class="sum">
+      <span>Wage (average)</span><span class="n">£2,399.15</span>
+      <span>Bills (average)</span><span class="n">£715.61</span>
+      <span>Normal spending (average)</span><span class="n">£285.10</span>
+      <span>One-offs (not counted)</span><span class="n">£0.00</span>
+      <span>Unsorted (average)</span><span class="n">£215.21</span>
+    </div>
+  </div>
+  
+  </div>
+  
+
+  
+  <div class="footer">New statements? Put the PDFs in the statements folder, run run.py (it asks any questions), then refresh this page.</div>
+  
+</div>
+
+<script>
+  // Fold cards: toggle folded class and save/load from localStorage (user, 5 Oct 2026)
+  var folded = [];
+  try {
+    var stored = localStorage.getItem('ft_folded');
+    if (stored) folded = JSON.parse(stored);
+  } catch (e) {}
+
+  function saveFolded() {
+    try {
+      var ids = [];
+      document.querySelectorAll('.card.folded').forEach(function (c) {
+        if (c.dataset.id) ids.push(c.dataset.id);
+      });
+      localStorage.setItem('ft_folded', JSON.stringify(ids));
+    } catch (e) {}
+  }
+
+  // Restore folded state
+  folded.forEach(function (id) {
+    var card = document.querySelector('.card[data-id="' + id + '"]');
+    if (card) {
+      card.classList.add('folded');
+      var btn = card.querySelector('h2 .fold');
+      if (btn) btn.textContent = '▸';
+    }
+  });
+
+  // Fold cards (5 Oct 2026). 15 Oct: they slide open / shut, and only N can be open at once (Settings → Cards open
+  // at once, default 2, per device): opening one more folds the one opened longest ago.
+  var openOrder = [], maxOpen = 2;
+  try { openOrder = JSON.parse(localStorage.getItem('ft_openorder') || '[]'); maxOpen = parseInt(localStorage.getItem('ft_maxopen'), 10) || 2; } catch (e) {}
+  var calmFold = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function foldable() { return Array.prototype.slice.call(document.querySelectorAll('.card[data-id]')).filter(function (c) { return c.querySelector('h2 .fold'); }); }
+  function saveOrder() { try { localStorage.setItem('ft_openorder', JSON.stringify(openOrder)); } catch (e) {} }
+  function slideFold(card, fold, keep) {
+    var btn = card.querySelector('h2 .fold');
+    if (btn) btn.textContent = fold ? '▸' : '▾';
+    if (card.classList.contains('folded') === fold) return;
+    if (card.getAnimations) card.getAnimations().forEach(function (a) { a.cancel(); });
+    var r = card.getBoundingClientRect();
+    if (calmFold || !card.animate || r.bottom < 0) {           // off the top of the screen: fold at once and keep the view still
+      var before = card.offsetHeight;
+      card.classList.toggle('folded', fold);
+      if (r.bottom < 0) window.scrollBy(0, card.offsetHeight - before);
+      return;
+    }
+    var from = card.offsetHeight;
+    card.classList.toggle('folded', fold);
+    var to = card.offsetHeight;
+    card.style.overflow = 'hidden';
+    var a = card.animate([{height: from + 'px'}, {height: to + 'px'}], {duration: fold ? 300 : 340, easing: 'cubic-bezier(.2,.75,.25,1)'});
+    if (!fold) Array.prototype.slice.call(card.children).forEach(function (el) {
+      if (el.tagName !== 'H2' && el.animate) el.animate([{opacity: 0, transform: 'translateY(-6px)'}, {opacity: 1, transform: 'none'}], {duration: 340, easing: 'ease-out'});
+    });
+    a.onfinish = a.oncancel = function () { card.style.overflow = ''; };
+  }
+  function keepToMax(justOpened) {
+    var open = foldable().filter(function (c) { return !c.classList.contains('folded'); }).map(function (c) { return c.dataset.id; });
+    openOrder = openOrder.filter(function (id) { return open.indexOf(id) >= 0 && id !== justOpened; });
+    open.forEach(function (id) { if (openOrder.indexOf(id) < 0 && id !== justOpened) openOrder.unshift(id); });   // never-touched cards count as oldest
+    if (justOpened) openOrder.push(justOpened);
+    var anchor = justOpened && document.querySelector('.card[data-id="' + justOpened + '"]');
+    var top = anchor && anchor.getBoundingClientRect().top;
+    while (openOrder.length > maxOpen) {
+      var old = document.querySelector('.card[data-id="' + openOrder.shift() + '"]');
+      if (old) slideFold(old, true);
+    }
+    if (anchor) holdStill(anchor, top);
+    saveOrder(); saveFolded();
+  }
+  // The card you opened stays where it is on the screen while a card above it folds (15 Oct 2026)
+  function holdStill(card, top) {
+    var until = Date.now() + 450;
+    (function step() {
+      var drift = card.getBoundingClientRect().top - top;
+      if (Math.abs(drift) >= 0.5) window.scrollBy(0, drift);
+      if (Date.now() < until) requestAnimationFrame(step);
+    })();
+  }
+
+  // Handle fold button clicks
+  document.querySelectorAll('.card h2 .fold').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var card = btn.closest('.card');
+      if (!card) return;
+      var fold = !card.classList.contains('folded');
+      slideFold(card, fold);
+      keepToMax(fold ? null : card.dataset.id);
+    });
+  });
+
+  // Settings → Cards open at once (1 to 9)
+  (function () {
+    var shown = document.getElementById('maxopen');
+    if (!shown) return;
+    shown.textContent = maxOpen;
+    function setMax(n) {
+      maxOpen = Math.min(9, Math.max(1, n)); shown.textContent = maxOpen;
+      try { localStorage.setItem('ft_maxopen', maxOpen); } catch (e) {}
+      keepToMax(null);
+    }
+    document.getElementById('maxless').addEventListener('click', function (e) { e.stopPropagation(); setMax(maxOpen - 1); });
+    document.getElementById('maxmore').addEventListener('click', function (e) { e.stopPropagation(); setMax(maxOpen + 1); });
+  })();
+
+  // Error messages go after 5 seconds (15 Oct 2026); the ?error= is taken off the address so a refresh does not bring it back
+  document.querySelectorAll('.error.fade').forEach(function (box) {
+    setTimeout(function () {
+      if (calmFold || !box.animate) { box.remove(); return; }
+      var cs = getComputedStyle(box);
+      box.style.overflow = 'hidden';
+      box.animate([{opacity: 1, height: box.offsetHeight + 'px', marginBottom: cs.marginBottom, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom},
+                   {opacity: 0, height: '0px', marginBottom: '0px', paddingTop: '0px', paddingBottom: '0px'}],
+                  {duration: 400, easing: 'ease-in-out'}).onfinish = function () { box.remove(); };
+    }, 5000);
+  });
+  if (location.search.indexOf('error=') >= 0 && history.replaceState) history.replaceState(null, '', location.pathname);
+
+  // Expand/collapse items in last month's spending
+  document.querySelectorAll('.openitems').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var row = btn.closest('tr');
+      if (!row) return;
+      var catId = row.dataset.id;
+      var items = document.querySelectorAll('tr.item[data-cat="' + catId + '"]');
+      var isHidden = items[0] && items[0].hidden;
+      items.forEach(function (item) { item.hidden = !isHidden; });
+      btn.textContent = isHidden ? '▾ ' + items.length : '▸ ' + items.length;
+    });
+  });
+
+  // Set up data-label attributes for responsive tables (runs on all pages before other scripts)
+  document.querySelectorAll('table').forEach(function (table) {
+    var headers = [];
+    table.querySelectorAll('th').forEach(function (th, i) {
+      headers[i] = (th.childNodes[0] ? th.childNodes[0].textContent : th.textContent).trim();
+    });
+    table.querySelectorAll('tbody td').forEach(function (td) {
+      var row = td.parentElement;
+      var idx = [...row.children].indexOf(td);
+      if (headers[idx] && !td.dataset.label) {
+        td.dataset.label = headers[idx];
+      }
+    });
+  });
+</script>
+
+
+<script>
+  // Change a bill for this pay cycle only (3 Oct 2026): spare cash, Diff and Total update as you type,
+  // and each change is saved quietly (POST /bill) as a temp note until the next payday. Bills are never changed.
+  const PAGE = {"bills": 1183.73, "left": 0.0, "typed": 46.700000000000045, "wage": 2500.0};
+  const money = x => (x < 0 ? '-£' : '£') + Math.abs(x).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const diff = x => Math.abs(x) < 0.005 ? '£0.00' : (x > 0 ? '+' : '') + money(x);
+  const tone = (el, x) => { el.classList.remove('good', 'bad', 'muted'); if (x === null) el.classList.add('muted');
+    else if (x < -0.005) el.classList.add('good'); else if (x > 0.005) el.classList.add('bad'); else el.classList.add('muted'); };
+  const readMoney = t => { t = t.replace(/[£,\s]/g, ''); return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN; };
+
+  function save(row, amount) {
+    fetch('/bill', {method: 'POST', headers: {'X-Requested-With': 'fetch', 'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({key: row.dataset.key, amount: amount})});
+  }
+
+  function showRow(row) {
+    const used = parseFloat(row.dataset.used), changed = row.dataset.changed === '1', est = row.dataset.estimated === '1' && !changed;
+    const link = row.querySelector('button.link');
+    link.textContent = money(used) + (est ? '*' : (changed && !document.body.classList.contains('demo') ? ' ✏️' : ''));
+    link.classList.toggle('muted', est);
+    row.querySelector('button.x').hidden = !changed;
+    const d = est ? null : used - parseFloat(row.dataset.avg);
+    const cell = row.querySelector('td.diff');
+    cell.textContent = d === null ? '' : diff(d); tone(cell, d);
+  }
+
+  function recalc() {
+    let bills = 0, avg = 0;
+    document.querySelectorAll('tr.bill').forEach(r => { bills += parseFloat(r.dataset.used); avg += parseFloat(r.dataset.avg); });
+    const spare = PAGE.wage + PAGE.left - bills, leftNow = spare - PAGE.typed;
+    document.getElementById('btotal').textContent = money(bills);
+    const bd = document.getElementById('bdiff'); bd.textContent = diff(bills - avg); tone(bd, bills - avg); bd.classList.remove('muted');
+    document.getElementById('spare-big').textContent = money(leftNow);
+    document.getElementById('spare-how').textContent = 'Pay ' + money(PAGE.wage) + (PAGE.left ? ' + left ' + money(PAGE.left) : '') +
+      ' − bills ' + money(bills) + ' = ' + money(spare) + (PAGE.typed ? ' − spends ' + money(PAGE.typed) : '');
+    document.getElementById('mfs').textContent = money(spare);
+    document.getElementById('leftnow').textContent = money(leftNow);
+    document.querySelectorAll('.yleft').forEach(el => el.textContent = money(spare - parseFloat(el.dataset.amount)));
+    if (window.demoTop) demoTop(bills);
+  }
+
+  document.querySelectorAll('tr.bill').forEach(row => {
+    const link = row.querySelector('button.link'), box = row.querySelector('input.billbox'), x = row.querySelector('button.x');
+    let timer = null;
+    link.addEventListener('click', () => { link.hidden = true; box.hidden = false; box.focus(); box.select(); });
+    box.addEventListener('input', () => {
+      const v = readMoney(box.value);
+      box.classList.toggle('badval', isNaN(v) && box.value.trim() !== '');
+      if (isNaN(v)) return;
+      row.dataset.used = v; row.dataset.changed = '1';
+      showRow(row); recalc();
+      clearTimeout(timer); timer = setTimeout(() => save(row, v), 500);
+    });
+    box.addEventListener('keydown', e => { if (e.key === 'Enter') box.blur(); });
+    box.addEventListener('blur', () => { box.hidden = true; link.hidden = false; box.value = parseFloat(row.dataset.used).toFixed(2); box.classList.remove('badval'); });
+    x.addEventListener('click', () => {
+      clearTimeout(timer);
+      row.dataset.used = row.dataset.default; row.dataset.changed = '0';
+      box.value = parseFloat(row.dataset.default).toFixed(2);
+      showRow(row); recalc(); save(row, '');
+    });
+  });
+
+  // Move & rename (3 Oct 2026): drag cards and rows by the handle, click a name to rename it. Saved for good.
+  const post = (url, data) => fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+  const editBtn = document.getElementById('editbtn');
+  if (editBtn) editBtn.addEventListener('click', () => {
+    const on = document.body.classList.toggle('editing');
+    editBtn.textContent = on ? '✅ Done' : '✏️ Move & rename';
+    document.querySelectorAll('.rname').forEach(n => n.contentEditable = on ? 'plaintext-only' : 'false');
+  });
+  document.querySelectorAll('summary').forEach(sm => sm.addEventListener('click', e => {
+    if (document.body.classList.contains('editing')) e.preventDefault();      // no opening while editing
+  }));
+  document.querySelectorAll('.rname').forEach(n => {
+    n.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); n.blur(); } });
+    n.addEventListener('blur', () => {
+      const name = n.textContent.trim();
+      if (name === '') n.textContent = n.dataset.orig;
+      post('/name', {id: n.dataset.id, name: name === n.dataset.orig ? '' : name});
+    });
+  });
+
+  // Click a handle to pick a card or row, then arrow up / down to move it (user, 3 Oct 2026). Esc or Done to stop.
+  let picked = null;
+  const unpick = () => { if (picked) picked.classList.remove('picked'); picked = null; };
+  document.querySelectorAll('.handle').forEach(h => h.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const el = h.closest('[data-id]');
+    if (picked === el) { unpick(); return; }
+    unpick(); picked = el; el.classList.add('picked');
+  }));
+  document.addEventListener('keydown', e => {
+    if (!picked) return;
+    if (e.key === 'Escape') { unpick(); return; }
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const box = picked.parentElement;
+    let next = e.key === 'ArrowUp' ? picked.previousElementSibling : picked.nextElementSibling;
+    while (next && !next.dataset.id) next = e.key === 'ArrowUp' ? next.previousElementSibling : next.nextElementSibling;
+    if (!next) return;
+    box.insertBefore(picked, e.key === 'ArrowUp' ? next : next.nextSibling);
+    picked.scrollIntoView({block: picked.classList.contains('card') ? 'start' : 'center'});
+    post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
+  });
+  if (editBtn) editBtn.addEventListener('click', unpick);
+
+  // While dragging, the page scrolls by itself near the top or bottom of the window.
+  document.addEventListener('dragover', e => {
+    if (!dragEl) return;
+    if (e.clientY < 80) window.scrollBy(0, -20);
+    else if (e.clientY > window.innerHeight - 80) window.scrollBy(0, 20);
+  });
+
+  let dragEl = null;
+  const childOf = (box, node) => { while (node && node.parentElement !== box) node = node.parentElement; return node; };
+  document.querySelectorAll('.handle').forEach(h => h.addEventListener('mousedown', () => {
+    const el = h.closest('[data-id]'); if (el) el.draggable = true;
+  }));
+  document.querySelectorAll('[data-sort]').forEach(box => {
+    box.addEventListener('dragstart', e => {
+      const el = childOf(box, e.target);
+      if (!el || !el.dataset.id || dragEl) return;
+      dragEl = el; el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', el.dataset.id);
+    });
+    box.addEventListener('dragover', e => {
+      if (!dragEl || dragEl.parentElement !== box) return;
+      e.preventDefault();
+      const over = childOf(box, e.target);
+      if (!over || over === dragEl || !over.dataset.id) return;
+      const r = over.getBoundingClientRect();
+      box.insertBefore(dragEl, e.clientY > r.top + r.height / 2 ? over.nextSibling : over);
+    });
+    box.addEventListener('drop', e => { if (dragEl && dragEl.parentElement === box) e.preventDefault(); });
+    box.addEventListener('dragend', () => {
+      if (!dragEl || dragEl.parentElement !== box) return;
+      dragEl.classList.remove('dragging'); dragEl.draggable = false; dragEl = null;
+      post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
+    });
+  });
+
+  // 🔄 Update (3 Oct 2026): get the latest code from GitHub; the page restarts itself and reloads.
+  const updBtn = document.getElementById('updbtn');
+  if (updBtn) updBtn.addEventListener('click', async () => {
+    if (!confirm('Get the latest version from GitHub?\n\nYour statements and data are not touched.')) return;
+    updBtn.disabled = true; updBtn.textContent = '⏳ Updating...';
+    const back = () => { updBtn.disabled = false; updBtn.textContent = '🔄 Update'; };
+    let r;
+    try { r = await (await fetch('/update', {method: 'POST'})).json(); }
+    catch (e) { alert('Sorry, the update did not work. Try update.bat in the code folder.'); back(); return; }
+    if (!r.ok) { alert('Sorry, the update did not work (' + r.error + ').\nCheck the internet, or try update.bat in the code folder.'); back(); return; }
+    if (!r.changed) { updBtn.textContent = '✅ Up to date'; setTimeout(back, 3000); return; }
+    updBtn.textContent = '✅ Updated! Restarting...';
+    const wait = () => fetch('/', {cache: 'no-store'}).then(x => { if (x.ok) location.reload(); else setTimeout(wait, 1000); })
+                                                      .catch(() => setTimeout(wait, 1000));
+    setTimeout(wait, 3000);
+  });
+
+  // A new pay = "I got paid": ask before clearing the typed spends (3 Oct 2026). Same pay (a typo fix) asks nothing.
+  const payForm = document.getElementById('payform');
+  if (payForm) payForm.addEventListener('submit', () => {
+    const typed = parseFloat(payForm.pay.value.replace(/[£,\s]/g, ''));
+    if (payForm.dataset.spends === '1' && !isNaN(typed) && Math.abs(typed - parseFloat(payForm.dataset.pay)) >= 0.005)
+      payForm.clear.value = confirm('New pay. Clear your typed spends?\n\nOK = clear them, Cancel = keep them') ? '1' : '0';
+  });
+
+  // No. 6a: drop PDFs anywhere on the page (or click the bar): read in, then the page reloads with any new items to sort
+  const dropbar = document.getElementById('dropbar'), dropfiles = document.getElementById('dropfiles');
+  const dropresult = document.getElementById('dropresult');
+  function showDrop(html) { if (dropresult) { dropresult.innerHTML = html; dropresult.hidden = false; } }
+  try { const m = sessionStorage.getItem('dropmsg'); if (m) { showDrop(m); sessionStorage.removeItem('dropmsg'); } } catch (e) {}
+  async function sendPdfs(files) {
+    files = [...files].filter(f => /\.pdf$/i.test(f.name));
+    if (!files.length) { showDrop('Only PDF statements can be dropped here.'); return; }
+    showDrop('⏳ Reading ' + files.length + ' statement' + (files.length > 1 ? 's' : '') + '...');
+    const fd = new FormData(); files.forEach(f => fd.append('files', f));
+    let r;
+    try { r = await (await fetch('/upload', {method: 'POST', body: fd})).json(); }
+    catch (e) { showDrop('❌ Sorry, that did not work. Is the black window still open?'); return; }
+    const esc = t => String(t).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+    const lines = r.results.map(x => x.error ? '❌ ' + esc(x.file) + ': ' + esc(x.error)
+      : !x.new ? '↩️ ' + esc(x.file) + ': already in (' + x.start + ' to ' + x.end + ')'
+      : (x.problems.length ? '⚠️ ' : '✅ ') + esc(x.file) + ': ' + x.start + ' to ' + x.end + ', ' + x.payments + ' payments'
+        + (x.problems.length ? '<br><span class="muted">' + x.problems.map(esc).join('<br>') + '</span>' : ''));
+    const html = lines.join('<br>');
+    if (r.results.some(x => x.new)) { try { sessionStorage.setItem('dropmsg', html); } catch (e) {} location.reload(); }
+    else showDrop(html);
+  }
+  if (dropfiles) dropfiles.addEventListener('change', () => sendPdfs(dropfiles.files));
+  document.addEventListener('dragover', e => { if (!dragEl && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); document.body.classList.add('dragover'); } });
+  document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('dragover'); });
+  document.addEventListener('drop', e => {
+    if (dragEl || !e.dataTransfer.files.length) return;
+    e.preventDefault(); document.body.classList.remove('dragover'); sendPdfs(e.dataTransfer.files);
+  });
+
+  // No. 6b: sort new items: buttons, Save, Copy for AI, Paste answers
+  document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+  }));
+  // → Bill buttons (last month's spending items and subscriptions)
+  document.querySelectorAll('.tobill').forEach(btn => btn.addEventListener('click', async () => {
+    const keys = btn.dataset.key.split(',');
+    const answers = keys.map(k => ({key: k, kind: 'bill', label: '', category: ''}));
+    await fetch('/sort/save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({answers})});
+    location.reload();
+  }));
+
+  const sortSave = document.getElementById('sortsave');
+  if (sortSave) sortSave.addEventListener('click', async () => {
+    const answers = [...document.querySelectorAll('tr.sortrow')].map(r => ({
+      key: r.dataset.key, kind: (r.querySelector('.seg .on') || {}).dataset?.kind || '',
+      label: r.querySelector('.sname').value, category: r.querySelector('.scat').value}));
+    sortSave.disabled = true; sortSave.textContent = '⏳ Saving...';
+    await fetch('/sort/save', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({answers})});
+    location.reload();
+  });
+  const aiCopy = document.getElementById('aicopy');
+  if (aiCopy) aiCopy.addEventListener('click', async () => {
+    const text = document.getElementById('aitext').value;
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) { const t = document.getElementById('aitext'); t.hidden = false; t.select(); document.execCommand('copy'); t.hidden = true; }
+    aiCopy.textContent = '✅ Copied! Paste it into ChatGPT or Claude';
+    setTimeout(() => aiCopy.textContent = '📋 Copy for AI', 4000);
+  });
+  const aiPasteBtn = document.getElementById('aipastebtn');
+  if (aiPasteBtn) aiPasteBtn.addEventListener('click', () => {
+    const box = document.getElementById('aipaste'); box.hidden = !box.hidden;
+    if (!box.hidden) document.getElementById('aireply').focus();
+  });
+  const aiFill = document.getElementById('aifill');
+  if (aiFill) aiFill.addEventListener('click', async () => {
+    const count = parseInt(document.getElementById('sortcard').dataset.count);
+    const got = await (await fetch('/sort/parse', {method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: document.getElementById('aireply').value, count})})).json();
+    let n = 0;
+    document.querySelectorAll('tr.sortrow').forEach(r => {
+      const a = got[r.dataset.n]; if (!a) return;
+      r.querySelectorAll('.seg button').forEach(b => b.classList.toggle('on', b.dataset.kind === a.kind));
+      if (a.category) r.querySelector('.scat').value = a.category;
+      r.classList.add('filled'); n++;
+    });
+    document.getElementById('aimsg').textContent = n ? `Filled in ${n} of ${count}. Check them, then press Save.` :
+      'I could not read any answers. Lines should look like: 1 bill Household';
+  });
+
+  // No. 6c: one click answers a question; the page reloads with the new numbers
+  document.querySelectorAll('.ask').forEach(box => box.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const q = JSON.parse(box.dataset.q), a = {type: q.type};
+    if (q.type === 'newbill' && b.dataset.new === '0' && !box.querySelector('.askinto').value) return box.querySelector('.askinto').focus();
+    if (q.type === 'job') Object.assign(a, {name: q.name, yes: b.dataset.yes === '1'});
+    else if (q.type === 'same') Object.assign(a, {big: q.big, small: q.small, yes: b.dataset.yes === '1'});
+    else if (q.type === 'rent') Object.assign(a, {payer: q.payer, usual: q.usual, yes: b.dataset.yes === '1',
+                                                  label: box.querySelector('.asklabel').value});
+    else if (q.type === 'newbill') Object.assign(a, {key: q.key, into: b.dataset.new === '1' ? '' : box.querySelector('.askinto').value});
+    else Object.assign(a, {id: q.id, keep: b.dataset.keep === '1'});
+    box.querySelectorAll('button').forEach(x => x.disabled = true);
+    await fetch('/ask', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(a)});
+    location.reload();
+  }));
+</script>
+
+
+<script>
+  // v3 (15 Oct 2026): keep up to date with the other devices. Check when the page is opened or shown again and every
+  // 15 minutes; reload only when the data changed and nothing is being typed, opened or moved.
+  (function () {
+    let seen = null;
+    const busy = () => {
+      const a = document.activeElement;
+      return (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) || document.body.classList.contains('editing') ||
+             document.querySelector('.bmenu') || (document.getElementById('setmenu') && !document.getElementById('setmenu').hidden) ||
+             (document.getElementById('quick') && !document.getElementById('quick').hidden);
+    };
+    async function check() {
+      if (document.visibilityState !== 'visible') return;
+      let r;
+      try { r = await fetch('/stamp', {cache: 'no-store'}); } catch (e) { return; }     // offline: try again later
+      if (r.status === 401) { if (!busy()) location.reload(); return; }                // passcode time again
+      if (!r.ok) return;
+      const s = (await r.json()).stamp;
+      if (seen === null) { seen = s; return; }
+      if (s !== seen && !busy()) location.reload();
+    }
+    check();
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('pageshow', e => { if (e.persisted) check(); });
+    setInterval(check, 15 * 60 * 1000);
+  })();
+</script>
+
+
+</body>
+</html>
