@@ -15,9 +15,11 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.10"></script>
-<script src="render.js?v=0.10"></script>
-<script src="lite.js?v=0.10"></script>
+<script src="money.js?v=0.11"></script>
+<script src="render.js?v=0.11"></script>
+<script src="lite.js?v=0.11"></script>
+<script src="lock.js?v=0.11"></script>
+<script src="lockui.js?v=0.11"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -174,10 +176,71 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.10">
-<link rel="stylesheet" href="lite.css?v=0.10">
+<link rel="stylesheet" href="look.css?v=0.11">
+<link rel="stylesheet" href="lite.css?v=0.11">
 </head>
 <body class="demo">
+
+<div id="lock" hidden data-step=""><main class="box">
+  <img src="icon-192.png" alt="">
+  <h1>Where's My Money?</h1>
+  <p class="tag">Payday to payday · Lite</p>
+  <p class="err" id="lockerr" role="alert" hidden></p>
+
+  <section data-for="unlock" hidden>
+    <div id="fp" hidden>
+      <button type="button" id="fpbtn" class="fpbtn">👆 Use fingerprint</button>
+      <p class="or">or type your passcode</p>
+    </div>
+    <form id="unlockform" novalidate>
+      <label>Your passcode
+        <input class="code" id="pin" name="pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="6"></label>
+      <button type="submit">Unlock</button>
+    </form>
+    <div class="links"><button type="button" class="linkbtn" id="forgot">Forgot passcode?</button></div>
+  </section>
+
+  <section data-for="newpin" hidden>
+    <p><b>Choose a 6-number passcode</b></p>
+    <p class="tag">You'll type it each time you open the app (or use your fingerprint).</p>
+    <form id="pinform" novalidate>
+      <label>Passcode
+        <input class="code" id="pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6"></label>
+      <label>Same again
+        <input class="code" id="again" name="again" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6"></label>
+      <button type="submit">Save passcode</button>
+    </form>
+  </section>
+
+  <section data-for="codes" hidden>
+    <p><b>Your backup codes</b></p>
+    <p>Keep these in your phone's notes. Each works once. You need one if you forget your passcode, or to open a backup file.</p>
+    <ul class="codes"></ul>
+    <p class="tag">You won't see them again. Old backup codes no longer work.</p>
+    <button type="button" id="codesdone">I've saved them</button>
+  </section>
+
+  <section data-for="forgot" hidden>
+    <form id="codeform" novalidate>
+      <label>Type a backup code
+        <input class="code" id="bcode" name="code" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="abcd-2345"></label>
+      <button type="submit">Use code</button>
+    </form>
+    <div class="links"><button type="button" class="linkbtn" id="backtopin">Back to the passcode</button></div>
+  </section>
+
+  <section data-for="passkey" hidden>
+    <p><b>👆 Fingerprint</b></p>
+    <p class="tag">Unlock with your fingerprint instead of typing the passcode. Do this on the phone you use. The passcode still works.</p>
+    <p class="note" id="fpok" hidden>✅ Fingerprint is on for this phone.</p>
+    <p id="fpnone" hidden>This browser can't use a fingerprint here.</p>
+    <button type="button" id="fpadd">Turn on fingerprint</button>
+    <div class="links">
+      <button type="button" class="linkbtn" id="fpoff" hidden>Turn off fingerprint</button>
+      <button type="button" class="linkbtn" id="lockback">Back to the home page</button>
+    </div>
+  </section>
+</main></div>
 
 <div class="wrap">
   
@@ -191,9 +254,12 @@
           <div class="grp"><a class="small" href="/ideas">💡 Ideas &amp; feedback</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
           <div class="grp"><button type="button" class="small" id="savebackup">💾 Save backup</button>
           <button type="button" class="small" id="loadbackup">📂 Load backup</button>
+          <button type="button" class="small" id="newcodes">🔑 New backup codes</button>
+          <button type="button" class="small" id="fingerprint">👆 Fingerprint</button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
+          <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="appver">v0.10</div></div>
+      <div class="appver">v0.11</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>

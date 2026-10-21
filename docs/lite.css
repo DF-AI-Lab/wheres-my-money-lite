@@ -56,3 +56,33 @@ body.demo [data-card="lastmonth"] td.diff:empty { display: none; }
 @media (max-width: 420px) { .zring { width: 80px; height: 80px; } }
 .demo [data-card="card"] .ccfree2 { color: var(--zfreetext); }
 .cardfoot { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+/* the lock screen (Go B step 6): live's sign-in box, as a full-screen cover; the app is hidden while it shows */
+html.lockon .wrap { display: none; }
+#lock { position: fixed; inset: 0; z-index: 1000; background: var(--bg); color: var(--text); overflow-y: auto;
+        display: flex; align-items: center; justify-content: center; padding: 24px 16px; box-sizing: border-box; }
+#lock[hidden] { display: none; }
+#lock section[hidden] { display: none; }
+.box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
+       width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; margin: auto; }
+.box img { width: 64px; height: 64px; border-radius: 16px; }
+.box h1 { font-size: 22px; margin: 12px 0 4px; }
+.box .tag { color: var(--muted); margin: 0 0 20px; }
+.box form { display: flex; flex-direction: column; gap: 10px; text-align: left; margin: 0; }
+.box label { font-weight: 600; display: flex; flex-direction: column; gap: 6px; }
+.box input { font: inherit; font-size: 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+             background: var(--bg); color: var(--text); width: 100%; box-sizing: border-box; }
+.box input.code { letter-spacing: 6px; text-align: center; font-size: 24px; }
+.box button { font: inherit; font-weight: 700; font-size: 17px; padding: 12px; border: 0; border-radius: 10px;
+              background: var(--accent); color: var(--on-accent); cursor: pointer; }
+.box section > button { width: 100%; }
+.box .note { color: var(--accent); font-weight: 600; margin: 0 0 14px; }
+.box .err { color: var(--bad); font-weight: 600; margin: 0 0 14px; }
+.box .links { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.box .linkbtn { color: var(--muted); }
+.box button.linkbtn { background: none; border: 0; padding: 0; font-weight: 500; font-size: inherit; text-decoration: underline; }
+.box ul.codes { list-style: none; padding: 0; margin: 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+                font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 18px; }
+.box .fpbtn { width: 100%; font-size: 19px; padding: 16px; }
+.box .or { color: var(--muted); margin: 14px 0 10px; }
+.box ul.codes li { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; }

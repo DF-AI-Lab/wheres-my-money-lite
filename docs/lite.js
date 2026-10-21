@@ -4,7 +4,9 @@
    routes changes the state, saves it, and (for a form) reloads the page, exactly like live's redirect after a POST.
    Every other server path still does nothing (the step 1 shim in index.html answers /stamp and swallows the rest).
    Saving: a person's own data lives in localStorage ('lite_state_v1'); ?demo=1 uses the fake data in this tab's
-   sessionStorage only and never touches localStorage. Settings has Save backup / Load backup (a JSON file). */
+   sessionStorage only and never touches localStorage. Settings has Save backup / Load backup (a JSON file).
+   Backup file: with the lock (lock.js) it is scrambled ({scrambled: ...}, opened with the passcode or a backup code);
+   the demo has no lock, so its file is the plain one. A plain old file still loads. */
 (function (root) {
   'use strict';
   const M = root.Money;
@@ -111,8 +113,9 @@
   }
 
   // ---------- the backup file (Settings, and the New payday panel) ----------
-  function saveBackup() {
-    const day = today(), file = M.exportBackup(state, day);
+  async function saveBackup() {
+    const day = today(), plain = M.exportBackup(state, day), rec = root.LockUI && root.LockUI.record();
+    const file = rec ? {app: plain.app, version: plain.version, saved: plain.saved, scrambled: await root.Lock.seal(rec, plain.state)} : plain;
     const blob = new Blob([JSON.stringify(file, null, 1)], {type: 'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = M.backupName(day);
@@ -122,6 +125,13 @@
   async function loadBackup(file) {
     let obj = null;
     try { obj = JSON.parse(await file.text()); } catch (e) { /* not JSON */ }
+    if (obj && typeof obj === 'object' && obj.app === 'wheres-my-money-lite' && obj.scrambled) {   // scrambled: ask for the key
+      const secret = prompt('Type your passcode (or a backup code) to open this backup');
+      if (secret === null) return;
+      const st = await root.Lock.open(obj.scrambled, secret);
+      if (!st) { alert('Sorry, that could not open the backup. Check the passcode or code and try again.'); return; }
+      obj = {app: obj.app, saved: obj.saved, state: st};
+    }
     const s = M.importBackup(obj);
     if (!s) { alert("That is not a Where's My Money backup file."); return; }
     if (!confirm('Replace everything on this phone with the backup from ' + M.fmt.day(obj.saved) + '?')) return;
