@@ -89,7 +89,7 @@ html.lockon .wrap { display: none; }
 
 /* views (Go B step 7): ?view=ideas / ?view=invite replace the home page parts; the header stays */
 body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[data-view] .footer, body[data-view] #quicktab { display: none; }
-#ideas[hidden], #invite[hidden], #installbtn[hidden] { display: none; }
+#ideas[hidden], #invite[hidden], #drive[hidden], #drive [hidden], #installbtn[hidden] { display: none; }
 
 /* 💡 Ideas & feedback: live's ideas.html styles, all under #ideas so the home page is not touched */
 #ideas { margin-bottom: 18px; }
@@ -130,3 +130,10 @@ body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[d
 #invite .invbtns { display: flex; gap: 10px; }
 #invite .invbtns button { flex: 1; }
 #invite .invmsg { color: var(--good); font-weight: 700; margin: 12px 0 0; }
+
+/* ☁️ Google Drive: the same box as Invite */
+#drive { margin: 8px auto 18px; }
+#drive .back { display: block; text-align: left; color: var(--accent); font-weight: 700; text-decoration: none; }
+#drive button { display: block; width: 100%; margin: 0 0 10px; }
+#drive .driveok { color: var(--good); font-weight: 700; margin: 12px 0 0; }
+#drive .err { margin: 12px 0 0; }

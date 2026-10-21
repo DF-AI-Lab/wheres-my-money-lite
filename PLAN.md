@@ -79,11 +79,12 @@ holds the link only, never any data. Added by Darren 21 Oct).
 2. 🧾 Bills (add, name, due day, Paid ⓘ, Stop ⓘ, delete, template) ✅
 3. 📅 Payday + history (save the month, Left filled in, last month, categories, 6/12 months) ✅
 4. 🟠 Pots ✅
-5. 💳 Several credit cards + the Zopa question ⬅️ NEXT
-6. 🔒 Fingerprint + passcode + 10 codes + scrambled backup
-7. ✏️ Move & rename + Update + Ideas + 📱 Invite QR code
-8. 📲 Install + works offline
-9. ☁️ Google Drive (optional)
+5. 💳 Several credit cards + the Zopa question ✅ (v0.10)
+6. 🔒 Fingerprint + passcode + 10 codes + scrambled backup ✅ (v0.11)
+7. ✏️ Move & rename + Update + Ideas + 📱 Invite QR code ✅ (v0.12)
+8. 📲 Install + works offline ✅ (v0.13)
+9. ☁️ Google Drive (optional) ✅ (v0.14; Darren does DRIVE_SETUP.md once, then it is switched on)
+10. Darren's 21 Oct feedback round (back button, pots in Bills, start vs actual spare, payday date, 🔔 reminders, tap card tops, category pick list, backup box, ⓘ bubbles) ⬅️ NEXT
 Then the rest of the map (Lite issue #1); Bill details (#2) is mostly covered by step 2.
 
 ## GitHub Pages (Darren does once)

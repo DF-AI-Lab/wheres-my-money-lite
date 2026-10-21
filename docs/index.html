@@ -15,11 +15,12 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="money.js?v=0.13"></script>
-<script src="render.js?v=0.13"></script>
-<script src="lite.js?v=0.13"></script>
-<script src="lock.js?v=0.13"></script>
-<script src="lockui.js?v=0.13"></script>
+<script src="config.js?v=0.14"></script>
+<script src="money.js?v=0.14"></script>
+<script src="render.js?v=0.14"></script>
+<script src="lite.js?v=0.14"></script>
+<script src="lock.js?v=0.14"></script>
+<script src="lockui.js?v=0.14"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -176,8 +177,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.13">
-<link rel="stylesheet" href="lite.css?v=0.13">
+<link rel="stylesheet" href="look.css?v=0.14">
+<link rel="stylesheet" href="lite.css?v=0.14">
 </head>
 <body class="demo">
 
@@ -255,12 +256,13 @@
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button>
           <button type="button" class="small" id="savebackup">💾 Save backup</button>
           <button type="button" class="small" id="loadbackup">📂 Load backup</button>
+          <a class="small" id="drivelink" href="?view=drive" data-view="drive">☁️ Google Drive</a>
           <button type="button" class="small" id="newcodes">🔑 New backup codes</button>
           <button type="button" class="small" id="fingerprint">👆 Fingerprint</button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="appver">v0.13</div></div>
+      <div class="appver">v0.14</div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -312,6 +314,20 @@
   <p class="invlink">https://df-ai-lab.github.io/wheres-my-money-lite/</p>
   <div class="invbtns"><button type="button" id="sharebtn">📤 Share</button><button type="button" id="copylink">📋 Copy link</button></div>
   <p class="invmsg" id="sharemsg" role="status" hidden>✅ Link copied</p>
+</div>
+
+<div id="drive" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>☁️ Google Drive</h1>
+  <p class="tag">Keep a copy of your backup in your own Google Drive. It is scrambled with your passcode, so only you can open it. The app can only see the files it made.</p>
+  <p id="drivenone" hidden>Google Drive is not set up for this app yet.</p>
+  <div id="driveset" hidden>
+    <button type="button" id="driveconnect">Connect Google Drive</button>
+    <button type="button" id="drivesave" hidden>☁️ Save a copy now</button>
+    <button type="button" id="driveload" hidden>📥 Load the copy from Drive</button>
+    <p class="driveok" id="driveok" hidden role="status">✅ Saved to your Drive.</p>
+    <p class="err" id="driveerr" hidden role="alert"></p>
+  </div>
 </div>
 
 <div class="card quick" id="quick" hidden>

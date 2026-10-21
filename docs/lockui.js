@@ -189,7 +189,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
     if (demo) {                                              // no lock in the demo: its menu items go too
-      ['newcodes', 'fingerprint', 'locknow'].forEach(id => { const el = $(id); if (el) el.hidden = true; });
+      ['newcodes', 'fingerprint', 'locknow', 'drivelink'].forEach(id => { const el = $(id); if (el) el.hidden = true; });
       const g = $('locknow') && $('locknow').parentElement; if (g) g.hidden = true;
       return;
     }

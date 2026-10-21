@@ -326,7 +326,7 @@
     });
   }
 
-  // ---------- views: ?view=ideas / ?view=invite show one box in place of the home page parts ----------
+  // ---------- views: ?view=ideas / ?view=invite / ?view=drive show one box in place of the home page parts ----------
   // The same address without ?view= (demo / today / ... stay), or with another view.
   function viewUrl(view) {
     const u = new URL(location.href);
@@ -365,9 +365,8 @@
   function showView(state, today) {
     const view = new URLSearchParams(location.search).get('view'), body = document.body;
     document.querySelectorAll('a[data-view]').forEach(a => { a.href = viewUrl(a.dataset.view); });
-    const home = document.querySelector('#invite a.back');
-    if (home) home.href = viewUrl('');
-    if (view !== 'ideas' && view !== 'invite') return;
+    document.querySelectorAll('#invite a.back, #drive a.back').forEach(a => { a.href = viewUrl(''); });
+    if (view !== 'ideas' && view !== 'invite' && view !== 'drive') return;
     body.dataset.view = view;                                    // lite.css hides the home page parts
     const box = document.getElementById(view);
     if (!box) return;

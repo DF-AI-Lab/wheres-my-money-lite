@@ -32,6 +32,13 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **21 Oct REVIEW FIXES (v0.09, by me):** no Paid tick box (only ⓘ 'check your bank app' once the due day has gone);
   a category on every bill (grey line + ⋯ → 🏷 Category, POST /bill/cat); Last month's spending rows have avg + diff
   pills, every category opens to its shops with → Bill (adds a bill). Tests 20 node + 22 browser.
+- **21 Oct GO B BUILT (v0.10-v0.14, Opus wrote tests, Sonnet built, Opus checked; work on branch
+  claude/busy-hamilton-qv12p1, also pushed to jolly-bardeen = Pages):** step 5 several cards (state v3 `cards`, Zopa
+  question once a card bill's due day has gone), 6 lock (docs/lock.js + lockui.js: passcode, 10 codes, fingerprint
+  passkey, scrambled backup; tests seed a lock via conftest.py), 7 Move & rename / Update (version.json) / Ideas
+  (?view=ideas) / Invite (?view=invite, docs/invite-qr.svg), 8 sw.js offline + install (bump sw.js VERSION every
+  version), 9 Google Drive (docs/config.js googleClientId empty until Darren does DRIVE_SETUP.md). Tests 43 node + 67 browser.
+  NEXT: Darren's feedback round (PLAN.md step 10).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
