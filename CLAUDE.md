@@ -52,7 +52,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   too) = monthEndSpare. Starting spare = the plan (pay + left − own bills − pots set). Top rows: ... Starting spare, + Pots
   not spent yet (potsLeft), − Pots over, − Spends (not in a pot), Actual spare. Ring pots slice = potsSpent. Add a spend
   card: mfs = pay + left − billsAll, typed = every spend. Tests 61 node + 98 browser.
-- **21 Oct v0.18-0.19:** bell Show makes the target pulse (class .pulse ~2.7 s, green glow + outline; tr = glow 10px outside +
+- **21 Oct v0.18-0.20:** bell Show makes the target pulse (class .pulse ~2.7 s, green glow + outline; tr = a rounded .pulsebox overlay 10px outside +
   outline; reduced motion = one calm highlight; Show payday/backup pulses #quick). Tests 61 node + 100 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.

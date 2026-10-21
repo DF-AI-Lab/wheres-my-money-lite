@@ -177,17 +177,20 @@ body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[d
   70%  { box-shadow: 0 0 0 8px transparent; background-color: color-mix(in srgb, var(--accent) 12%, transparent); }
   100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
 }
-@keyframes litepulse-bg {
-  0%, 100% { background-color: transparent; box-shadow: 0 0 0 10px transparent; outline-color: transparent; }
-  30% { background-color: color-mix(in srgb, var(--accent) 40%, transparent);
-        box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent); outline-color: var(--accent); }
+@keyframes litepulse-box {
+  0%, 100% { background-color: transparent; border-color: transparent; }
+  30% { background-color: color-mix(in srgb, var(--accent) 35%, transparent); border-color: var(--accent); }
 }
+@keyframes litepulse-mark { from { opacity: 1; } to { opacity: 1; } }
 @keyframes litepulse-calm {
   0%, 100% { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
 }
 .pulse { animation: litepulse 0.9s ease-out 3; border-radius: 10px; }
-/* the glow sits 10px outside the row (shadow + outline), so the words have room (Darren, 21 Oct) */
-tr.pulse { animation: litepulse-bg 0.9s ease-out 3; border-radius: 4px; outline: 2px solid transparent; outline-offset: 10px; }
+/* a row's glow = a rounded box over it, 10px outside so the words have room (Darren, 21 Oct) */
+tr.pulse { animation: litepulse-mark 2.7s linear 1; }
+.pulsebox { position: absolute; z-index: 5; pointer-events: none; box-sizing: border-box; border: 2px solid transparent;
+            border-radius: 14px; animation: litepulse-box 0.9s ease-out 3; }
 @media (prefers-reduced-motion: reduce) {
-  .pulse, tr.pulse { animation: litepulse-calm 2.5s linear 1; }
+  .pulse, .pulsebox { animation: litepulse-calm 2.5s linear 1; }
+  tr.pulse { animation: litepulse-mark 2.5s linear 1; }
 }

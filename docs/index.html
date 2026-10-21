@@ -15,12 +15,12 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.19"></script>
-<script src="money.js?v=0.19"></script>
-<script src="render.js?v=0.19"></script>
-<script src="lite.js?v=0.19"></script>
-<script src="lock.js?v=0.19"></script>
-<script src="lockui.js?v=0.19"></script>
+<script src="config.js?v=0.20"></script>
+<script src="money.js?v=0.20"></script>
+<script src="render.js?v=0.20"></script>
+<script src="lite.js?v=0.20"></script>
+<script src="lock.js?v=0.20"></script>
+<script src="lockui.js?v=0.20"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -177,8 +177,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.19">
-<link rel="stylesheet" href="lite.css?v=0.19">
+<link rel="stylesheet" href="look.css?v=0.20">
+<link rel="stylesheet" href="lite.css?v=0.20">
 </head>
 <body class="demo">
 
@@ -263,7 +263,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.19</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.20</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -992,7 +992,17 @@
       if (pulseEl) { pulseEl.classList.remove('pulse'); clearTimeout(pulseTimer); }
       pulseEl = el; el.classList.remove('pulse'); void el.offsetWidth;   // restart cleanly if Show is tapped twice
       el.classList.add('pulse');
-      const stop = () => { el.classList.remove('pulse'); el.removeEventListener('animationend', onEnd); if (pulseEl === el) pulseEl = null; };
+      // a table row can't have round corners, so its glow is a rounded box laid over it (10px outside, words have room)
+      document.querySelectorAll('.pulsebox').forEach(b => b.remove());
+      let box = null;
+      if (el.tagName === 'TR') {
+        const r = el.getBoundingClientRect();
+        box = document.createElement('div'); box.className = 'pulsebox';
+        Object.assign(box.style, {top: (r.top + window.scrollY - 10) + 'px', left: (r.left + window.scrollX - 10) + 'px',
+                                  width: (r.width + 20) + 'px', height: (r.height + 20) + 'px'});
+        document.body.appendChild(box);
+      }
+      const stop = () => { el.classList.remove('pulse'); if (box) box.remove(); el.removeEventListener('animationend', onEnd); if (pulseEl === el) pulseEl = null; };
       const onEnd = e => { if (e.target === el || e.target.parentNode === el) { clearTimeout(pulseTimer); pulseTimer = setTimeout(stop, 50); } };
       el.addEventListener('animationend', onEnd);
       clearTimeout(pulseTimer); pulseTimer = setTimeout(stop, 2800);
@@ -1011,8 +1021,7 @@
       if (!el) return;
       if (card && card.classList.contains('folded')) { slideFold(card, false); keepToMax(card.dataset.id); }   // open a folded card first
       const wait = card && card.classList.contains('folded') ? 350 : 0;
-      setTimeout(() => el.scrollIntoView({behavior: 'smooth', block: 'center'}), wait);
-      pulse(el);
+      setTimeout(() => { el.scrollIntoView({behavior: 'smooth', block: 'center'}); pulse(el); }, wait);
     }
     window.refreshBell = function () {
       const list = Money.reminders(Lite.state(), Lite.today());
