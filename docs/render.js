@@ -151,7 +151,7 @@
     ? r.cards.map((c, i) => cardCard(c, i === 0, err, r.cards.length === 1 ? 'Credit card' : c.label)).join('') : noCardBox(err);
 
   const INFO = {
-    due: 'The due day has gone. Check your bank app that it came out.',
+    due: 'The due day has gone, so it should be paid. Check your bank app that it came out.',
     stopped: 'Not counted until you choose Count it again in ⋯.',
     left: 'Check your bank app for what is really left. Please check this each month.',
   };
@@ -163,8 +163,9 @@
     let line = b.blank ? `${tags}no amount yet` : `${tags}avg ${money(b.avg)}`;
     if (b.dueText) line += ` · due ${b.dueText}`;
     if (b.cardName) line += ` · pays ${esc(b.cardName)}`;
+    if (b.pot) line += ` · from the ${esc(b.pot)} pot`;
     if (b.stopped) line += ` · <span class="bstop">Stopped ${infoBtn(INFO.stopped)}</span>`;
-    else if (b.duePassed) line += ` ${infoBtn(INFO.due)}`;
+    else if (b.duePassed) line += ` · <span class="bpaid">Paid</span> ${infoBtn(INFO.due)}`;
     return line;
   }
 
@@ -173,7 +174,7 @@
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span><b class="bbase">${esc(nm[0])}</b>
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
@@ -247,7 +248,7 @@
       <input class="name" type="text" name="name" placeholder="New pot" aria-label="Pot name">
       <button type="submit">Add</button>
     </form>
-    <div class="labels bnote">Spends in a pot's category fill it. Over comes off spare.</div>
+    <div class="labels bnote">Spends and bills in a pot's category fill it. Over comes off spare.</div>
   </div>`;
   }
 

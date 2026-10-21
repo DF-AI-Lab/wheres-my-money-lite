@@ -68,7 +68,9 @@ tr.potbill td:first-child .bbase { color: var(--pot); }
 #bellcount { display: inline-block; min-width: 16px; margin-left: 3px; padding: 0 4px; border-radius: 99px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; }
 #bellcount[hidden] { display: none; }
 .bellmenu { position: absolute; right: 0; top: calc(100% + 40px); z-index: 30; width: min(320px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--border);
-            border-radius: 14px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: grid; gap: 8px; }
+            border-radius: 14px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: grid; gap: 8px;
+            max-height: calc(100vh - 190px); overflow-y: auto; }
+#bellclear { position: sticky; bottom: 0; justify-self: end; }
 .bellmenu[hidden] { display: none; }
 .remind { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 .remind:last-child { border-bottom: 0; }

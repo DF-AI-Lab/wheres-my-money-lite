@@ -15,12 +15,12 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.15"></script>
-<script src="money.js?v=0.15"></script>
-<script src="render.js?v=0.15"></script>
-<script src="lite.js?v=0.15"></script>
-<script src="lock.js?v=0.15"></script>
-<script src="lockui.js?v=0.15"></script>
+<script src="config.js?v=0.16"></script>
+<script src="money.js?v=0.16"></script>
+<script src="render.js?v=0.16"></script>
+<script src="lite.js?v=0.16"></script>
+<script src="lock.js?v=0.16"></script>
+<script src="lockui.js?v=0.16"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -177,8 +177,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.15">
-<link rel="stylesheet" href="lite.css?v=0.15">
+<link rel="stylesheet" href="look.css?v=0.16">
+<link rel="stylesheet" href="lite.css?v=0.16">
 </head>
 <body class="demo">
 
@@ -263,7 +263,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.15</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.16</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -809,7 +809,7 @@
 
   function recalc() {
     let bills = 0, avg = 0;
-    document.querySelectorAll('tr.bill').forEach(r => { bills += parseFloat(r.dataset.used); avg += parseFloat(r.dataset.avg); });
+    document.querySelectorAll('tr.bill:not([data-inpot="1"])').forEach(r => { bills += parseFloat(r.dataset.used); avg += parseFloat(r.dataset.avg); });
     const spare = PAGE.wage + PAGE.left - bills - PAGE.potsSet, leftNow = spare - PAGE.potsOver - PAGE.typed;
     document.getElementById('btotal').textContent = money(bills + PAGE.potsSet);
     const bd = document.getElementById('bdiff'); bd.textContent = diff(bills - avg); tone(bd, bills - avg); bd.classList.remove('muted');
@@ -1007,6 +1007,11 @@
       count.textContent = list.length || ''; count.hidden = !list.length;
       menu.innerHTML = '';
       if (!list.length) { menu.innerHTML = '<div class="remempty">Nothing to check 👍</div>'; return; }
+      const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'small'; clear.id = 'bellclear'; clear.textContent = 'Clear all';
+      clear.addEventListener('click', () => {
+        const f = document.createElement('form'); f.method = 'post'; f.action = '/reminders/clear';
+        document.body.appendChild(f); f.submit();
+      });
       list.forEach(r => {
         const row = document.createElement('div'); row.className = 'remind'; row.dataset.kind = r.kind; row.dataset.key = r.key || '';
         const text = document.createElement('span'); text.className = 'remtext'; text.textContent = r.text; row.appendChild(text);
@@ -1024,6 +1029,7 @@
         }
         menu.appendChild(row);
       });
+      menu.appendChild(clear);
     };
     refreshBell();
     bell.addEventListener('click', () => show(menu.hidden));

@@ -238,6 +238,8 @@
     // bills
     const start = s.payday || (today ? today.slice(0, 8) + '01' : null);
     const cardList = cardsOf(s);
+    const potOf = {};                                            // pots that have an amount, by category
+    (s.pots || []).forEach(p => { if (isSet(p)) potOf[p.cat] = p; });
     const bills = (s.bills || []).map(b => {
       const blank = typeof b.amount !== 'number', stopped = !!b.stopped;
       const amount = blank ? null : b.amount;
@@ -248,7 +250,8 @@
       const was = saved(s, b.key);
       const due = b.due || null, dueAt = due && start ? dueDate(start, due) : null;
       const name = b.name === undefined ? b.key : b.name;
-      return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, last: amount || 0, used, blank, stopped,
+      const inPot = !stopped && potOf[b.cat] ? potOf[b.cat].name : null;   // a bill in a pot's category is paid from that pot
+      return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, pot: inPot, last: amount || 0, used, blank, stopped,
               saved: was && typeof was.amount === 'number' ? was.amount : null,
               changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
               due, dueText: due ? ordinal(due) : '', duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
@@ -258,16 +261,17 @@
     bills.forEach((b, i) => { b.i = i; });
     bills.sort((a, b) => (a.stopped - b.stopped) || (b.avg - a.avg) || (a.i - b.i));
     const live = bills.filter(b => !b.stopped);
-    const billsTotal = sum(live.map(b => b.used));
-    const billsAvg = sum(live.map(b => b.avg));
+    const billsAll = sum(live.map(b => b.used));                 // every live bill, pot bills too
+    const own = live.filter(b => !b.pot);                        // pot bills are not counted twice
+    const billsTotal = sum(own.map(b => b.used));
+    const billsAvg = sum(own.map(b => b.avg));
 
     // spends and pots: a spend is "in a pot" when its category is a pot that has an amount
     const pay = s.pay || 0, left = s.left || 0;
     const spends = (s.spends || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
-    const potOf = {};
-    (s.pots || []).forEach(p => { if (isSet(p)) potOf[p.cat] = p; });
     const pots = (s.pots || []).map(p => {
-      const spent = sum(spends.filter(x => x.cat === p.cat).map(x => x.amount)), blank = !isSet(p);
+      const spent = sum(spends.filter(x => x.cat === p.cat).map(x => x.amount))
+        + (isSet(p) ? sum(live.filter(b => b.pot === p.name).map(b => b.used)) : 0), blank = !isSet(p);
       const amount = blank ? null : p.amount;
       return {key: p.key, name: p.name, cat: p.cat, amount, spent, blank,
               left: blank ? 0 : Math.max(amount - spent, 0), over: blank ? 0 : Math.max(spent - amount, 0),
@@ -328,7 +332,7 @@
     const periods = {six: sums(history.slice(-6)), twelve: sums(history.slice(-12)),
                      ytd: sums(history.filter(m => m.start.slice(0, 4) === year)), year};
 
-    return {pay, left, startSpare: moneyForSpending, bills, billsTotal, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
+    return {pay, left, startSpare: moneyForSpending, bills, billsTotal, billsAll, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
             pots, potsSet, potsOver, potsTotal, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
             anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
@@ -336,7 +340,7 @@
   // The money really left at the end of the month (unspent pot money goes back into spare).
   function monthEndSpare(s) {
     const r = compute(s);
-    return r.pay + r.left - r.billsTotal - sum((s.spends || []).map(x => x.amount));
+    return r.pay + r.left - r.billsAll - sum((s.spends || []).map(x => x.amount));
   }
 
   // ---------- state shape ----------
@@ -371,7 +375,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.15';
+  const APP = 'wheres-my-money-lite', VERSION = '0.16';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -537,7 +541,7 @@
       bills: (s.bills || []).map(b => ({key: b.key, name: b.name, cat: b.cat, amount: typeof b.amount === 'number' ? b.amount : null, stopped: !!b.stopped})),
       spends: clone(spends),
       pots: pots.map(p => ({key: p.key, name: p.name, cat: p.cat, amount: isSet(p) ? p.amount : null,
-                            spent: sum(spends.filter(x => x.cat === p.cat).map(x => x.amount))})),
+                            spent: (compute(s).pots.find(q => q.key === p.key) || {spent: 0}).spent})),
     });
     s.payday = day; s.pay = pay; s.left = left; s.spends = [];
     (s.bills || []).forEach(b => { b.paid = false; delete b.asked; });
@@ -592,6 +596,7 @@
     const r = compute(s, todayIso), list = [];
     r.bills.filter(b => !b.stopped && !b.paid && b.duePassed).forEach(b => list.push({kind: 'bill', key: b.key,
       text: `${b.name} was due on the ${b.dueText}. Check your bank app.`, go: `tr.bill[data-key="${b.key}"]`}));
+    if (s.snooze === todayIso) return list;
     if (paydayDue(s, todayIso)) list.push({kind: 'payday', text: 'Payday is here. Put in your new pay.', go: '#quicktab'});
     r.cards.forEach(c => c.asks.forEach(a => list.push({kind: 'card', key: a.key,
       text: `${a.name} ${money(a.amount)}: take it off the ${c.name} card?`, go: `.cardask[data-bill="${a.key}"]`})));
@@ -599,6 +604,13 @@
     if (s.lastBackup ? days >= 30 : (r.pay > 0 || r.hasHistory)) list.push({kind: 'backup',
       text: s.lastBackup ? `No backup for ${days} days.` : 'No backup saved yet.', go: '#qsave'});
     return list;
+  }
+
+  // POST /reminders/clear: bills ticked as checked; payday, card and backup quiet for today only
+  function clearReminders(s, todayIso) {
+    reminders(s, todayIso).filter(x => x.kind === 'bill').forEach(x => setPaid(s, x.key, true));
+    s.snooze = todayIso;
+    return null;
   }
 
   function cardAdd(s, iso, amountText, nameText, paid, cardKey) {   // POST /card/add
@@ -783,7 +795,7 @@
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
-    nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders,
+    nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,
     setLayout, resetLayout, order, renameRow, IDEA_TAGS, IDEA_BUTTONS, addIdea, toggleIdea, removeIdea, ideasCopy, VERSION,

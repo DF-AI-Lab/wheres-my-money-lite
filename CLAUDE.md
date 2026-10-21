@@ -44,6 +44,10 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   categories, reminders, setBackupDay/backupText. Routes /payday/day, /backup/saved. Bell = #bellbtn under ⚙ Settings
   (beside the version: no room next to the name at 390 px). Pots = tr.potbill rows in Bills (not tr.bill; Total includes
   them, spare counts them once). Tests 57 node + 93 browser. NEXT: Darren tries v0.15 on the phone.
+- **21 Oct v0.16 (Opus tests, Sonnet built, Opus checked):** green 'Paid' then ⓘ once a bill's due day has gone; bell list
+  scrolls + Clear all (/reminders/clear: due bills paid=true, s.snooze=today hides payday/card/backup that day); a bill in
+  a pot's category (pot with an amount) is paid FROM the pot (bill.pot; out of billsTotal, into pot spent; billsAll for
+  monthEndSpare). Tests 62 node + 97 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

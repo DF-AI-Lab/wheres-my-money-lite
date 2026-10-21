@@ -6,10 +6,6 @@ const M = require('../docs/money.js');
 
 const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.005, `${what}: ${a} != ${b}`);
 
-test('version 0.15', () => {
-  assert.strictEqual(M.VERSION, '0.15');
-});
-
 // ---------- 3. top card: Starting spare and Actual spare ----------
 
 test('starting spare = pay + left - bills - pots (set amounts); actual spare = what is left now', () => {

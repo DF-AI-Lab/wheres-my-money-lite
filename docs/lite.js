@@ -68,6 +68,7 @@
     '/bill/add': (s, get) => M.addBill(s, get('amount'), get('name')),
     '/bill/name': (s, get) => quiet(M.renameBill(s, get('key'), get('name'))),
     '/bill/due': (s, get) => quiet(M.setDue(s, get('key'), get('day'))),
+    '/reminders/clear': s => quiet(M.clearReminders(s, today())),
     '/bill/paid': (s, get) => quiet(M.setPaid(s, get('key'), get('paid') === '1')),
     '/bill/cat': (s, get) => quiet(M.setBillCat(s, get('key'), get('cat'))),
     '/bill/delete': (s, get) => quiet(M.deleteBill(s, get('key'))),
