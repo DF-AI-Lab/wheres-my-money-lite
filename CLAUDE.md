@@ -7,6 +7,11 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - Version: fintrack/appversion.py, starts at 0.01, +0.01 per push.
 - Plan: map = financial-tracker issue #22. Next: trim what Lite doesn't need (PC .bat files, v2 phone parts,
   prototypes), then ticket #25 Bill details. Not online yet (later: same PythonAnywhere site at /lite).
+- **21 Oct BIG CHANGE: Lite = HTML + CSS + JS only, on GitHub Pages, data in each person's browser (localStorage).
+  No Python server. Python stays as a guide only. Read `PLAN.md` first (rules + steps).** Look = 100% live v3.62
+  (financial-tracker branch `live`, read only), only change = the word "Lite". Done = side-by-side phone screenshots.
+- **WHO BUILDS: Sonnet subagent builds, Opus checks** (read every diff, run the screenshots, decide done).
+- Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
 ---
