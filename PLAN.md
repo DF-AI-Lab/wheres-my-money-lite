@@ -27,7 +27,7 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 ## Steps done
 1. **Look** ✅ 21 Oct: LOOK LOCKED (Darren agreed). docs/look.css never changes.
 2. **Maths** ✅ 21 Oct (v0.04): spare cash, spends, credit card, bills in JS. Saved for the tab only.
-3. **Go A = build steps 1-4** ✅ 21 Oct (v0.07): saving (localStorage) + backup file, bills (add/name/due/Paid/Stop/delete/template), payday + history cards, pots. ?demo=1 = fake data for the tab only.
+3. **Go A = build steps 1-4** ✅ 21 Oct (v0.08): saving (localStorage) + backup file, bills (add/name/due/Paid/Stop/delete/template), payday + history cards, pots. ?demo=1 = fake data for the tab only.
 
 ## Agreed design (grill, 21 Oct, Darren said "agreed")
 **Basics**
@@ -70,7 +70,9 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
   (forgot passcode = a code + load backup + new passcode). The app's code is public, so no secret key in the app.
 - Optional ☁️ Google Drive copy in the user's own Drive (Darren sets up the Google side once; test after).
 
-**Settings:** Save / Load backup, Google Drive, Move & rename (like live), 🔄 Update, 💡 Ideas & feedback, Cards open.
+**Settings:** Save / Load backup, Google Drive, Move & rename (like live), 🔄 Update, 💡 Ideas & feedback, Cards open,
+📱 **Invite** (a QR code + Share button for the Lite link, so a friend can scan it and install their own copy; it
+holds the link only, never any data. Added by Darren 21 Oct).
 
 ## Build order (one step at a time, Darren says go)
 1. 💾 Saving on the phone + backup file ✅
@@ -79,7 +81,7 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 4. 🟠 Pots ✅
 5. 💳 Several credit cards + the Zopa question ⬅️ NEXT
 6. 🔒 Fingerprint + passcode + 10 codes + scrambled backup
-7. ✏️ Move & rename + Update + Ideas
+7. ✏️ Move & rename + Update + Ideas + 📱 Invite QR code
 8. 📲 Install + works offline
 9. ☁️ Google Drive (optional)
 Then the rest of the map (Lite issue #1); Bill details (#2) is mostly covered by step 2.
