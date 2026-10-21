@@ -22,6 +22,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   Checks: `node --test tests_js/money.test.js` (4 pass) and `tools/lite_compare.py LIVE_COPY OUT` (9 scenarios, Lite vs
   live pixel compare: all OK). Darren's real numbers (21 Oct: spare 53.66, card 293.36) checked PRIVATELY in scratch:
   all match. REPO + PAGES ARE PUBLIC: never commit real data. Bills sort by avg (no Move & rename order yet).
+- **21 Oct GRILL AGREED: no statements/PDFs, all typed by hand; new design + build order 1-9 in PLAN.md.** Next = step 1 saving.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
