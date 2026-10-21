@@ -178,14 +178,16 @@ body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[d
   100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
 }
 @keyframes litepulse-bg {
-  0%, 100% { background-color: transparent; outline-color: transparent; }
-  30% { background-color: color-mix(in srgb, var(--accent) 40%, transparent); outline-color: var(--accent); }
+  0%, 100% { background-color: transparent; box-shadow: 0 0 0 10px transparent; outline-color: transparent; }
+  30% { background-color: color-mix(in srgb, var(--accent) 40%, transparent);
+        box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent); outline-color: var(--accent); }
 }
 @keyframes litepulse-calm {
   0%, 100% { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
 }
 .pulse { animation: litepulse 0.9s ease-out 3; border-radius: 10px; }
-tr.pulse { animation: litepulse-bg 0.9s ease-out 3; box-shadow: none; border-radius: 0; outline: 2px solid transparent; outline-offset: -2px; }
+/* the glow sits 10px outside the row (shadow + outline), so the words have room (Darren, 21 Oct) */
+tr.pulse { animation: litepulse-bg 0.9s ease-out 3; border-radius: 4px; outline: 2px solid transparent; outline-offset: 10px; }
 @media (prefers-reduced-motion: reduce) {
   .pulse, tr.pulse { animation: litepulse-calm 2.5s linear 1; }
 }
