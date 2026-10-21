@@ -7,7 +7,7 @@ Normal page = the person's own data in localStorage ('lite_state_v1'), starting 
 """
 import json
 
-from conftest import DEMO, stored, post, bill_menu
+from conftest import DEMO, PIN, stored, post, bill_menu, open_scrambled
 
 
 # ---------- step 1: saving + backup file ----------
@@ -54,12 +54,13 @@ def test_save_backup_downloads_a_file_and_load_backup_brings_it_back(page, base,
     path = tmp_path / d.suggested_filename
     d.save_as(path)
     data = json.loads(path.read_text())
-    assert data["app"] == "wheres-my-money-lite" and data["state"]["spends"][0]["name"] == "Before"
+    assert data["app"] == "wheres-my-money-lite"                  # step 6: scrambled, opens with the passcode
+    assert open_scrambled(data, PIN)["spends"][0]["name"] == "Before"
 
     post(page, 'form[action="/remove"]', {"id": "1"})
     assert stored(page)["spends"] == []
     page.click("#setbtn")
-    page.once("dialog", lambda dlg: dlg.accept())                 # "Replace everything on this phone ...?"
+    page.on("dialog", lambda dlg: dlg.accept(PIN) if dlg.type == "prompt" else dlg.accept())   # passcode, then "Replace ...?"
     with page.expect_navigation():
         page.set_input_files("#loadfile", str(path))
     page.wait_for_load_state()
