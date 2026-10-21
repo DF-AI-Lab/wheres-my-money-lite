@@ -90,3 +90,22 @@ Then the rest of the map (Lite issue #1); Bill details (#2) is mostly covered by
 ## GitHub Pages (Darren does once)
 Repo must be public. Settings → Pages → Branch = the branch Claude names, folder `/docs` → Save.
 DONE 21 Oct: https://df-ai-lab.github.io/wheres-my-money-lite/ (branch claude/jolly-bardeen-j3jk6i, /docs).
+
+## Step 10: Darren's feedback (21 Oct, agreed answers). Build in one round: tests first, Sonnet builds, Opus checks
+1. ⬅️ **Back button** at the top of the ⚙ Settings menu (closes it; also leaves Move & rename editing).
+2. 🟠 **Pots in Bills**: every pot also shows in the Bills card as its own row, category **Pots**, name = the pot's
+   name, amount = the pot amount. Counted ONCE in spare (not twice).
+3. 💰 **Top card**: show **Starting spare** (pay + left − bills − pots, at the start of the month) and **Actual spare**
+   (what is left now).
+4. 📅 **Payday date**: paid on the **same date each month** (e.g. 25th; a weekend moves it to the Friday before).
+   Set it in the New payday panel = **mock B** (mockups/mock-4-payday-panel-B.png/.html): a 3rd box "Payday", a pill
+   "📅 25 Nov · in 17 days" next to "New payday?".
+5. 🔔 **Reminders bell** left of ⚙ Settings with a count. It reminds you of: bills whose due day has gone (check your
+   bank app), payday is here (put in the new pay), a card question waiting (Take £X off the card?), no backup saved
+   for 30 days. Tap = a list; each item jumps to its place.
+6. 👆 **Cards fold by tapping anywhere on the top row** (the h2), not just the arrow.
+7. 🏷 **Categories**: a fixed list (so months can be compared). The bill ⋯ → Category becomes a pick list of the
+   categories + **＋ New category** at the bottom (it joins the list for good).
+8. 💾 **Backup in the payday panel** (mock B): a big "💾 Save a backup" button, a small "Last saved 3 Nov · 5 days ago"
+   line under it (remember the date of the last backup).
+9. ⓘ **Info bubbles float** over the page (a popover; take no space) and any tap anywhere closes them.
