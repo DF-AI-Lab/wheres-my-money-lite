@@ -32,7 +32,7 @@ In this repo: map = issue #1, Bill details = issue #2. (financial-tracker #22/#2
 **Basics**
 - Everything typed in by hand. **No statements, no PDFs** (old step 4 is gone).
 - Android only for now, installed from the web (PWA), works offline.
-- Same look as live. New parts reuse live's styles. One new colour: **pots = orange**. Mock-ups were shown first.
+- Same look as live. New parts reuse live's styles. One new colour: **pots = orange**. Mock-ups were shown first (mockups/, fake data; agreed changes: pots orange, "Paid ⓘ ☐" green word, payday panel hidden under the tab).
 
 **Bills**
 - ⋯ menu: Change amount, Change name, 📅 Due day, ⏸ Stop counting, 🗑 Delete (no Replaces…). Add a bill box.
