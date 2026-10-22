@@ -15,12 +15,12 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.25"></script>
-<script src="money.js?v=0.25"></script>
-<script src="render.js?v=0.25"></script>
-<script src="lite.js?v=0.25"></script>
-<script src="lock.js?v=0.25"></script>
-<script src="lockui.js?v=0.25"></script>
+<script src="config.js?v=0.26"></script>
+<script src="money.js?v=0.26"></script>
+<script src="render.js?v=0.26"></script>
+<script src="lite.js?v=0.26"></script>
+<script src="lock.js?v=0.26"></script>
+<script src="lockui.js?v=0.26"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -177,8 +177,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.25">
-<link rel="stylesheet" href="lite.css?v=0.25">
+<link rel="stylesheet" href="look.css?v=0.26">
+<link rel="stylesheet" href="lite.css?v=0.26">
 </head>
 <body class="demo">
 
@@ -247,7 +247,8 @@
   
   
   <header class="demohead">
-    <a class="brand" href="./" title="Back to the top"><img src="icon-192.png" alt=""><div><h1>Where's My Money?</h1><div class="tagline">Payday to payday · Lite</div></div></a>
+    <div class="brandcol"><a class="brand" href="./" title="Back to the top"><img src="icon-192.png" alt=""><div><h1>Where's My Money?</h1><div class="tagline">Payday to payday · Lite</div></div></a>
+      <button type="button" class="small" id="headupd" title="Get the latest version">🔄 Update</button></div>
     <div class="settings"><button type="button" class="small" id="setbtn" aria-expanded="false" aria-controls="setmenu">⚙ Settings</button>
       <div class="bellmenu" id="bellmenu" hidden></div>
       <div class="setmenu" id="setmenu" hidden>
@@ -263,7 +264,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.25</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.26</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -545,6 +546,9 @@
       const row = btn.closest('tr'), key = row.dataset.key, stopped = row.dataset.stopped === '1', items = [];
       if (!stopped) items.push(['✏️ Change amount', '', () => row.querySelector('button.link').click()]);
       if (row.dataset.changed === '1') items.push(['↩ Put back', '', () => row.querySelector('button.x').click()]);
+      if (!stopped) items.push(row.dataset.paid === '1'                                  // paid by hand (Darren, 22 Oct)
+        ? ['↩️ Not paid yet', '', () => send('/bill/paid', {key, paid: '0'})]
+        : ['✅ Mark as paid', '', () => send('/bill/paid', {key, paid: '1'})]);
       items.push(['✏️ Change name', '', () => {
         const name = prompt('Name of the bill', row.dataset.name); if (name !== null) send('/bill/name', {key, name}); }]);
       items.push(['🏷 Category', '', () => {                // a pick list of the categories, then ＋ New category
@@ -971,6 +975,26 @@
         });
       }
     } catch (e) { /* no worker: a plain reload is enough */ }
+    location.reload();
+  });
+
+  // 🔄 Update under the icon (Darren, 22 Oct): one tap, the icon spins, the page reloads with the newest files
+  const headUpd = document.getElementById('headupd');
+  if (headUpd) headUpd.addEventListener('click', async () => {
+    const brand = document.querySelector('.demohead .brand');
+    brand.classList.add('spinning'); headUpd.disabled = true;
+    try {
+      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        const w = reg.installing || reg.waiting;            // wait (max 5 s) until the new worker has taken over
+        if (w && w.state !== 'activated') await new Promise(done => {
+          const t = setTimeout(done, 5000);
+          w.addEventListener('statechange', () => { if (w.state === 'activated') { clearTimeout(t); done(); } });
+        });
+      }
+    } catch (e) { /* offline or no worker: a plain reload */ }
+    await new Promise(done => setTimeout(done, 600));       // let the spin show
     location.reload();
   });
 

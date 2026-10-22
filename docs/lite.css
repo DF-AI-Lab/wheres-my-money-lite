@@ -243,3 +243,10 @@ body.demo.editing [data-card="bills"] table.dbills .bline .bbase { display: none
 .bline.paid .bbase, .bline.paid .bdate { color: var(--good); }
 .bline.paid .bbase::before { content: "✓ "; font-weight: 800; }
 .bline button.info { font-size: 13px; vertical-align: 1px; }
+
+/* 🔄 Update under the app icon (Darren, 22 Oct): tap = the icon spins and the page reloads */
+.demohead .brandcol { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.demo #headupd { margin: 2px 0 0; padding: 2px 6px; font-size: 11px; font-weight: 700; line-height: 1.4; white-space: nowrap; }
+@keyframes litespin { to { transform: rotate(360deg); } }
+.demo .brand.spinning img { animation: litespin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .demo .brand.spinning img { animation: none; opacity: .6; } }

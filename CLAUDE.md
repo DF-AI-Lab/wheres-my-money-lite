@@ -63,6 +63,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   .ter Cancel = nothing; Escape or tap outside = Cancel), no browser confirm. Other confirm()s still browser boxes. Tests 61 node + 104 browser.
 - **22 Oct v0.25 (mock B):** bill row = .bline (.bbase name + .bdate "· 1st", 13px) then .bsub "cat · avg"; due day gone (duePassed, not
   stopped) = .bline.paid: green name with ::before ✓, green date, then ⓘ. No "Paid" word / .bpaid. Tests 61 node + 104 browser.
+- **22 Oct v0.26:** bill ⋯ → ✅ Mark as paid / ↩️ Not paid yet (POST /bill/paid, tr data-paid; green = !stopped && (paid || duePassed),
+  ⓘ INFO.marked when paid by hand). #headupd "🔄 Update" under the icon (.brandcol): no confirm, .brand.spinning, sw update, reload.
+  Tests 61 node + 107 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

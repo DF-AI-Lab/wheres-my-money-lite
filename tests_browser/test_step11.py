@@ -150,3 +150,50 @@ def test_new_month_asks_in_a_sheet_not_a_browser_box(page, base):
     page.click("#payform .q-go")
     page.keyboard.press("Escape")                                     # Escape = Cancel too
     assert page.locator("#newmonth").count() == 0 or not page.locator("#newmonth").is_visible()
+
+
+def test_mark_a_bill_paid_by_hand(page, base):
+    """Darren, 22 Oct: ⋯ → ✅ Mark as paid (any time); it goes green with ✓, leaves the bell; ↩️ Not paid yet undoes it."""
+    page.goto(base + DEMO)
+    row = 'tr.bill[data-key="Phone Co"]'                              # due 18th, today 8 Nov: not due yet
+    assert page.locator(f"{row} .bline.paid").count() == 0
+    bill_menu(page, "Phone Co", "Mark as paid")
+    assert page.locator(f"{row} .bline.paid").count() == 1
+    page.click(f"{row} button.info")
+    assert "marked" in page.locator(".infotip").inner_text().lower()
+    demo = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1'))")
+    assert next(b for b in demo["bills"] if b["key"] == "Phone Co")["paid"] is True
+    page.click(f"{row} button.more")
+    assert page.locator('.bmenu [role=menuitem]:has-text("Mark as paid")').count() == 0
+    page.keyboard.press("Escape")
+    bill_menu(page, "Phone Co", "Not paid yet")
+    assert page.locator(f"{row} .bline.paid").count() == 0
+
+
+def test_marking_a_due_bill_paid_clears_its_reminder(page, base):
+    page.goto(base + DEMO)
+    before = page.locator("#bellcount").inner_text()
+    bill_menu(page, "Rent", "Mark as paid")
+    assert int(page.locator("#bellcount").inner_text()) == int(before) - 1
+
+
+def test_update_button_under_the_icon_spins_and_reloads(page, base):
+    """Darren, 22 Oct: a small 🔄 Update under the app icon; tap = the icon spins and the page reloads with the new version."""
+    page.goto(base + DEMO)
+    img = page.locator(".demohead .brand img").bounding_box()
+    upd = page.locator("#headupd")
+    b = upd.bounding_box()
+    assert b["y"] >= img["y"] + img["height"] - 2                     # under the icon
+    assert abs((b["x"] + b["width"] / 2) - (img["x"] + img["width"] / 2)) < 30
+    head = page.locator(".demohead").bounding_box()
+    assert b["y"] + b["height"] <= head["y"] + head["height"]         # inside the header
+    page.route("**/version.json*", lambda r: r.fulfill(status=200, content_type="application/json", body='{"version": "9.99"}'))
+    dialogs = []
+    page.on("dialog", lambda d: (dialogs.append(d.message), d.accept()))
+    page.evaluate("window.__before = 1")
+    with page.expect_navigation(timeout=8000):
+        upd.click()
+        assert page.locator(".demohead .brand.spinning").count() == 1
+    page.wait_for_load_state()
+    assert page.evaluate("window.__before") is None
+    assert dialogs == []                                              # no OK / Cancel box

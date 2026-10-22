@@ -159,6 +159,7 @@
   const INFO = {
     due: 'The due day has gone, so it should be paid. Check your bank app that it came out.',
     stopped: 'Not counted until you choose Count it again in ⋯.',
+    marked: 'You marked this as paid (⋯ → Not paid yet to undo).',
     left: 'Check your bank app for what is really left. Please check this each month.',
   };
   const infoBtn = tip => `<button type="button" class="info" aria-label="What is this?" data-tip="${esc(tip)}">ⓘ</button>`;
@@ -174,10 +175,10 @@
   }
 
   // the name line: name · due day; once the due day has gone both go green with ✓ (CSS), then ⓘ (mock B, 22 Oct)
-  const paidNow = b => b.duePassed && !b.stopped;
+  const paidNow = b => !b.stopped && (b.paid || b.duePassed);   // marked paid by hand (⋯), or the due day has gone
   function billLine(b, nm) {
     const date = b.dueText ? `<span class="bdate">· ${b.dueText}</span>` : '';
-    return `<span class="bline${paidNow(b) ? ' paid' : ''}"><b class="bbase">${esc(nm[0])}</b>${date}${paidNow(b) ? ` ${infoBtn(INFO.due)}` : ''}</span>`;
+    return `<span class="bline${paidNow(b) ? ' paid' : ''}"><b class="bbase">${esc(nm[0])}</b>${date}${paidNow(b) ? ` ${infoBtn(b.paid ? INFO.marked : INFO.due)}` : ''}</span>`;
   }
 
   function billRow(b) {
@@ -185,7 +186,7 @@
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}" data-paid="${b.paid ? 1 : 0}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span>${billLine(b, nm)}
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
