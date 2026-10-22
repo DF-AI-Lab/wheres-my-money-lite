@@ -112,3 +112,28 @@ def test_middle_widths_keep_the_phone_rows(page, base):
         more = row.locator("td.bmore").bounding_box()
         card = page.locator('[data-card="bills"]').bounding_box()
         assert card["x"] + card["width"] - (more["x"] + more["width"]) < 40, w           # ⋯ sits at the right edge
+
+
+def test_new_month_asks_in_a_sheet_not_a_browser_box(page, base):
+    """Darren, 22 Oct (mock B): a sheet slides up with the numbers, Yes / No, just change the pay / Cancel."""
+    page.goto(base + DEMO)
+    dialogs = []
+    page.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
+    months = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1')).history.length")
+    page.click("#quicktab")
+    page.fill("#qpay", "2600")
+    page.fill("#qleft", "100")
+    page.click("#payform .q-go")
+    sheet = page.locator("#newmonth")
+    sheet.wait_for(state="visible")
+    text = sheet.inner_text()
+    assert "Start a new month?" in text and "£2,600.00" in text and "£100.00" in text
+    assert "Yes, start a new month" in text and "just change this month" in text and "Cancel" in text
+    assert dialogs == []                                              # no browser pop-up
+    page.click("#newmonth .ter")                                      # Cancel: nothing changes
+    assert page.locator("#newmonth").count() == 0 or not page.locator("#newmonth").is_visible()
+    s = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1'))")
+    assert s["pay"] == 2500 and len(s["history"]) == months
+    page.click("#payform .q-go")
+    page.keyboard.press("Escape")                                     # Escape = Cancel too
+    assert page.locator("#newmonth").count() == 0 or not page.locator("#newmonth").is_visible()

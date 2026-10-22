@@ -182,9 +182,9 @@ def test_new_payday_saves_the_month_and_fills_in_left(page, base):
     assert "please check this each month" in page.locator("#quick").inner_text().lower()
     months = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1')).history.length")
     page.fill("#qpay", "2600")
-    page.once("dialog", lambda d: d.accept())                     # "Start a new month? ..."
+    page.click("#payform .q-go")                                  # the sheet asks "Start a new month?"
     with page.expect_navigation():
-        page.click("#payform .q-go")
+        page.click("#newmonth .pri")
     page.wait_for_load_state()
     s = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1'))")
     assert len(s["history"]) == months + 1
@@ -197,9 +197,9 @@ def test_cancel_just_changes_the_pay(page, base):
     months = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1')).history.length")
     page.click("#quicktab")
     page.fill("#qpay", "2550")
-    page.once("dialog", lambda d: d.dismiss())
+    page.click("#payform .q-go")
     with page.expect_navigation():
-        page.click("#payform .q-go")
+        page.click("#newmonth .sec")                              # No, just change this month's pay
     page.wait_for_load_state()
     s = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1'))")
     assert len(s["history"]) == months and s["pay"] == 2550 and len(s["spends"]) > 0

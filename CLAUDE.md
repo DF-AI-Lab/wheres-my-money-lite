@@ -59,6 +59,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **22 Oct v0.22:** no "(not in a pot)" words: ⓘ on − Spends (.r.spends) and on Pots left explain them. Tests 61 node + 102 browser.
 - **22 Oct v0.23:** 521-640 px (phone zoomed out) used look.css boxed card rows for Bills/Last month; lite.css now gives them the
   phone (≤520) rows there too. Tests 61 node + 103 browser.
+- **22 Oct v0.24 (mock B):** "Start a new month?" = #newmonth .sheetback sheet (slides up; New pay + Left; .pri Yes / .sec just the pay /
+  .ter Cancel = nothing; Escape or tap outside = Cancel), no browser confirm. Other confirm()s still browser boxes. Tests 61 node + 104 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
