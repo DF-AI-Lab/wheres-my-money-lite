@@ -197,3 +197,20 @@ tr.pulse { animation: litepulse-mark 2.7s linear 1; }
   .pulse, .pulsebox { animation: litepulse-calm 2.5s linear 1; }
   tr.pulse { animation: litepulse-mark 2.5s linear 1; }
 }
+
+/* 22 Oct (Darren): 521-640 px (a phone zoomed out) got boxed rows with a gap on the right. Use the phone rows there too
+   (same rules look.css has for 520 px and under). */
+@media (min-width: 521px) and (max-width: 640px) {
+  body.demo [data-card="bills"] table.dbills tr { grid-template-columns: minmax(0, 1fr) auto 32px; row-gap: 4px; }
+  body.demo [data-card="bills"] table.dbills td.diff { grid-column: 2; grid-row: 2; }
+  body.demo [data-card="bills"] table.dbills td:first-child { grid-column: 1; font-weight: inherit; }
+  body.demo [data-card="bills"] table.dbills tr { margin: 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 0; }
+  body.demo [data-card="bills"] table.dbills tr.total { border-top: 2px solid var(--text); }
+  body.demo [data-card="bills"] table.dbills td.n::before { content: none; }
+  body.demo [data-card="bills"] table.dbills td.bamt { text-align: right; }
+  body.demo [data-card="bills"] table.dbills td.bmore { grid-column: 3; grid-row: 1; }
+  body.demo [data-card="lastmonth"] table.dlast tr:not(.item) { grid-template-columns: minmax(0, 1fr) auto 48px; row-gap: 4px; }
+  body.demo [data-card="lastmonth"] table.dlast tr:not(.item) td.diff { grid-column: 2; grid-row: 2; }
+  body.demo [data-card="lastmonth"] table.dlast tr:not(.item) td.lchev { grid-column: 3; grid-row: 1; }
+  .demo .card .tiles { grid-template-columns: 1fr; }
+}

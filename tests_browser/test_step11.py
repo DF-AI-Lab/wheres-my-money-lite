@@ -98,3 +98,17 @@ def test_show_payday_pulses_the_panel(page, base):
     page.wait_for_timeout(700)
     assert page.locator("#quick").is_visible()
     assert "pulse" in page.locator("#quick").get_attribute("class")
+
+
+def test_middle_widths_keep_the_phone_rows(page, base):
+    """Darren, 22 Oct: zoomed out (521-640 px) the bills turned into boxes with a gap on the right. Keep the phone rows."""
+    for w in (390, 600):
+        page.set_viewport_size({"width": w, "height": 900})
+        page.goto(base + DEMO)
+        row = page.locator('[data-card="bills"] tr.bill[data-key="Rent"]')
+        assert row.evaluate("e => getComputedStyle(e).borderLeftWidth") == "0px", w      # no box round each bill
+        label = row.locator("td.n").first.evaluate("e => getComputedStyle(e, '::before').content")
+        assert label in ("none", "normal"), (w, label)                                   # no 'LAST MONTH' label
+        more = row.locator("td.bmore").bounding_box()
+        card = page.locator('[data-card="bills"]').bounding_box()
+        assert card["x"] + card["width"] - (more["x"] + more["width"]) < 40, w           # ⋯ sits at the right edge
