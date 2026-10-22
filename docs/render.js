@@ -28,7 +28,7 @@
       <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">${money(r.pay)}</button></div>
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">${left}</button></div>
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">${money(r.billsTotal)}</span></div>
-      <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
+      <div class="r spends"><span><i class="dot spend"></i>− Spends ${infoBtn('Spends that are not in a pot. Pot spends come out of the pot, so they show in Pots left.')}</span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
       ${potsLine(r)}
       <div class="r start"><span>Starting spare</span><span id="st-start">${money(r.startSpare)}</span></div>
       <div class="r tot"><span>Actual spare</span><span id="st-spare">${money(r.leftNow)}</span></div>
@@ -39,7 +39,7 @@
   function potsLine(r) {
     const net = r.potsLeft - r.potsOver;
     const over = r.potsOver > 0.004 ? ` <span class="labels">(${money(r.potsOver)} over)</span>` : '';
-    return `<div class="r pots"><span><i class="dot pot"></i>${net < -0.004 ? 'Pots over' : 'Pots left'}${over}</span><span class="k-pot" id="st-potleft">${money(Math.abs(net))}</span></div>`;
+    return `<div class="r pots"><span><i class="dot pot"></i>${net < -0.004 ? 'Pots over' : 'Pots left'}${over} ${infoBtn('Pot money still left to spend this month (less any pot that went over).')}</span><span class="k-pot" id="st-potleft">${money(Math.abs(net))}</span></div>`;
   }
 
   // one tile per card; only the first keeps the ids the page script and tests look for

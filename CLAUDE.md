@@ -56,6 +56,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   outline; reduced motion = one calm highlight; Show payday/backup pulses #quick). Tests 61 node + 100 browser.
 - **22 Oct v0.21:** top card = Pay, + Left, − Bills, − Spends, ONE pot line "Pots left" (#st-potleft = potsLeft − potsOver, "(£X over)" note;
   "Pots over" if negative), then the line, Starting spare, Actual spare. No #st-pots / #st-over. Tests 61 node + 101 browser.
+- **22 Oct v0.22:** no "(not in a pot)" words: ⓘ on − Spends (.r.spends) and on Pots left explain them. Tests 61 node + 102 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

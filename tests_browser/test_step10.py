@@ -345,3 +345,15 @@ def test_any_tap_closes_the_bubble(page, base):
     page.mouse.click(20, 400)                                         # anywhere else
     assert page.locator(".infotip").count() == 0
     assert not page.errors
+
+
+def test_spends_and_pots_left_explain_themselves_with_info(page, base):
+    """Darren, 22 Oct: no '(not in a pot)' words; an ⓘ on Spends and on Pots left says what each is."""
+    page.goto(base + DEMO)
+    assert "not in a pot" not in page.locator(".st-rows").inner_text()
+    spends = page.locator(".st-rows .r.spends button.info")
+    assert "pot" in spends.get_attribute("data-tip").lower()
+    spends.click()
+    assert "pot" in page.locator(".infotip").inner_text().lower()
+    pots = page.locator(".st-rows .r.pots button.info")
+    assert "left" in pots.get_attribute("data-tip").lower()
