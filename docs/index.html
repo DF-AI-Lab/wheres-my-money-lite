@@ -15,12 +15,12 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.20"></script>
-<script src="money.js?v=0.20"></script>
-<script src="render.js?v=0.20"></script>
-<script src="lite.js?v=0.20"></script>
-<script src="lock.js?v=0.20"></script>
-<script src="lockui.js?v=0.20"></script>
+<script src="config.js?v=0.21"></script>
+<script src="money.js?v=0.21"></script>
+<script src="render.js?v=0.21"></script>
+<script src="lite.js?v=0.21"></script>
+<script src="lock.js?v=0.21"></script>
+<script src="lockui.js?v=0.21"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -177,8 +177,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.20">
-<link rel="stylesheet" href="lite.css?v=0.20">
+<link rel="stylesheet" href="look.css?v=0.21">
+<link rel="stylesheet" href="lite.css?v=0.21">
 </head>
 <body class="demo">
 
@@ -263,7 +263,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.20</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.21</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <script>
@@ -379,9 +379,9 @@
       <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">£2,500.00</button></div>
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">Add</button></div>
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">£1,183.73</span></div>
-      <div class="r"><span><i class="dot pot"></i>− Pots</span><span class="k-pot" id="st-pots">£0.00</span></div>
-      <div class="r start"><span>Starting spare</span><span id="st-start">£1,316.27</span></div>
       <div class="r"><span><i class="dot spend"></i>− Spends <span class="labels">(not in a pot)</span></span><span class="k-spend" id="st-spends">£46.70</span></div>
+      <div class="r pots"><span><i class="dot pot"></i>Pots left</span><span class="k-pot" id="st-potleft">£0.00</span></div>
+      <div class="r start"><span>Starting spare</span><span id="st-start">£1,316.27</span></div>
       <div class="r tot"><span>Actual spare</span><span id="st-spare">£1,269.57</span></div>
     </div>
     <div id="spare-how" hidden></div>

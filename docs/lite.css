@@ -59,6 +59,9 @@ tr.potbill td:first-child .bbase { color: var(--pot); }
 /* top card: Starting spare */
 .st-rows .r.start { font-weight: 700; }
 .st-rows .r.start > span:first-child { color: var(--text); }
+/* 22 Oct: Starting spare sits under the line, just above Actual spare */
+.st-rows .r.start { border-top: 2px solid var(--text); }
+.st-rows .r.start + .r.tot { border-top: 0; }
 
 /* Settings: ⬅️ Back first; the 🔔 bell left of Settings, and its list */
 .setrow { display: flex; gap: 6px; align-items: center; }

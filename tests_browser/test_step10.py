@@ -53,7 +53,7 @@ def test_pots_are_counted_once(page, base):
     page.goto(base + DEMO)
     assert page.locator("#btotal").inner_text() == "£1,733.73"        # bills 1,183.73 + pots 550 (the card adds up)
     assert page.locator("#st-bills").inner_text() == "£1,183.73"      # the top card: bills alone
-    assert page.locator("#st-pots").inner_text() == "£550.00"
+    assert page.locator("#st-pots").count() == 0                      # one pot line only: Pots left (22 Oct)
     assert page.locator("#spare-big").inner_text() == "£1,209.57"     # real money left: not taken off twice
 
 
@@ -91,11 +91,26 @@ def test_top_card_shows_starting_and_actual_spare(page, base):
     assert page.locator("#st-over").count() == 0                      # no pot over
 
 
-def test_a_pot_going_over_shows_its_own_line_and_the_rows_add_up(page, base):
+def test_one_pots_left_line_and_starting_spare_under_the_line(page, base):
+    """Darren, 22 Oct: one pot line 'Pots left'; Starting spare under the line, just above Actual spare."""
+    page.goto(base + DEMO)
+    rows = page.locator(".st-rows .r")
+    texts = [rows.nth(i).inner_text() for i in range(rows.count())]
+    assert sum("Pot" in t for t in texts) == 1, texts
+    assert "Pots left" in texts[-3]
+    assert "Starting spare" in texts[-2] and "Actual spare" in texts[-1]
+    line = page.locator(".st-rows .r.start").evaluate("e => getComputedStyle(e).borderTopWidth")
+    assert line == "2px"                                              # the line sits above Starting spare
+    assert page.locator(".st-rows .r.tot").evaluate("e => getComputedStyle(e).borderTopWidth") == "0px"
+
+
+def test_a_pot_going_over_shows_in_the_pots_left_line(page, base):
     page.goto(base + DEMO)
     post(page, 'form[action="/add"]', {"amount": "100", "name": "Shell"})   # Fuel pot 160 of 150
     assert page.locator("#st-start").inner_text() == "£766.27"
-    assert page.locator("#st-over").inner_text() == "£10.00"
+    assert page.locator("#st-over").count() == 0                      # still one pot line
+    assert page.locator("#st-potleft").inner_text() == "£390.00"        # 400 left - 10 over
+    assert "£10.00 over" in page.locator(".st-rows .r.pots").inner_text()
     assert page.locator("#st-spare").inner_text() == "£1,109.57"
     assert page.locator("#spare-big").inner_text() == "£1,109.57"
 

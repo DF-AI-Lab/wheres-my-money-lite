@@ -228,7 +228,7 @@ def test_pots_card_and_top_card(page, base):
     assert card.locator(".pot").count() >= 3
     assert card.locator(".pot .potbar > i").count() >= 1
     rows = page.locator(".st-rows").inner_text()
-    assert "− Pots" in rows and "not in a pot" in rows
+    assert "Pots left" in rows and "not in a pot" in rows
     assert page.locator("#ring .seg-pot").count() == 1
     assert "Pots" in page.locator("#st-key").inner_text()
 
