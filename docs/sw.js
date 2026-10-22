@@ -1,13 +1,13 @@
 /* Where's My Money? Lite - the service worker (step 8): keeps the app files on the phone so it opens with no internet.
    Bump VERSION with every app version (the tests check that the cache name = the page version). */
-const VERSION = '0.28';
+const VERSION = '0.29';
 // Live (…/) and the demo (…/demo/) share one website, so each keeps its own cache and never touches the other's.
 const DEMO = /\/demo\/$/.test(new URL('./', self.location).pathname);
 const PREFIX = DEMO ? 'wmm-lite-demo-' : 'wmm-lite-';
 const CACHE = PREFIX + VERSION;
 const mine = name => DEMO ? name.startsWith('wmm-lite-demo-') : /^wmm-lite-\d/.test(name);
 const FILES = ['./', 'index.html', 'config.js', 'money.js', 'render.js', 'sheet.js', 'lite.js', 'lock.js', 'lockui.js', 'look.css', 'lite.css',
-  'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'invite-qr.svg'];
+  'manifest.json', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'lite-192.png', 'lite-512.png', 'lite-maskable-512.png', 'invite-qr.svg'];
 
 // install: fetch every file fresh (not from the HTTP cache) and keep it under its plain URL (no ?v=)
 self.addEventListener('install', e => {
