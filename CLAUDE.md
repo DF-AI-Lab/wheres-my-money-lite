@@ -79,6 +79,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **22 Oct v0.29 (mock B, Darren: "move straight to live too"):** the installed app clashed with the old v3 app (same lens icon, same
   name). Home-screen icons = lite-192/512/maskable-512.png (mint LITE tag, tools/make_lite_icon.py), manifest short_name "My Money Lite",
   apple-touch-icon = lite-192; the page header keeps icon-192.png. Tests 61 node + 119 browser (test_liteicon.py).
+- **22 Oct v0.30 (demo only):** after a save the page stays where you were: lite.js keepPlace() (in leave) saves sessionStorage
+  'lite_place' = the tapped thing's form / [data-id] row / card + its screen top (pointerdown; sheets/menus ignored; else the sent form),
+  backToPlace() on load scrolls it back (fallback scrollY). Tests 61 node + 124 browser (test_stayput.py).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

@@ -121,8 +121,53 @@
     return {error, unknown};
   }
 
+  // ---------- stay put: after a save the page comes back where you were (Darren, 22 Oct) ----------
+  // The place = what you tapped (its form, else its row or card) and how far down the screen it sat.
+  let lastTap = null, lastForm = null;
+  document.addEventListener('pointerdown', e => {
+    const t = e.target;
+    if (t && t.closest && !t.closest('.sheetback, .bmenu, [role=menu]')) lastTap = t;   // a sheet or menu = the thing that opened it
+  }, true);
+  const shown = el => el && el.isConnected && el.getBoundingClientRect().height > 0;
+  function placesOf(el) {                                         // [{sel, i, top}], the closest first
+    const out = [], add = (node, sel) => {
+      if (!shown(node)) return;
+      const i = Array.prototype.indexOf.call(document.querySelectorAll(sel), node);
+      if (i >= 0) out.push({sel, i, top: node.getBoundingClientRect().top});
+    };
+    const f = el && el.closest && el.closest('form[action]');
+    if (f) add(f, `form[action="${f.getAttribute('action')}"]`);
+    for (let n = el; n && n.closest; n = n.parentElement && n.parentElement.closest('[data-id]')) {
+      n = n.closest('[data-id]');
+      if (!n) break;
+      add(n, `[data-id="${CSS.escape(n.dataset.id)}"]`);
+    }
+    return out;
+  }
+  function keepPlace() {
+    let places = placesOf(lastTap);
+    if (!places.length) places = placesOf(lastForm);
+    try { sessionStorage.setItem('lite_place', JSON.stringify({places, y: scrollY})); } catch (e) { /* no storage: top */ }
+  }
+  function backToPlace() {
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem('lite_place')); sessionStorage.removeItem('lite_place'); } catch (e) { /* none */ }
+    if (!saved) return;
+    const go = () => {
+      for (const p of saved.places || []) {
+        const node = document.querySelectorAll(p.sel)[p.i];
+        if (shown(node)) { scrollTo({top: scrollY + node.getBoundingClientRect().top - p.top, behavior: 'instant'}); return; }
+      }
+      scrollTo({top: saved.y || 0, behavior: 'instant'});
+    };
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    if (document.readyState === 'complete') go(); else addEventListener('load', () => { go(); requestAnimationFrame(go); });
+  }
+  backToPlace();
+
   // ---------- forms: apply, then go where live's redirect goes ----------
   function leave(error) {
+    keepPlace();
     if (error) {
       const u = new URL(location.href);
       u.searchParams.set('error', error);
@@ -268,6 +313,7 @@
     if (!ROUTES[path]) return;
     let data;
     try { data = new FormData(form, submitter || undefined); } catch (e) { data = new FormData(form); }
+    lastForm = form;
     const r = run(path, data);
     leave(r && r.error);
   }
