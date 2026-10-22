@@ -234,3 +234,12 @@ tr.pulse { animation: litepulse-mark 2.7s linear 1; }
 @keyframes sheetup { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes sheetfade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .sheetback, .sheetback .sheet { animation: none; } }
+
+/* Bills: name · due day on one line; due day gone = green name + ✓ and a slightly smaller green date (mock B, Darren 22 Oct) */
+body.demo [data-card="bills"] table.dbills .bline { display: block; }
+body.demo [data-card="bills"] table.dbills .bline .bbase { display: inline; }
+body.demo.editing [data-card="bills"] table.dbills .bline .bbase { display: none; }
+.bline .bdate { margin-left: 4px; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bline.paid .bbase, .bline.paid .bdate { color: var(--good); }
+.bline.paid .bbase::before { content: "✓ "; font-weight: 800; }
+.bline button.info { font-size: 13px; vertical-align: 1px; }

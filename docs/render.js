@@ -163,16 +163,21 @@
   };
   const infoBtn = tip => `<button type="button" class="info" aria-label="What is this?" data-tip="${esc(tip)}">ⓘ</button>`;
 
-  // grey line under a bill: category, avg, due day, then ⓘ once the due day has gone
+  // grey line under a bill: category, avg (the due day sits on the name line, Darren 22 Oct)
   function billSub(b) {
     const nm = F.tagsplit(b.name), tags = [b.cat || 'Unsorted', ...nm[1]].map(t => `${esc(t)} · `).join('');
     let line = b.blank ? `${tags}no amount yet` : `${tags}avg ${money(b.avg)}`;
-    if (b.dueText) line += ` · due ${b.dueText}`;
     if (b.cardName) line += ` · pays ${esc(b.cardName)}`;
     if (b.pot) line += ` · from the ${esc(b.pot)} pot`;
     if (b.stopped) line += ` · <span class="bstop">Stopped ${infoBtn(INFO.stopped)}</span>`;
-    else if (b.duePassed) line += ` · <span class="bpaid">Paid</span> ${infoBtn(INFO.due)}`;
     return line;
+  }
+
+  // the name line: name · due day; once the due day has gone both go green with ✓ (CSS), then ⓘ (mock B, 22 Oct)
+  const paidNow = b => b.duePassed && !b.stopped;
+  function billLine(b, nm) {
+    const date = b.dueText ? `<span class="bdate">· ${b.dueText}</span>` : '';
+    return `<span class="bline${paidNow(b) ? ' paid' : ''}"><b class="bbase">${esc(nm[0])}</b>${date}${paidNow(b) ? ` ${infoBtn(INFO.due)}` : ''}</span>`;
   }
 
   function billRow(b) {
@@ -181,7 +186,7 @@
 
 
       <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}">
-        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span><b class="bbase">${esc(nm[0])}</b>
+        <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span>${billLine(b, nm)}
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
         <td class="n bavg">${money(b.avg)}</td>

@@ -112,7 +112,7 @@ def test_change_name_due_day_and_delete(page, base):
     bill_menu(page, "Gym Club", "Change name", "PureGym")
     assert page.locator('tr.bill[data-key="Gym Club"] .bbase').inner_text() == "PureGym"
     bill_menu(page, "Gym Club", "Due day", "12")
-    assert "due 12th" in page.locator('tr.bill[data-key="Gym Club"] .bsub').inner_text()
+    assert "12th" in page.locator('tr.bill[data-key="Gym Club"] .bdate').inner_text()
     bill_menu(page, "Gym Club", "Delete", "")
     assert page.locator('tr.bill[data-key="Gym Club"]').count() == 0
 
@@ -120,7 +120,8 @@ def test_change_name_due_day_and_delete(page, base):
 def test_grey_line_shows_avg_and_due_day(page, base):
     page.goto(base + DEMO)
     sub = page.locator('tr.bill[data-key="Gym Club"] .bsub').inner_text()
-    assert "avg £" in sub and "due " in sub
+    assert "avg £" in sub and "due" not in sub                    # 22 Oct: the date sits on the name line
+    assert page.locator('tr.bill[data-key="Gym Club"] .bdate').inner_text().strip() == "· 10th"
 
 
 def test_due_day_gone_shows_info_not_a_tick_box(page, base):

@@ -61,6 +61,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   phone (≤520) rows there too. Tests 61 node + 103 browser.
 - **22 Oct v0.24 (mock B):** "Start a new month?" = #newmonth .sheetback sheet (slides up; New pay + Left; .pri Yes / .sec just the pay /
   .ter Cancel = nothing; Escape or tap outside = Cancel), no browser confirm. Other confirm()s still browser boxes. Tests 61 node + 104 browser.
+- **22 Oct v0.25 (mock B):** bill row = .bline (.bbase name + .bdate "· 1st", 13px) then .bsub "cat · avg"; due day gone (duePassed, not
+  stopped) = .bline.paid: green name with ::before ✓, green date, then ⓘ. No "Paid" word / .bpaid. Tests 61 node + 104 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

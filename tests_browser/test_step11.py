@@ -5,18 +5,31 @@ from conftest import DEMO, stored, post, bill_menu
 TODAY = "?today=2024-11-08"
 
 
-def test_due_bill_shows_green_paid_then_info(page, base):
+def test_due_bill_name_and_date_turn_green_with_a_tick(page, base):
+    """Darren, 22 Oct (mock B): name + date on one line; once the due day has gone they go green with ✓, then ⓘ.
+    Category · avg on the line under. The date is a little smaller than the name."""
     page.goto(base + DEMO)                                            # 8 Nov: Rent (due 1st) has gone
-    sub = page.locator('tr.bill[data-key="Rent"] .bsub')
-    paid = sub.locator(".bpaid")
-    assert paid.inner_text().strip() == "Paid"
+    rent = page.locator('tr.bill[data-key="Rent"]')
+    line = rent.locator(".bline")
+    assert line.locator(".bbase").inner_text() == "Rent"
+    assert line.locator(".bdate").inner_text().strip() == "· 1st"
+    tick = line.locator(".bbase").evaluate("e => getComputedStyle(e, '::before').content")
+    assert "✓" in tick
     green = page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--good').trim()")
-    color = paid.evaluate("e => getComputedStyle(e).color")
     probe = page.evaluate("c => { const d = document.createElement('i'); d.style.color = c; document.body.appendChild(d); const v = getComputedStyle(d).color; d.remove(); return v; }", green)
-    assert color == probe                                             # the live green
-    order = sub.evaluate("e => [...e.querySelectorAll('.bpaid, button.info')].map(x => x.className.includes('bpaid') ? 'paid' : 'info')")
-    assert order == ["paid", "info"]                                  # Paid, then ⓘ
-    assert page.locator('tr.bill[data-key="Phone Co"] .bpaid').count() == 0   # not due yet
+    for part in (".bbase", ".bdate"):
+        assert line.locator(part).evaluate("e => getComputedStyle(e).color") == probe, part
+    size = lambda sel: float(line.locator(sel).evaluate("e => getComputedStyle(e).fontSize")[:-2])
+    assert size(".bdate") < size(".bbase")                            # slightly smaller
+    order = line.evaluate("e => [...e.querySelectorAll('.bbase, .bdate, button.info')].map(x => x.className)")
+    assert order == ["bbase", "bdate", "info"]                        # name, date, then ⓘ
+    sub = rent.locator(".bsub").inner_text()
+    assert sub.startswith("Household") and "avg £550.00" in sub and "due" not in sub and "Paid" not in sub
+    assert rent.locator(".bpaid").count() == 0
+    phone = page.locator('tr.bill[data-key="Phone Co"] .bline')      # not due yet: white name, grey date, no ✓ or ⓘ
+    assert "✓" not in phone.locator(".bbase").evaluate("e => getComputedStyle(e, '::before').content")
+    assert phone.locator(".bbase").evaluate("e => getComputedStyle(e).color") != probe
+    assert phone.locator("button.info").count() == 0
     assert page.locator("input.paidbox").count() == 0
 
 
