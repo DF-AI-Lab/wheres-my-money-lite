@@ -7,7 +7,7 @@ DOCS = Path(__file__).resolve().parent.parent / "docs"
 DEMO = DOCS / "demo"
 
 for old in DOCS.iterdir():                        # live files the demo no longer has
-    if old.is_file() and not (DEMO / old.name).exists():
+    if old.is_file() and not old.name.startswith(".") and not (DEMO / old.name).exists():   # keep .nojekyll
         old.unlink()
 for f in DEMO.iterdir():
     if f.is_file():
