@@ -180,8 +180,8 @@
       say(e && e.name === 'InvalidStateError' ? 'Fingerprint is already on for this phone.' : 'Cancelled. Nothing changed.');
     }
   }
-  function offFinger() {
-    if (!confirm('Turn off fingerprint on this phone? You will use your passcode.')) return;
+  async function offFinger() {
+    if (!await root.Sheet.confirm('👆 Turn off fingerprint?', 'You will use your passcode on this phone.', 'Turn off', true)) return;
     rec.passkeys = []; save(); fingerPage();
   }
 
@@ -220,7 +220,7 @@
     on('fpoff', 'click', offFinger);
     on('lockback', 'click', enter);
     on('newcodes', 'click', async () => {
-      if (!confirm('Make 10 new backup codes? The old ones stop working.')) return;
+      if (!await root.Sheet.confirm('🔑 Make 10 new backup codes?', 'The old ones stop working.', 'Make new codes', true)) return;
       rec = load();
       if (!rec) return;
       const codes = L.makeCodes();

@@ -1,7 +1,7 @@
 """Go B step 7 (PLAN.md): Move & rename, 🔄 Update, 💡 Ideas & feedback, 📱 Invite (QR code). Phone width, fake data."""
 import json
 
-from conftest import DEMO, stored, post
+from conftest import DEMO, stored, post, sheet
 
 TODAY = "?today=2024-11-08"
 LINK = "https://df-ai-lab.github.io/wheres-my-money-lite/"
@@ -76,38 +76,12 @@ def _version(page):
     return page.locator(".appver").inner_text().lstrip("v")
 
 
-def test_update_says_up_to_date_when_nothing_is_new(page, base):
+def test_settings_has_no_update_button_now(page, base):
+    """Darren, 22 Oct (v0.28): the ✨ band on the bottom edge does updates, so Settings has no 🔄 Update."""
     page.goto(base + TODAY)
-    v = _version(page)
-    page.route("**/version.json*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"version": v})))
-    page.once("dialog", lambda d: d.accept())
     page.click("#setbtn")
-    page.click("#updbtn")
-    page.wait_for_function("document.getElementById('updbtn').textContent.includes('Up to date')")
-
-
-def test_update_reloads_when_there_is_a_new_version(page, base):
-    page.goto(base + TODAY)
-    page.route("**/version.json*", lambda r: r.fulfill(status=200, content_type="application/json", body='{"version": "9.99"}'))
-    page.once("dialog", lambda d: d.accept())
-    page.click("#setbtn")
-    page.evaluate("window.__before = 1")
-    with page.expect_navigation(timeout=8000):
-        page.click("#updbtn")
-    page.wait_for_load_state()
-    assert page.evaluate("window.__before") is None                   # a fresh page
-    assert stored(page) is not None                                   # data untouched
-
-
-def test_update_offline_says_so(page, base):
-    page.goto(base + TODAY)
-    page.route("**/version.json*", lambda r: r.abort())
-    msgs = []
-    page.on("dialog", lambda d: (msgs.append(d.message), d.accept()))
-    page.click("#setbtn")
-    page.click("#updbtn")
-    page.wait_for_timeout(800)
-    assert any("internet" in m.lower() for m in msgs), msgs
+    assert page.locator("#updbtn").count() == 0
+    assert "Update" not in page.locator("#setmenu").inner_text()
 
 
 def test_version_json_matches_the_page(page, base):
@@ -145,9 +119,9 @@ def test_ideas_add_done_copy_and_delete(page, base):
         page.locator('#ideas .note:has-text("Show pots first") button:has-text("Done")').click()
     page.wait_for_load_state()
     assert stored(page)["ideas"][0]["done"] is True
-    page.once("dialog", lambda d: d.accept())
+    page.locator('#ideas .note:has-text("Odd sum") button[aria-label="Delete"]').click()
     with page.expect_navigation():
-        page.locator('#ideas .note:has-text("Odd sum") button[aria-label="Delete"]').click()
+        sheet(page)
     page.wait_for_load_state()
     assert [n["text"] for n in stored(page)["ideas"]] == ["Show pots first"]
     with page.expect_navigation():
@@ -182,7 +156,7 @@ def test_invite_shows_a_qr_code_of_the_lite_link_only(page, base):
 
 def test_the_qr_file_holds_the_link(base):
     from pathlib import Path
-    svg = (Path(__file__).resolve().parent.parent / "docs" / "invite-qr.svg").read_text()
+    svg = (Path(__file__).resolve().parent.parent / "docs" / "demo" / "invite-qr.svg").read_text()
     assert svg.lstrip().startswith("<?xml") or svg.lstrip().startswith("<svg")
     assert "wheres-my-money-lite" in svg                                # the link is written in the file's title too
 
@@ -191,5 +165,5 @@ def test_settings_menu_has_the_step_7_items(page, base):
     page.goto(base + TODAY)
     page.click("#setbtn")
     text = page.locator("#setmenu").inner_text()
-    for want in ("Update", "Move & rename", "Ideas & feedback", "Invite", "Cards open at once"):
+    for want in ("Move & rename", "Ideas & feedback", "Invite", "Cards open at once"):
         assert want in text, text

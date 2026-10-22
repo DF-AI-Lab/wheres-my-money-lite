@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from playwright.sync_api import sync_playwright
 
-DOCS = Path(__file__).resolve().parent.parent / "docs"
+DOCS = Path(__file__).resolve().parent.parent / "docs" / "demo"
 CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
 DEMO = "?demo=1&today=2024-11-08"
 
@@ -156,13 +156,28 @@ def post(page, selector, fields, button=None):
     page.wait_for_load_state()
 
 
+def sheet(page, answer=True):
+    """Answer the slide-up sheet (docs/sheet.js): True = the main button, a text = type it then Save, None/False = Cancel."""
+    box = page.locator(".litesheet").last
+    box.wait_for(state="visible")
+    if answer is None or answer is False:
+        box.locator("button.cancel").click()
+        return
+    if isinstance(answer, str) and box.locator(".sheetin").count():
+        box.locator(".sheetin").fill(answer)
+    box.locator("button.ok").click()
+
+
 def bill_menu(page, key, item, dialog_answer=None):
-    """Open a bill's ⋯ menu and tap one item; answer the prompt/confirm it shows."""
-    if dialog_answer is not None:
-        page.once("dialog", lambda d: d.accept(dialog_answer) if d.type == "prompt" else d.accept())
+    """Open a bill's ⋯ menu and tap one item; answer the sheet it shows (a text, or True for yes)."""
     page.click(f'tr.bill[data-key="{key}"] button.more')
-    with page.expect_navigation():
+    if dialog_answer is None:
+        with page.expect_navigation():
+            page.click(f'.bmenu [role=menuitem]:has-text("{item}")')
+    else:
         page.click(f'.bmenu [role=menuitem]:has-text("{item}")')
+        with page.expect_navigation():
+            sheet(page, dialog_answer)
     page.wait_for_load_state()
 
 

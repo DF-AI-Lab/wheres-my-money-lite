@@ -2,7 +2,7 @@
 // Run: node --test tests_js/   (fake data only; the expected numbers come from the live page on the fake statements)
 const test = require('node:test');
 const assert = require('node:assert');
-const Money = require('../docs/money.js');
+const Money = require('../docs/demo/money.js');
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.005, `${msg}: ${a} != ${b}`);
 

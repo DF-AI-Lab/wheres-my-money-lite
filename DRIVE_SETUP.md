@@ -37,7 +37,7 @@ The app asks for `drive.file` only: it can see **just the one file it made**, ne
 
 8. Copy the **Client ID** (it ends in `.apps.googleusercontent.com`).
 
-9. Open `docs/config.js` and paste it in:
+9. Open `docs/demo/config.js` and paste it in (then it reaches live with the next "move to live"):
 
    ```js
    window.LITE_CONFIG = Object.assign({googleClientId: 'PASTE-IT-HERE.apps.googleusercontent.com'}, window.LITE_CONFIG || {});

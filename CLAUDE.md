@@ -68,6 +68,14 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   Tests 61 node + 107 browser.
 - **22 Oct v0.27 (mock C2):** no #headupd button; #updband (fixed bottom edge band "✨ New version vX · Update") shows only when version.json > Money.VERSION
   (checked on load + when the page comes back into view); tap = .brand.spinning, sw update, reload. Header size unchanged. Tests 61 node + 109 browser.
+- **22 Oct v0.28: LIVE + DEMO (Darren: "same as v3").** WORK IN `docs/demo/` (the source; served at …/demo/, ALWAYS fake data: lite.js
+  demoCopy = path has /demo/ → Store.demo, no lock, version shows "demo.v0.xx"). LIVE = `docs/` root = Darren's real money (localStorage, same
+  origin as the demo!). RULE: push to demo only; `python3 tools/move_to_live.py` (copies docs/demo/* to docs/) ONLY when Darren says
+  "move to live". sw.js: demo cache wmm-lite-demo-V, live wmm-lite-V, each deletes only its own; live's worker ignores …/demo/.
+  Tests serve docs/demo at / (so it acts as live); tests_browser/test_livedemo.py serves the whole docs/. New CSS only in
+  docs/demo/lite.css, never touch docs/demo/look.css. Version bump = the demo files (+ fintrack/appversion.py).
+  Also v0.28: docs/demo/sheet.js (Sheet.confirm/ask/tell) replaced EVERY confirm/prompt/alert (test bans them); tests answer with
+  conftest sheet(page, answer). Settings 🔄 Update removed (the ✨ band does it). Tests 61 node + 114 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

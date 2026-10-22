@@ -2,7 +2,7 @@
 // Run: node --test tests_js/*.test.js
 const test = require('node:test');
 const assert = require('node:assert');
-const M = require('../docs/money.js');
+const M = require('../docs/demo/money.js');
 
 const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.005, `${what}: ${a} != ${b}`);
 

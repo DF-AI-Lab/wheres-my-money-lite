@@ -7,7 +7,7 @@ Normal page = the person's own data in localStorage ('lite_state_v1'), starting 
 """
 import json
 
-from conftest import DEMO, PIN, stored, post, bill_menu, open_scrambled
+from conftest import DEMO, PIN, stored, post, bill_menu, open_scrambled, sheet
 
 
 # ---------- step 1: saving + backup file ----------
@@ -60,9 +60,10 @@ def test_save_backup_downloads_a_file_and_load_backup_brings_it_back(page, base,
     post(page, 'form[action="/remove"]', {"id": "1"})
     assert stored(page)["spends"] == []
     page.click("#setbtn")
-    page.on("dialog", lambda dlg: dlg.accept(PIN) if dlg.type == "prompt" else dlg.accept())   # passcode, then "Replace ...?"
+    page.set_input_files("#loadfile", str(path))
+    sheet(page, PIN)                                                # passcode, then "Load this backup?"
     with page.expect_navigation():
-        page.set_input_files("#loadfile", str(path))
+        sheet(page)
     page.wait_for_load_state()
     assert [x["name"] for x in stored(page)["spends"]] == ["Before"]
 
@@ -71,12 +72,11 @@ def test_load_backup_refuses_a_wrong_file(page, base, tmp_path):
     page.goto(base + "?today=2024-11-08")
     bad = tmp_path / "bad.json"
     bad.write_text('{"hello": 1}')
-    msgs = []
-    page.on("dialog", lambda d: (msgs.append(d.message), d.accept()))
     page.click("#setbtn")
     page.set_input_files("#loadfile", str(bad))
-    page.wait_for_timeout(500)
-    assert any("backup" in m.lower() for m in msgs)
+    page.locator(".litesheet").wait_for(state="visible")
+    assert "backup" in page.locator(".litesheet").inner_text().lower()
+    sheet(page)
     assert stored(page)["pay"] == 0
 
 
@@ -246,16 +246,16 @@ def test_add_a_pot_and_spends_fill_it(page, base):
 
 def test_change_and_delete_a_pot(page, base):
     page.goto(base + DEMO)
-    page.once("dialog", lambda d: d.accept("123"))
     page.click('[data-card="pots"] .pot[data-key="Shopping"] button.more')
+    page.click('.bmenu [role=menuitem]:has-text("Change amount")')
     with page.expect_navigation():
-        page.click('.bmenu [role=menuitem]:has-text("Change amount")')
+        sheet(page, "123")
     page.wait_for_load_state()
     assert "of £123.00" in page.locator('.pot[data-key="Shopping"]').inner_text()
-    page.once("dialog", lambda d: d.accept())
     page.click('[data-card="pots"] .pot[data-key="Shopping"] button.more')
+    page.click('.bmenu [role=menuitem]:has-text("Delete")')
     with page.expect_navigation():
-        page.click('.bmenu [role=menuitem]:has-text("Delete")')
+        sheet(page)
     page.wait_for_load_state()
     assert page.locator('.pot[data-key="Shopping"]').count() == 0
 

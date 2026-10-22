@@ -2,7 +2,7 @@
 // Run: node --test tests_js/   (fake data only)
 const test = require('node:test');
 const assert = require('node:assert');
-const L = require('../docs/lock.js');
+const L = require('../docs/demo/lock.js');
 
 const PIN = '135790';
 const STATE = {v: 3, pay: 2000, left: 0, bills: [], pots: [], spends: [{id: 1, date: '2024-11-01', amount: 9.99, name: 'Greggs', cat: 'Unsorted'}],

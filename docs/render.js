@@ -400,7 +400,10 @@
     if (!box) return;
     if (view === 'ideas') {
       box.innerHTML = ideasView(state, today);
-      box.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => { if (!confirm(f.dataset.confirm)) e.preventDefault(); }));
+      box.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => {
+        e.preventDefault();                                                // ask first; yes = send it (form.submit = the route)
+        root.Sheet.confirm('🗑 ' + f.dataset.confirm, '', 'Delete', true).then(yes => { if (yes) f.submit(); });
+      }));
       const btn = document.getElementById('copybtn');
       if (btn) btn.addEventListener('click', async () => {
         const text = document.getElementById('copytext');

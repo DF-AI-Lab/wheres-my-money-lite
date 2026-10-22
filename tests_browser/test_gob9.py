@@ -3,7 +3,7 @@ Google is faked here (no network): the sign-in script and the Drive API are answ
 import json
 from pathlib import Path
 
-from conftest import PIN, stored, post, open_scrambled
+from conftest import PIN, stored, post, open_scrambled, sheet
 
 TODAY = "?today=2024-11-08"
 GSI = "https://accounts.google.com/gsi/client"
@@ -93,9 +93,10 @@ def test_load_the_copy_back_from_drive(page, base, tmp_path):
     drive_view(page, base)
     page.click("#driveconnect")
     page.wait_for_selector("#driveload:not([hidden])")
-    page.on("dialog", lambda d: d.accept(PIN) if d.type == "prompt" else d.accept())
+    page.click("#driveload")
+    sheet(page, PIN)
     with page.expect_navigation():
-        page.click("#driveload")
+        sheet(page)
     page.wait_for_load_state()
     assert [x["name"] for x in stored(page)["spends"]] == ["FromDrive"]
 

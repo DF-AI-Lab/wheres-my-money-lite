@@ -16,7 +16,11 @@
   const KEY = 'lite_state_v1', DEMO_KEY = 'lite_demo_v1', DEMO_FLAG = 'lite_demo_on', TODAY_KEY = 'lite_today';
   // ?demo=1 = demo for this tab. The tab remembers it for a reload (the address can lose its ?demo=1 after an error),
   // but opening the page again without ?demo=1 is the person's own data.
+  // The demo copy (…/demo/, Darren 22 Oct) is ALWAYS the fake data: new work lands there before live, so it must never
+  // read or write the real data that live keeps in this same website's localStorage.
+  const demoCopy = /\/demo\//.test(root.location.pathname);
   function isDemo() {
+    if (demoCopy) return true;
     try {
       if (new URLSearchParams(location.search).get('demo') === '1') { root.sessionStorage.setItem(DEMO_FLAG, '1'); return true; }
       const nav = (root.performance.getEntriesByType('navigation')[0] || {}).type;
@@ -153,19 +157,21 @@
     let obj = null;
     try { obj = JSON.parse(text); } catch (e) { /* not JSON */ }
     if (obj && typeof obj === 'object' && obj.app === 'wheres-my-money-lite' && obj.scrambled) {   // scrambled: ask for the key
-      const secret = prompt('Type your passcode (or a backup code) to open this backup');
+      const secret = await root.Sheet.ask('🔑 Open this backup', 'Your passcode (or a backup code)', '');
       if (secret === null) return;
       const st = await root.Lock.open(obj.scrambled, secret);
-      if (!st) { alert('Sorry, that could not open the backup. Check the passcode or code and try again.'); return; }
+      if (!st) { await root.Sheet.tell("😕 That didn't open", 'Check the passcode or backup code and try again.'); return; }
       obj = {app: obj.app, saved: obj.saved, state: st};
     }
     const s = M.importBackup(obj);
-    if (!s) { alert("That is not a Where's My Money backup file."); return; }
-    if (!confirm('Replace everything on this phone with the backup from ' + M.fmt.day(obj.saved) + '?')) return;
+    if (!s) { await root.Sheet.tell('😕 Not a backup', "That is not a Where's My Money backup file."); return; }
+    if (!await root.Sheet.confirm('📂 Load this backup?', 'Everything on this phone is replaced with the backup from ' + M.fmt.day(obj.saved) + '.', 'Replace', true)) return;
     Store.save(s);
     location.reload();
   }
   document.addEventListener('DOMContentLoaded', () => {
+    const ver = document.querySelector('.demohead .appver');               // "demo.v0.28", like v3's test copy
+    if (demoCopy && ver) ver.textContent = 'demo.' + ver.textContent.trim();
     const on = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
     on('savebackup', 'click', saveBackup);
     on('qsave', 'click', saveBackup);

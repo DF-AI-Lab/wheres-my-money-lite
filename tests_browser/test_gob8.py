@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-DOCS = Path(__file__).resolve().parent.parent / "docs"
+DOCS = Path(__file__).resolve().parent.parent / "docs" / "demo"
 TODAY = "?today=2024-11-08"
 APP_FILES = ["./", "index.html", "money.js", "render.js", "lite.js", "lock.js", "look.css", "lite.css", "manifest.json",
              "icon-192.png", "icon-512.png", "invite-qr.svg"]

@@ -2,7 +2,7 @@
 // Run: node --test tests_js/   (fake data only)
 const test = require('node:test');
 const assert = require('node:assert');
-const M = require('../docs/money.js');
+const M = require('../docs/demo/money.js');
 
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.005, `${msg}: ${a} != ${b}`);
 const bill = (key, amount, due, extra) => Object.assign({key, name: key, cat: 'Household', amount, due: due || null,

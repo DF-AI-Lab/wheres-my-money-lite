@@ -1,5 +1,5 @@
 """PLAN.md step 10: Darren's 21 Oct feedback (9 changes). Phone width (390 px), fake data only."""
-from conftest import DEMO, stored, post, bill_menu
+from conftest import DEMO, stored, post, bill_menu, sheet
 
 TODAY = "?today=2024-11-08"
 
@@ -70,9 +70,9 @@ def test_typing_a_bill_keeps_the_pots_in_the_total(page, base):
 
 def test_a_pot_row_amount_changes_the_pot(page, base):
     page.goto(base + TODAY)
-    page.once("dialog", lambda d: d.accept("450"))
+    page.click('tr.potbill[data-pot="Shopping"] button.link')
     with page.expect_navigation():
-        page.click('tr.potbill[data-pot="Shopping"] button.link')
+        sheet(page, "450")
     page.wait_for_load_state()
     pot = [p for p in stored(page)["pots"] if p["key"] == "Shopping"][0]
     assert pot["amount"] == 450
@@ -275,9 +275,9 @@ def test_new_category_joins_the_list_for_good(page, base):
     page.goto(base + TODAY)
     post(page, 'form[action="/bill/add"]', {"amount": "20", "name": "Vet plan"})
     _cat_menu(page, "Vet plan")
-    page.once("dialog", lambda d: d.accept("Pets"))
+    page.click(".bmenu.catmenu [role=menuitem]:has-text('New category')")
     with page.expect_navigation():
-        page.click(".bmenu.catmenu [role=menuitem]:has-text('New category')")
+        sheet(page, "Pets")
     page.wait_for_load_state()
     s = stored(page)
     assert [b for b in s["bills"] if b["key"] == "Vet plan"][0]["cat"] == "Pets"

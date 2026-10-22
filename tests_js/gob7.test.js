@@ -2,7 +2,7 @@
 // Run: node --test tests_js/   (fake data only)
 const test = require('node:test');
 const assert = require('node:assert');
-const M = require('../docs/money.js');
+const M = require('../docs/demo/money.js');
 
 test('layout: the saved order of a box (cards, bills, ...) is kept; junk is ignored; reset puts it back', () => {
   const s = M.FAKE();

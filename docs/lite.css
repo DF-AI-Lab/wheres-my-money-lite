@@ -260,3 +260,12 @@ body.demo.editing [data-card="bills"] table.dbills .bline .bbase { display: none
   font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
 body.hasupd { padding-bottom: 72px; }
 @media (prefers-reduced-motion: reduce) { .updband { animation: none; } }
+
+/* Sheets instead of the browser's OK / Cancel boxes (v0.28, mock 2a/2b/2c): docs/sheet.js */
+.demo .sheetback button.bad { background: var(--bad); color: #fff; }
+.sheetback.litesheet { z-index: 1100; }                         /* above the lock screen (fingerprint off) */
+.sheetback .sheetlbl { margin: 0 0 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.sheetback .sheetin { display: block; width: 100%; box-sizing: border-box; margin: 0 0 6px; padding: 12px 14px; border-radius: 12px;
+  border: 2px solid var(--accent); background: var(--row); color: var(--text); font: inherit; font-size: 20px; font-weight: 800; }
+.sheetback .sheetin:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.sheetback form.sheetform { margin: 0; }

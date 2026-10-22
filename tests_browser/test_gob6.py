@@ -2,7 +2,7 @@
 A real browser at phone width. Fake data only. Fixtures: page (set up + unlocked), locked (set up), fresh (new person)."""
 import json
 
-from conftest import DEMO, PIN, CODES, LOCK, stored, post, open_scrambled
+from conftest import DEMO, PIN, CODES, LOCK, stored, post, open_scrambled, sheet
 
 TODAY = "?today=2024-11-08"
 
@@ -143,8 +143,8 @@ def test_forgot_passcode_use_a_backup_code_then_choose_a_new_one(locked, base):
 def test_new_backup_codes_in_settings(page, base):
     page.goto(base + TODAY)
     page.click("#setbtn")
-    page.once("dialog", lambda d: d.accept())                     # "Make 10 new backup codes? The old ones stop working."
     page.click("#newcodes")
+    sheet(page)                                                     # "Make 10 new backup codes? The old ones stop working." 
     page.wait_for_selector('#lock[data-step="codes"]')
     new = page.locator("#lock ul.codes li").all_inner_texts()
     assert len(new) == 10 and not set(new) & set(CODES)
@@ -173,17 +173,17 @@ def test_the_backup_file_is_scrambled_and_opens_with_the_passcode_or_a_code(page
 
     post(page, 'form[action="/remove"]', {"id": "1"})
     assert stored(page)["spends"] == []
-    answers = ["000000"]                                            # wrong first: nothing changes
-    msgs = []
-    page.on("dialog", lambda d: (msgs.append(d.message), d.accept(answers.pop(0)) if d.type == "prompt" else d.accept()))
     page.click("#setbtn")
     page.set_input_files("#loadfile", str(path))
-    page.wait_for_timeout(1500)
-    assert any("could not open" in m.lower() for m in msgs), msgs
+    sheet(page, "000000")                                           # wrong first: nothing changes
+    page.locator(".litesheet").last.wait_for(state="visible")
+    assert "didn't open" in page.locator(".litesheet").last.inner_text()
+    sheet(page)
     assert stored(page)["spends"] == []
-    answers.append(CODES[7])                                        # a backup code opens it too
+    page.set_input_files("#loadfile", str(path))
+    sheet(page, CODES[7])                                           # a backup code opens it too
     with page.expect_navigation():
-        page.set_input_files("#loadfile", str(path))
+        sheet(page)                                                 # "Load this backup?" 
     page.wait_for_load_state()
     assert [x["name"] for x in stored(page)["spends"]] == ["Before"]
     assert lock_rec(page)["codes"][7]["used"] is False              # opening a file does not use up a code
@@ -195,10 +195,10 @@ def test_an_old_plain_backup_still_loads(page, base, tmp_path):
     s["spends"] = [{"id": 1, "date": "2024-11-01", "amount": 3, "name": "OldFile", "cat": "Unsorted"}]
     path = tmp_path / "old.json"
     path.write_text(json.dumps({"app": "wheres-my-money-lite", "version": "0.09", "saved": "2024-11-01", "state": s}))
-    page.on("dialog", lambda d: d.accept())
     page.click("#setbtn")
+    page.set_input_files("#loadfile", str(path))
     with page.expect_navigation():
-        page.set_input_files("#loadfile", str(path))
+        sheet(page)
     page.wait_for_load_state()
     assert [x["name"] for x in stored(page)["spends"]] == ["OldFile"]
 
@@ -244,7 +244,7 @@ def test_fingerprint_can_be_turned_off(locked, base):
     locked.click("#setbtn"); locked.click("#fingerprint")
     locked.click("#fpadd")
     locked.wait_for_selector("#fpok:not([hidden])")
-    locked.once("dialog", lambda d: d.accept())
     locked.click("#fpoff")
+    sheet(locked)
     locked.wait_for_timeout(300)
     assert lock_rec(locked)["passkeys"] == []

@@ -4,7 +4,7 @@ background teal: nothing important sits outside the safe zone."""
 from pathlib import Path
 from PIL import Image
 
-DOCS = Path(__file__).resolve().parent.parent / "docs"
+DOCS = Path(__file__).resolve().parent.parent / "docs" / "demo"
 icon = Image.open(DOCS / "icon-512.png").convert("RGBA")
 teal = icon.getpixel((20, 256))                     # background teal, left edge, middle (15, 110, 92)
 small = icon.resize((410, 410), Image.LANCZOS)      # 80% of 512

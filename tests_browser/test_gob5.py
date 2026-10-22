@@ -1,5 +1,5 @@
 """Go B step 5 (PLAN.md): several credit cards + the Zopa question, in a real browser at phone width. Fake data only."""
-from conftest import DEMO, stored, post, bill_menu
+from conftest import DEMO, stored, post, bill_menu, sheet
 
 TODAY = "?today=2024-11-08"
 CC = '#cards > [data-card="card"]'
@@ -7,19 +7,14 @@ CC = '#cards > [data-card="card"]'
 
 def card_menu(page, key, item, answers=()):
     """Open a credit card's ⋯ menu and tap one item; answer the prompts / confirm it shows, in order."""
-    answers = list(answers)
-
-    def on_dialog(d):
-        if d.type == "prompt":
-            d.accept(answers.pop(0) if answers else "")
-        else:
-            d.accept()
-    page.on("dialog", on_dialog)
+    answers = list(answers) or [True]
     page.click(f'{CC}[data-key="{key}"] .cardmore button.more')
+    page.click(f'.bmenu [role=menuitem]:has-text("{item}")')
+    for a in answers[:-1]:
+        sheet(page, a)
     with page.expect_navigation():
-        page.click(f'.bmenu [role=menuitem]:has-text("{item}")')
+        sheet(page, answers[-1])
     page.wait_for_load_state()
-    page.remove_listener("dialog", on_dialog)
 
 
 def add_card(page, name, limit):
@@ -113,9 +108,9 @@ def test_zopa_question_after_the_due_day_yes_takes_it_off_the_card(page, base):
 
 def test_zopa_question_other_amount_and_no(page, base):
     zopa_setup(page, base, 1)
-    page.once("dialog", lambda d: d.accept("60"))
+    page.click(".cardask button:has-text('Other amount')")
     with page.expect_navigation():
-        page.click(".cardask button:has-text('Other amount')")
+        sheet(page, "60")
     page.wait_for_load_state()
     assert [i["amount"] for i in stored(page)["cards"][0]["items"]] == [-60]
     assert page.locator(".cardask").count() == 0

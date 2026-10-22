@@ -218,3 +218,43 @@ def test_update_band_tap_spins_and_reloads(page, base):
     page.wait_for_load_state()
     assert page.evaluate("window.__before") is None
     assert dialogs == []                                              # no OK / Cancel box
+
+
+# ---------- v0.28: sheets instead of the browser's boxes (mock 2a/2b/2c) ----------
+
+def test_no_browser_boxes_left_in_the_app():
+    """Every OK / Cancel box, typing box and message is a slide-up sheet now (docs/sheet.js)."""
+    import re
+    from pathlib import Path
+    docs = Path(__file__).resolve().parent.parent / "docs" / "demo"
+    for f in ["index.html", "lite.js", "lockui.js", "render.js", "lock.js", "money.js"]:
+        text = (docs / f).read_text()
+        hits = re.findall(r"(?<![.\w])(confirm|prompt|alert)\(", text)
+        assert hits == [], (f, hits)
+
+
+def test_typing_sheet_shows_the_old_value_and_escape_cancels(page, base):
+    page.goto(base + DEMO)
+    page.click('tr.bill[data-key="Rent"] button.more')
+    page.click('.bmenu [role=menuitem]:has-text("Change name")')
+    box = page.locator(".litesheet")
+    box.wait_for(state="visible")
+    assert box.locator(".sheetin").input_value() == "Rent"
+    assert box.locator("button.ok").inner_text() == "Save"
+    page.keyboard.press("Escape")
+    assert box.count() == 0
+    assert page.locator('tr.bill[data-key="Rent"]').count() == 1
+
+
+def test_delete_sheet_is_red_and_cancel_keeps_the_bill(page, base):
+    page.goto(base + DEMO)
+    page.click('tr.bill[data-key="Rent"] button.more')
+    page.click('.bmenu [role=menuitem]:has-text("Delete")')
+    box = page.locator(".litesheet")
+    box.wait_for(state="visible")
+    assert "Delete Rent?" in box.inner_text()
+    assert "bad" in box.locator("button.ok").get_attribute("class")
+    box.locator("button.cancel").click()
+    assert page.locator('tr.bill[data-key="Rent"]').count() == 1
+    bill_menu(page, "Rent", "Delete", True)
+    assert page.locator('tr.bill[data-key="Rent"]').count() == 0

@@ -15,12 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.27"></script>
-<script src="money.js?v=0.27"></script>
-<script src="render.js?v=0.27"></script>
-<script src="lite.js?v=0.27"></script>
-<script src="lock.js?v=0.27"></script>
-<script src="lockui.js?v=0.27"></script>
+<script src="config.js?v=0.28"></script>
+<script src="money.js?v=0.28"></script>
+<script src="render.js?v=0.28"></script>
+<script src="sheet.js?v=0.28"></script>
+<script src="lite.js?v=0.28"></script>
+<script src="lock.js?v=0.28"></script>
+<script src="lockui.js?v=0.28"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -177,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.27">
-<link rel="stylesheet" href="lite.css?v=0.27">
+<link rel="stylesheet" href="look.css?v=0.28">
+<link rel="stylesheet" href="lite.css?v=0.28">
 </head>
 <body class="demo">
 
@@ -263,7 +264,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.27</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.28</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -302,7 +303,6 @@
 
   
   <div class="editbar">
-    <button type="button" class="small" id="updbtn" title="Get the newest files">🔄 Update</button>
     <button type="button" class="small" id="editbtn">✏️ Move &amp; rename</button>
     <form method="post" action="/layout/reset" class="onlyedit"><button class="small" type="submit">↺ Put the order back</button></form>
   </div>
@@ -550,38 +550,42 @@
         ? ['↩️ Not paid yet', '', () => send('/bill/paid', {key, paid: '0'})]
         : ['✅ Mark as paid', '', () => send('/bill/paid', {key, paid: '1'})]);
       items.push(['✏️ Change name', '', () => {
-        const name = prompt('Name of the bill', row.dataset.name); if (name !== null) send('/bill/name', {key, name}); }]);
+        Sheet.ask('✏️ Name of the bill', 'Name', row.dataset.name).then(name => { if (name !== null) send('/bill/name', {key, name}); }); }]);
       items.push(['🏷 Category', '', () => {                // a pick list of the categories, then ＋ New category
         const pick = Money.categories(Lite.state()).map(c => [(c === row.dataset.cat ? '✓ ' : '') + c, '', () => send('/bill/cat', {key, cat: c})]);
-        pick.push(['＋ New category', '', () => { const cat = prompt('Name of the new category'); if (cat !== null) send('/bill/cat', {key, cat}); }]);
+        pick.push(['＋ New category', '', () => Sheet.ask('🏷 New category', 'Name of the new category', '').then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); })]);
         menu(btn, pick, 'catmenu'); }]);
       items.push(['📅 Due day', '', () => {
-        const day = prompt('Due day (1-31), empty = none', row.dataset.due); if (day !== null) send('/bill/due', {key, day}); }]);
+        Sheet.ask('📅 ' + row.dataset.name + ': due day', 'Day of the month (1-31), empty = none', row.dataset.due, 'numeric').then(day => { if (day !== null) send('/bill/due', {key, day}); }); }]);
       items.push(['💳 Pays a credit card', '', () => {
         const names = (window.LITE_PAGE && window.LITE_PAGE.cards) || [];
-        const card = prompt('Which credit card does this bill pay? (' + names.join(', ') + '; empty = none)', row.dataset.card);
-        if (card !== null) send('/bill/card', {key, card}); }]);
+        Sheet.ask('💳 Which credit card does this bill pay?', names.join(', ') + ' (empty = none)', row.dataset.card).then(card => {
+          if (card !== null) send('/bill/card', {key, card}); }); }]);
       items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
-      items.push(['🗑 Delete', 'stop', () => { if (confirm('Delete ' + row.dataset.name + '?')) send('/bill/delete', {key}); }]);
+      items.push(['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
+        .then(yes => { if (yes) send('/bill/delete', {key}); })]);
       menu(btn, items);
     }));
 
     // pots: the amount in a Bills pot row changes the pot
     document.querySelectorAll('tr.potbill button.link').forEach(btn => btn.addEventListener('click', () => {
-      const row = btn.closest('tr'), v = prompt('Monthly amount for ' + row.dataset.name + ' (empty = none)', row.dataset.amount);
-      if (v !== null) send('/pot/amount', {key: row.dataset.pot, amount: v});
+      const row = btn.closest('tr');
+      Sheet.ask('💷 ' + row.dataset.name + ': monthly amount', 'Amount (empty = none)', row.dataset.amount, 'decimal').then(v => {
+        if (v !== null) send('/pot/amount', {key: row.dataset.pot, amount: v}); });
     }));
 
     // pots
     const askPot = (pot, what) => {
-      if (what === 'amount') { const v = prompt('Monthly amount for ' + pot.dataset.name + ' (empty = none)', pot.dataset.amount); if (v !== null) send('/pot/amount', {key: pot.dataset.key, amount: v}); }
-      else { const v = prompt('Name of the pot', pot.dataset.name); if (v !== null) send('/pot/name', {key: pot.dataset.key, name: v}); }
+      if (what === 'amount') Sheet.ask('💷 ' + pot.dataset.name + ': monthly amount', 'Amount (empty = none)', pot.dataset.amount, 'decimal')
+        .then(v => { if (v !== null) send('/pot/amount', {key: pot.dataset.key, amount: v}); });
+      else Sheet.ask('✏️ Name of the pot', 'Name', pot.dataset.name).then(v => { if (v !== null) send('/pot/name', {key: pot.dataset.key, name: v}); });
     };
     document.querySelectorAll('.pot .more').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
       const pot = btn.closest('.pot');
       menu(btn, [['✏️ Change amount', '', () => askPot(pot, 'amount')], ['✏️ Change name', '', () => askPot(pot, 'name')],
-                 ['🗑 Delete', 'stop', () => { if (confirm('Delete the ' + pot.dataset.name + ' pot?')) send('/pot/delete', {key: pot.dataset.key}); }]]);
+                 ['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete the ' + pot.dataset.name + ' pot?', "This can't be undone.", 'Delete', true)
+                    .then(yes => { if (yes) send('/pot/delete', {key: pot.dataset.key}); })]]);
     }));
     document.querySelectorAll('.pot .potset').forEach(btn => btn.addEventListener('click', () => askPot(btn.closest('.pot'), 'amount')));
 
@@ -590,14 +594,16 @@
       e.stopPropagation();
       const box = btn.closest('[data-card="card"]'), card = box.dataset.key, name = box.dataset.name;
       menu(btn, [['✏️ Change name', '', () => {
-                    const v = prompt('Name of the card', name); if (v !== null) send('/card/name', {card, name: v}); }],
+                    Sheet.ask('✏️ Name of the card', 'Name', name).then(v => { if (v !== null) send('/card/name', {card, name: v}); }); }],
                  ['＋ Add another card', '', () => {
-                    const n = prompt('Name of the new card'); if (n === null) return;
-                    const limit = prompt('Its limit, e.g. 500'); if (limit !== null) send('/card/new', {name: n, limit}); }],
-                 ['🗑 Remove card', 'stop', () => { if (confirm('Remove the ' + name + ' card and its lines?')) send('/card/delete', {card}); }]]);
+                    Sheet.ask('💳 New card', 'Name of the new card', '').then(n => { if (n === null) return;
+                      Sheet.ask('💳 ' + n + ': limit', 'Its limit, e.g. 500', '', 'decimal').then(limit => { if (limit !== null) send('/card/new', {name: n, limit}); }); }); }],
+                 ['🗑 Remove card', 'stop', () => Sheet.confirm('🗑 Remove the ' + name + ' card?', "Its lines go too. This can't be undone.", 'Remove', true)
+                    .then(yes => { if (yes) send('/card/delete', {card}); })]]);
     }));
     document.querySelectorAll('.cardask .askother').forEach(btn => btn.addEventListener('click', () => {
-      const amount = prompt('How much did you pay off the card?'); if (amount !== null) send('/card/ask', {bill: btn.closest('.cardask').dataset.bill, answer: 'other', amount});
+      const bill = btn.closest('.cardask').dataset.bill;
+      Sheet.ask('💳 How much did you pay off the card?', 'Amount', '', 'decimal').then(amount => { if (amount !== null) send('/card/ask', {bill, answer: 'other', amount}); });
     }));
 
     // ⓘ: a bubble that floats under the button (takes no space); any tap anywhere closes it
@@ -948,34 +954,6 @@
       LiteRender.regroup(box);
       post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
     });
-  });
-
-  // 🔄 Update: this is a static site, so "update" = get the newest files (version.json says which version they are)
-  const updBtn = document.getElementById('updbtn');
-  if (updBtn) updBtn.addEventListener('click', async () => {
-    if (!confirm('Get the latest version?\n\nYour money and notes on this phone are not touched.')) return;
-    updBtn.disabled = true; updBtn.textContent = '⏳ Updating...';
-    const back = () => { updBtn.disabled = false; updBtn.textContent = '🔄 Update'; };
-    let latest;
-    try {
-      const r = await fetch('version.json?t=' + Date.now(), {cache: 'no-store'});
-      if (!r.ok) throw new Error('not ok');
-      latest = String((await r.json()).version);
-    } catch (e) { alert("Sorry, the update didn't work. Check the internet and try again."); back(); return; }
-    if (latest === Money.VERSION) { updBtn.textContent = '✅ Up to date'; setTimeout(back, 3000); return; }
-    updBtn.textContent = '✅ Updated! Restarting...';
-    try {                                       // a service worker (step 8) fetches the new files first
-      const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-      if (reg) {
-        await reg.update();
-        const w = reg.installing || reg.waiting;            // wait (max 5 s) until the new worker has taken over
-        if (w && w.state !== 'activated') await new Promise(done => {
-          const t = setTimeout(done, 5000);
-          w.addEventListener('statechange', () => { if (w.state === 'activated') { clearTimeout(t); done(); } });
-        });
-      }
-    } catch (e) { /* no worker: a plain reload is enough */ }
-    location.reload();
   });
 
   // ✨ Update band (Darren, 22 Oct, mock C2): only when version.json is newer; stuck to the bottom edge, header untouched
