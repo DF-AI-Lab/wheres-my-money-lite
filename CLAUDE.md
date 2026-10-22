@@ -66,6 +66,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **22 Oct v0.26:** bill ⋯ → ✅ Mark as paid / ↩️ Not paid yet (POST /bill/paid, tr data-paid; green = !stopped && (paid || duePassed),
   ⓘ INFO.marked when paid by hand). #headupd "🔄 Update" under the icon (.brandcol): no confirm, .brand.spinning, sw update, reload.
   Tests 61 node + 107 browser.
+- **22 Oct v0.27 (mock C2):** no #headupd button; #updband (fixed bottom edge band "✨ New version vX · Update") shows only when version.json > Money.VERSION
+  (checked on load + when the page comes back into view); tap = .brand.spinning, sw update, reload. Header size unchanged. Tests 61 node + 109 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

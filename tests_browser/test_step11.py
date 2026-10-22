@@ -1,5 +1,6 @@
 """Darren's 21 Oct evening feedback (v0.16): green Paid ⓘ, the bell list scrolls + Clear all, bills paid from a pot.
 Phone width, fake data only."""
+import json
 from conftest import DEMO, stored, post, bill_menu
 
 TODAY = "?today=2024-11-08"
@@ -177,22 +178,42 @@ def test_marking_a_due_bill_paid_clears_its_reminder(page, base):
     assert int(page.locator("#bellcount").inner_text()) == int(before) - 1
 
 
-def test_update_button_under_the_icon_spins_and_reloads(page, base):
-    """Darren, 22 Oct: a small 🔄 Update under the app icon; tap = the icon spins and the page reloads with the new version."""
+def _band_with(page, base, version):
+    page.route("**/version.json*", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"version": version})))
     page.goto(base + DEMO)
-    img = page.locator(".demohead .brand img").bounding_box()
-    upd = page.locator("#headupd")
-    b = upd.bounding_box()
-    assert b["y"] >= img["y"] + img["height"] - 2                     # under the icon
-    assert abs((b["x"] + b["width"] / 2) - (img["x"] + img["width"] / 2)) < 30
-    head = page.locator(".demohead").bounding_box()
-    assert b["y"] + b["height"] <= head["y"] + head["height"]         # inside the header
-    page.route("**/version.json*", lambda r: r.fulfill(status=200, content_type="application/json", body='{"version": "9.99"}'))
+
+
+def test_no_update_band_when_nothing_is_new(page, base):
+    """Darren, 22 Oct (mock C2): no sticker button in the header; the band shows only when a new version is out."""
+    _band_with(page, base, "0.00")
+    page.wait_for_timeout(600)
+    assert page.locator("#headupd").count() == 0
+    assert page.locator("#updband").is_hidden()
+
+
+def test_update_band_sits_on_the_bottom_edge_and_header_keeps_its_size(page, base):
+    page.goto(base + DEMO)
+    head_before = page.locator(".demohead").bounding_box()["height"]
+    _band_with(page, base, "9.99")
+    band = page.locator("#updband")
+    band.wait_for(state="visible")
+    page.wait_for_timeout(500)                                        # let it finish sliding up
+    assert "9.99" in band.inner_text()
+    b = band.bounding_box(); vh = page.viewport_size["height"]
+    assert abs((b["y"] + b["height"]) - vh) < 2                       # stuck to the bottom of the screen
+    assert b["width"] >= page.viewport_size["width"] - 2              # edge to edge
+    assert page.evaluate("getComputedStyle(document.getElementById('updband')).position") == "fixed"
+    assert page.locator(".demohead").bounding_box()["height"] == head_before
+
+
+def test_update_band_tap_spins_and_reloads(page, base):
+    _band_with(page, base, "9.99")
+    page.locator("#updband").wait_for(state="visible")
     dialogs = []
     page.on("dialog", lambda d: (dialogs.append(d.message), d.accept()))
     page.evaluate("window.__before = 1")
     with page.expect_navigation(timeout=8000):
-        upd.click()
+        page.click("#updgo")
         assert page.locator(".demohead .brand.spinning").count() == 1
     page.wait_for_load_state()
     assert page.evaluate("window.__before") is None

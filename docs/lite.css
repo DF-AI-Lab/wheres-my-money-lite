@@ -245,8 +245,18 @@ body.demo.editing [data-card="bills"] table.dbills .bline .bbase { display: none
 .bline button.info { font-size: 13px; vertical-align: 1px; }
 
 /* 🔄 Update under the app icon (Darren, 22 Oct): tap = the icon spins and the page reloads */
-.demohead .brandcol { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
-.demo #headupd { margin: 2px 0 0; padding: 2px 6px; font-size: 11px; font-weight: 700; line-height: 1.4; white-space: nowrap; }
 @keyframes litespin { to { transform: rotate(360deg); } }
 .demo .brand.spinning img { animation: litespin .8s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .demo .brand.spinning img { animation: none; opacity: .6; } }
+
+/* ✨ Update band (v0.27, mock C2): fixed to the bottom edge, only when a new version is out */
+.updband { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; align-items: center; gap: 10px; white-space: nowrap;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; font-size: 13px; font-weight: 600; color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-bottom: 0;
+  box-shadow: 0 -6px 24px rgba(0,0,0,.25); animation: sheetup .3s ease-out; }
+.updband[hidden] { display: none; }
+.updband b { color: var(--accent); }
+.updband button { margin-left: auto; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 999px; padding: 6px 14px;
+  font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+body.hasupd { padding-bottom: 72px; }
+@media (prefers-reduced-motion: reduce) { .updband { animation: none; } }
