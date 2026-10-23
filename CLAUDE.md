@@ -93,6 +93,10 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   policy page, not made yet). Client id in docs/demo/config.js. Demo uses its own Drive file wheres-my-money-demo-backup.json
   + localStorage key lite_demo_drive_file (live: wheres-my-money-backup.json / lite_drive_file). Tests 61 node + 126 browser.
   NEXT: Darren tries Connect/Save/Load on the demo; then privacy page + Publish app; later maybe auto-sync.
+- **23 Oct v0.33 (demo only):** Darren tested Drive Save + Load on the demo: WORKS. Privacy page docs/demo/privacy.html (no email on
+  it; contact = GitHub issues; own body bg/colour so dark mode reads), link under the Drive buttons (.drivepp), in sw.js FILES.
+  Tests 61 node + 131 browser (test_privacy.py). NEXT: Darren fills Google Branding (home page, privacy link, authorised domain
+  df-ai-lab.github.io) then Audience → Publish app. Privacy URL is /demo/privacy.html until "move to live", then the root one.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
