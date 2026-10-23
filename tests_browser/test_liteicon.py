@@ -51,6 +51,8 @@ def test_maskable_tag_sits_in_the_safe_circle():
                 assert (x - 256) ** 2 + (y - 256) ** 2 <= 205 ** 2, (x, y)   # Android may crop to this circle
 
 
-def test_header_keeps_the_plain_icon():
+def test_header_shows_the_lite_icon():
+    # v0.31 (Darren, 23 Oct): the page header shows the Lite icon too, not the plain v3 lens
     html = (DOCS / "index.html").read_text()
-    assert re.search(r'class="brand"[^>]*><img src="icon-192.png"', html)
+    assert re.search(r'class="brand"[^>]*><img src="lite-192.png"', html)
+    assert 'lite-192.png' in (DOCS / "sw.js").read_text()        # kept offline too

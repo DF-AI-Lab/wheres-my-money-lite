@@ -15,7 +15,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from playwright.sync_api import sync_playwright
 
 DOCS = Path(__file__).resolve().parent.parent / "docs" / "demo"
-CHROME = "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"
+CHROME = os.environ.get("LITE_CHROME", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome")
 DEMO = "?demo=1&today=2024-11-08"
 
 

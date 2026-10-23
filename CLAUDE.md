@@ -85,6 +85,10 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **WHERE WE ARE (23 Oct): live = demo = v0.30.** Darren reinstalls "My Money Lite" on the phone (old icon gave "could not open
   app"; uninstall the old Lite icon, keep v3, install from Chrome itself). Ideas waiting (only if he asks): Pause/Resume for subs
   (pause-first in the delete sheet, a Paused group), Google Drive setup (DRIVE_SETUP.md), calling it v1.00.
+- **23 Oct v0.31 (demo only):** the Lite icon (lite-192.png) is now also in the page header, the lock screen and the browser tab
+  (no plain icon-192 left in index.html). Browser tests: `LITE_CHROME=/opt/pw-browsers/chromium-*/chrome-linux64/chrome` picks this
+  container's Chromium (conftest default = old path). Tests 61 node + 124 browser. Waiting: zoomed-in header overlap fix (mocked, Settings
+  + bell on their own line under ~380 px; spare ring clipped too).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
