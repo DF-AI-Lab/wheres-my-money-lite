@@ -102,3 +102,27 @@ def test_live_and_demo_keep_their_own_offline_copies(phone, site):
     phone.goto(site + TODAY)
     _ready(phone, site + "sw.js")
     assert sorted(phone.evaluate("caches.keys()")) == names
+
+
+def test_demo_drive_copy_is_its_own_file_never_the_live_one(phone, site):
+    # v0.32 (23 Oct): demo + live share one Google client id and one website, so the demo's fake data goes to its own
+    # Drive file and remembers it under its own key: a live Load can never pick up the demo's fake copy
+    from test_gob9 import fake_google
+    phone.add_init_script("window.LITE_CONFIG = {googleClientId: 'test-client.apps.googleusercontent.com'};")
+    files = {}
+    fake_google(phone, files)
+    phone.goto(site + "demo/" + TODAY + "&view=drive")
+    phone.click("#driveconnect")
+    phone.wait_for_selector("#drivesave:not([hidden])")
+    phone.click("#drivesave")
+    phone.wait_for_selector("#driveok:not([hidden])")
+    body = files["_uploads"][-1]["body"]
+    assert "wheres-my-money-demo-backup.json" in body and '"wheres-my-money-backup.json"' not in body
+    assert phone.evaluate("localStorage.getItem('lite_drive_file')") is None
+    assert phone.evaluate("localStorage.getItem('lite_demo_drive_file')") == "file1"
+    assert json.loads(phone.evaluate("localStorage.getItem('lite_state_v1')")) == REAL
+
+
+def test_demo_has_the_real_google_client_id():
+    cfg = (SITE / "demo" / "config.js").read_text()
+    assert "1018863337394-dhhfi006uhdf715dovuqetkl22tj5gdo.apps.googleusercontent.com" in cfg

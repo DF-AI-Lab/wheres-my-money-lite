@@ -13,7 +13,7 @@ FAKE_GSI = """window.google = {accounts: {oauth2: {initTokenClient: cfg => ({req
 
 
 def drive_view(page, base, client_id="test-client.apps.googleusercontent.com", spend=None):
-    if client_id:
+    if client_id is not None:                                          # "" = test the app with no client id
         page.add_init_script("window.LITE_CONFIG = {googleClientId: %s};" % json.dumps(client_id))
     page.goto(base + TODAY)
     if spend:

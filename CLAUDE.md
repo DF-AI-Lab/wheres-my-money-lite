@@ -87,8 +87,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   (pause-first in the delete sheet, a Paused group), Google Drive setup (DRIVE_SETUP.md), calling it v1.00.
 - **23 Oct v0.31 (demo only):** the Lite icon (lite-192.png) is now also in the page header, the lock screen and the browser tab
   (no plain icon-192 left in index.html). Browser tests: `LITE_CHROME=/opt/pw-browsers/chromium-*/chrome-linux64/chrome` picks this
-  container's Chromium (conftest default = old path). Tests 61 node + 124 browser. Waiting: zoomed-in header overlap fix (mocked, Settings
-  + bell on their own line under ~380 px; spare ring clipped too).
+  container's Chromium (conftest default = old path). Tests 61 node + 124 browser. (Zoomed-in header overlap: Darren said forget it.)
+- **23 Oct v0.32 (demo only): GOOGLE DRIVE SET UP.** Darren made Google Cloud project "Wheres My Money Lite" (Drive API on,
+  scope drive.file = non-sensitive, External, still TESTING: test user = Darren only; publishing needs Branding = a privacy
+  policy page, not made yet). Client id in docs/demo/config.js. Demo uses its own Drive file wheres-my-money-demo-backup.json
+  + localStorage key lite_demo_drive_file (live: wheres-my-money-backup.json / lite_drive_file). Tests 61 node + 126 browser.
+  NEXT: Darren tries Connect/Save/Load on the demo; then privacy page + Publish app; later maybe auto-sync.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
