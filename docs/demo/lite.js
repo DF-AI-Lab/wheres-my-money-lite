@@ -159,19 +159,35 @@
     if (!places.length) places = placesOf(lastForm);
     try { sessionStorage.setItem('lite_place', JSON.stringify({places, y: scrollY})); } catch (e) { /* no storage: top */ }
   }
+  // v0.41: back to the place as soon as the cards are drawn (start()), not after 'load': that waits for the Google
+  // fonts and the Google sign-in script, so on a phone the page sat at the top for half a second (Darren: 'flickers')
+  let placeNow = () => {};
   function backToPlace() {
     let saved = null;
     try { saved = JSON.parse(sessionStorage.getItem('lite_place')); sessionStorage.removeItem('lite_place'); } catch (e) { /* none */ }
     if (!saved) return;
-    const go = () => {
+    let moved = false;                                             // the person scrolled since: leave it where they put it
+    ['wheel', 'touchstart', 'keydown'].forEach(t => addEventListener(t, () => { moved = true; }, {once: true, passive: true}));
+    const go = () => {                                             // true = the thing was found and put back
+      if (moved) return true;
+      let top = saved.y || 0, found = false;
       for (const p of saved.places || []) {
         const node = document.querySelectorAll(p.sel)[p.i];
-        if (shown(node)) { scrollTo({top: scrollY + node.getBoundingClientRect().top - p.top, behavior: 'instant'}); return; }
+        if (shown(node)) { top = scrollY + node.getBoundingClientRect().top - p.top; found = true; break; }
       }
-      scrollTo({top: saved.y || 0, behavior: 'instant'});
+      scrollTo({top, behavior: 'instant'});
+      return found;
     };
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-    if (document.readyState === 'complete') go(); else addEventListener('load', () => { go(); requestAnimationFrame(go); });
+    // until it is placed, the page shows only its background: no glimpse of the top (1.5 s at most)
+    const hide = document.createElement('style');
+    hide.textContent = 'body > * { visibility: hidden !important; }';
+    document.head.appendChild(hide);
+    const show = () => hide.remove();
+    setTimeout(show, 1500);
+    placeNow = () => { if (go()) show(); };                        // the lock can still hide the cards here
+    document.addEventListener('DOMContentLoaded', () => setTimeout(() => { go(); show(); }));   // after the lock opens
+    if (document.readyState === 'complete') go(); else addEventListener('load', () => { go(); requestAnimationFrame(go); });   // fonts can move it
   }
   backToPlace();
 
@@ -517,7 +533,9 @@
     let err = null;
     try { err = new URLSearchParams(location.search).get('error'); } catch (e) { /* ignore */ }
     Store.save(state);
-    return root.LiteRender.render(state, err, today());
+    const out = root.LiteRender.render(state, err, today());
+    placeNow();
+    return out;
   }
 
   root.Lite = {start, Store, today, state: () => state, run, leave, saveBackup};
