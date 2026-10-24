@@ -2,6 +2,9 @@
    Sheet.confirm(title, text, ok, danger) -> Promise<true|false>
    Sheet.ask(title, label, value, mode)    -> Promise<text|null>   (mode 'decimal' / 'numeric' = the number keyboard)
    Sheet.tell(title, text)                 -> Promise<undefined>
+   Sheet.day(title)                        -> Promise<'1'..'31'|null>   (a grid of days, v0.36)
+   Sheet.pick(title, names, current)       -> Promise<name|null>        (a list to tap; ＋ New category asks for the name)
+   Sheet.ask(..., 'date')                  -> a date box (YYYY-MM-DD)
    Escape or a tap outside = Cancel. Enter in the box = Save. */
 (function (root) {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
@@ -33,7 +36,7 @@
   function ask(title, label, value, mode) {
     const im = mode === 'decimal' || mode === 'numeric' ? ` inputmode="${mode}"` : '';
     return open(`<h3>${esc(title)}</h3>${label ? `<div class="sheetlbl">${esc(label)}</div>` : ''}
-      <form class="sheetform"><input class="sheetin" type="text" autocomplete="off"${im} value="${esc(value)}" aria-label="${esc(label || title)}">
+      <form class="sheetform"><input class="sheetin" type="${mode === 'date' ? 'date' : 'text'}" autocomplete="off"${im} value="${esc(value)}" aria-label="${esc(label || title)}">
       <button type="submit" class="ok pri">Save</button></form>
       <button type="button" class="ter cancel">Cancel</button>`, null, (back, close) => {
       const input = back.querySelector('.sheetin');
@@ -49,5 +52,26 @@
     });
   }
 
-  root.Sheet = {confirm, ask, tell};
+  function day(title) {
+    const days = Array.from({length: 31}, (_, i) => `<button type="button" data-v="${i + 1}">${i + 1}</button>`).join('');
+    return open(`<h3>${esc(title)}</h3><div class="daygrid">${days}</div>
+      <button type="button" class="ter cancel">Cancel</button>`, null, (back, close) => {
+      back.querySelectorAll('.daygrid button').forEach(b => b.addEventListener('click', () => close(b.dataset.v)));
+      back.querySelector('.daygrid button').focus();
+    });
+  }
+
+  function pick(title, names, current) {
+    const list = names.map(n => `<button type="button" data-v="${esc(n)}"${n === current ? ' aria-current="true"' : ''}>${esc(n)}</button>`).join('');
+    return open(`<h3>${esc(title)}</h3><div class="picklist">${list}<button type="button" class="picknew">＋ New category</button></div>
+      <button type="button" class="ter cancel">Cancel</button>`, null, (back, close) => {
+      back.querySelectorAll('.picklist button[data-v]').forEach(b => b.addEventListener('click', () => close(b.dataset.v)));
+      back.querySelector('.picknew').addEventListener('click', () => close(NEW));
+      back.querySelector('.picklist button').focus();
+    }).then(v => v !== NEW ? v
+      : ask('🏷 New category', 'Name of the new category', '').then(t => t !== null && t.trim() ? t.trim() : null));
+  }
+  const NEW = {};
+
+  root.Sheet = {confirm, ask, tell, day, pick};
 })(typeof window !== 'undefined' ? window : globalThis);

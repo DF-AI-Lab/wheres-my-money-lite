@@ -114,6 +114,14 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   Darren installs LIVE on the phone; demo is tested in the browser only. Live's Drive uses the same client id; privacy page now at
   /wheres-my-money-lite/privacy.html (use that one for Google Branding).
 - **24 Oct: Darren: "all works" = live v0.35 INSTALLS on the phone. Install problem CLOSED.** Next: Google Branding + Publish app.
+- **24 Oct v0.36 (mocks A3 + D + H2; Darren: "send straight to both live and demo"): live = demo = v0.36.** Bills: no due day =
+  green '+ date' (.addlink data-add=due → Sheet.day grid → /bill/due), Unsorted = '+ category' (Sheet.pick → /bill/cat); set = plain
+  text. New bill glows once (sessionStorage lite_glow → tr.newglow). Spends: .spendseg Paid/Upcoming (hidden upcoming + date box
+  .spenddate); spend.upcoming + date = expected; compute gives upcoming (today < date) / autoPaid (today >= date, green ✓);
+  "Coming up"/"Paid" tr.sgrp only when something is coming up; every row ⓘ (SPEND_TIP in render.js) + ⋯ (Change date /spend/date,
+  ✅ Paid /spend/paid, Remove = hidden /remove form). Upcoming spends count against spare like bills. newPayday keeps upcoming
+  spends dated from the new payday on. tools/move_to_live.py now keeps live's manifest id. Tests 69 node + 145 browser.
+  Ideas not built: bell reminder for upcoming spends; '+ category' on Unsorted spends.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

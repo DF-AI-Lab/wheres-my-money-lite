@@ -272,3 +272,34 @@ body.hasupd { padding-bottom: 72px; }
 /* v0.33: the privacy link under the Drive buttons */
 .drivepp { text-align: center; font-size: 14px; margin: 14px 0 0; }
 .drivepp a { color: var(--muted); }
+
+/* v0.36 (mock A3): a missing due day / category = a green '+ date' / '+ category' link; set = plain text */
+.demo button.addlink { background: none; border: 0; border-radius: 0; padding: 0; margin: 0; font: inherit; font-weight: 700; color: var(--accent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); cursor: pointer; }
+.demo button.addlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* mock D: the bill you just added glows once */
+@keyframes newglow { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+body.demo [data-card="bills"] table.dbills tr.bill.newglow { animation: newglow 3s ease-out; border-radius: 12px; }
+@media (prefers-reduced-motion: reduce) { body.demo [data-card="bills"] table.dbills tr.bill.newglow { animation: none; background: color-mix(in srgb, var(--accent) 12%, transparent); } }
+/* the day grid + category list sheets */
+.sheetback .daygrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 0 0 10px; }
+.sheetback .picklist { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.demo .sheetback .daygrid button, .demo .sheetback .picklist button { background: var(--row); color: var(--text); border: 0; padding: 10px 0; border-radius: 10px; font-weight: 700; }
+.demo .sheetback .picklist button { padding: 8px 12px; }
+.demo .sheetback .picklist button[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* v0.36 (mock H2): Paid / Upcoming spends */
+.spendseg { display: inline-flex; gap: 2px; padding: 3px; margin: 0 0 10px; border-radius: 999px; background: var(--row); border: 1px solid var(--border); }
+.demo .spendseg button { background: none; color: var(--muted); border: 0; padding: 5px 14px; border-radius: 999px; font-size: 13px; }
+.demo .spendseg button[aria-pressed="true"] { background: var(--spend); color: #1d1500; }
+.spenddate { flex-basis: 100%; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.spenddate[hidden] { display: none; }
+.spenddate input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--row); color: var(--text); font: inherit; }
+body.demo [data-card] table tr.sgrp td { padding: 12px 0 2px; border: 0; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+body.demo [data-card="spend"] table tr.drow.upcoming td.n { color: var(--muted); }
+body.demo [data-card="spend"] table tr.drow.upcoming td b::before { content: "⏳ "; }
+body.demo [data-card="spend"] table tr.drow.paid td b { color: var(--good); }
+body.demo [data-card="spend"] table tr.drow.paid td b::before { content: "✓ "; font-weight: 800; }
+body.demo [data-card="spend"] table tr.drow td.smore { position: relative; }
+body.demo [data-card="spend"] table tr.drow .more { width: 32px; height: 32px; padding: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; border: 0; }
+body.demo [data-card="spend"] table tr.drow .labels button.info { font-size: 13px; vertical-align: 1px; }

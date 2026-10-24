@@ -64,21 +64,43 @@
   `;
   }
 
+  // v0.36 (mock H2): Upcoming spends (an expected date) sit under "Coming up" until that date, then count as paid by
+  // themselves (green ✓). Every row: date · category ⓘ, and ⋯ = Change date / ✅ Paid (upcoming only) / Remove.
+  const SPEND_TIP = {
+    upcoming: 'Expected date. When this date comes it moves to Paid by itself. Tap ⋯ to change the date, or to mark it paid early.',
+    gone: 'The expected date has gone, so it should be paid. Please check your bank app it came out.',
+    added: 'This is the date you added it. If it went out on another day, tap ⋯ to change the date.',
+    dated: 'You changed this date. Tap ⋯ to change it again.',
+  };
+  const shortDay = iso => F.day(iso).replace(/ \d{4}$/, '');           // '20 Nov'
+  function spendRow(s) {
+    const where = s.pot ? `<i class="dot pot"></i>${esc(s.pot)}` : esc(s.cat || 'Unsorted');
+    const when = s.upcoming ? `expected ${shortDay(s.date)}` : F.day(s.date);
+    const tip = s.upcoming ? SPEND_TIP.upcoming : (s.autoPaid ? SPEND_TIP.gone : (s.dated ? SPEND_TIP.dated : SPEND_TIP.added));
+    const cls = s.upcoming ? ' upcoming' : (s.autoPaid ? ' paid' : '');
+    return `
+
+          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}</td>
+              <td class="n smore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or remove ${esc(s.name)}">⋯</button><form method="post" action="/remove" hidden><input type="hidden" name="id" value="${s.id}"></form></td></tr>
+
+        `;
+  }
   function spendCard(r, err) {
-    const rows = r.spends.map(s => `
-
-          <tr class="drow"><td><b>${esc(s.name)}</b><span class="labels">${F.day(s.date)} · ${s.pot ? `<i class="dot pot"></i>${esc(s.pot)}` : esc(s.cat || 'Unsorted')}</span></td><td class="n">${money(s.amount)}</td>
-              <td class="n"><form method="post" action="/remove"><input type="hidden" name="id" value="${s.id}"><button class="small xbtn" type="submit" title="Remove" aria-label="Remove ${esc(s.name)}">×</button></form></td></tr>
-
-        `).join('');
+    const up = r.spends.filter(s => s.upcoming), done = r.spends.filter(s => !s.upcoming);
+    const head = (text, list) => `<tr class="sgrp"><td colspan="3">${text} · ${money(list.reduce((a, s) => a + s.amount, 0))}</td></tr>`;
+    const rows = up.length ? head('Coming up', up) + up.map(spendRow).join('') + head('Paid', done) + done.map(spendRow).join('')
+                           : done.map(spendRow).join('');
     return `<div class="card" data-id="spend" data-card="spend">
     <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot spend"></i> Add a spend<button type="button" class="fold" title="Fold">▾</button></h2>
     ${errorBox(err, 'spend')}
 
+    <div class="spendseg" role="group" aria-label="Paid or upcoming"><button type="button" data-up="0" aria-pressed="true">Paid</button><button type="button" data-up="1" aria-pressed="false">Upcoming</button></div>
     <form class="inline" method="post" action="/add">
       <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.50" aria-label="Amount">
       <input class="name" type="text" name="name" placeholder="Coffee" aria-label="What">
       <button type="submit">Add</button>
+      <input type="hidden" name="upcoming" value="0">
+      <label class="spenddate" hidden>📅 Expected on <input type="date" name="date" aria-label="Expected date"></label>
     </form>
     ${r.spends.length ? `
       <table style="margin-top:12px">
@@ -165,8 +187,11 @@
   const infoBtn = tip => `<button type="button" class="info" aria-label="What is this?" data-tip="${esc(tip)}">ⓘ</button>`;
 
   // grey line under a bill: category, avg (the due day sits on the name line, Darren 22 Oct)
+  // v0.36 (mock A3): a missing date or category is a green '+ date' / '+ category' link; once set it is plain text
+  const addLink = (what, text) => `<button type="button" class="addlink" data-add="${what}">${text}</button>`;
   function billSub(b) {
-    const nm = F.tagsplit(b.name), tags = [b.cat || 'Unsorted', ...nm[1]].map(t => `${esc(t)} · `).join('');
+    const nm = F.tagsplit(b.name), unsorted = !b.cat || b.cat === 'Unsorted';
+    const tags = [unsorted ? addLink('cat', '+ category') : esc(b.cat), ...nm[1].map(esc)].map(t => `${t} · `).join('');
     let line = b.blank ? `${tags}no amount yet` : `${tags}avg ${money(b.avg)}`;
     if (b.cardName) line += ` · pays ${esc(b.cardName)}`;
     if (b.pot) line += ` · from the ${esc(b.pot)} pot`;
@@ -177,7 +202,7 @@
   // the name line: name · due day; once the due day has gone both go green with ✓ (CSS), then ⓘ (mock B, 22 Oct)
   const paidNow = b => !b.stopped && (b.paid || b.duePassed);   // marked paid by hand (⋯), or the due day has gone
   function billLine(b, nm) {
-    const date = b.dueText ? `<span class="bdate">· ${b.dueText}</span>` : '';
+    const date = b.dueText ? `<span class="bdate">· ${b.dueText}</span>` : (b.stopped ? '' : `<span class="bdate">· ${addLink('due', '+ date')}</span>`);
     return `<span class="bline${paidNow(b) ? ' paid' : ''}"><b class="bbase">${esc(nm[0])}</b>${date}${paidNow(b) ? ` ${infoBtn(b.paid ? INFO.marked : INFO.due)}` : ''}</span>`;
   }
 

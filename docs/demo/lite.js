@@ -63,7 +63,10 @@
   // Each takes (state, get) where get(name) reads a posted field; returns null (worked) or an error code.
   const quiet = r => r === 'unknown' ? null : r;                 // a bill or pot that is gone: nothing happens
   const ROUTES = {
-    '/add': (s, get) => M.addSpend(s, today(), get('amount'), get('name')),
+    '/add': (s, get) => get('upcoming') === '1' && !get('date').trim() ? 'spend'
+      : M.addSpend(s, today(), get('amount'), get('name'), get('upcoming') === '1' ? get('date') : ''),
+    '/spend/paid': (s, get) => M.paySpend(s, get('id'), today()),
+    '/spend/date': (s, get) => M.setSpendDate(s, get('id'), get('date')),
     '/remove': (s, get) => M.removeSpend(s, get('id')),
     '/pay': (s, get) => M.setPay(s, get('pay'), get('clear') === '1'),
     '/left': (s, get) => M.setLeft(s, get('amount')),
@@ -116,8 +119,13 @@
     if (path === '/bill' || path === '/stopped') {
       unknown = !state.bills.some(b => b.key === getter(data)('key'));
     }
+    const before = path === '/bill/add' ? state.bills.length : 0;
     const error = fn(state, getter(data));
     if (!error) Store.save(state);
+    // a new bill glows once on the next page (v0.36, mock D)
+    if (path === '/bill/add' && !error && state.bills.length > before) {
+      try { root.sessionStorage.setItem('lite_glow', state.bills[state.bills.length - 1].key); } catch (e) { /* ignore */ }
+    }
     return {error, unknown};
   }
 

@@ -12,4 +12,7 @@ for old in DOCS.iterdir():                        # live files the demo no longe
 for f in DEMO.iterdir():
     if f.is_file():
         shutil.copy2(f, DOCS / f.name)
+# live keeps its own install id (v0.35): the demo's id would make the phone see live as the demo app
+m = DOCS / "manifest.json"
+m.write_text(m.read_text().replace('"id": "/wheres-my-money-lite/demo/"', '"id": "/wheres-my-money-lite/"'))
 print("live is now v" + (DOCS / "version.json").read_text().split('"')[3])

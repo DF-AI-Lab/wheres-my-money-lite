@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.35"></script>
-<script src="money.js?v=0.35"></script>
-<script src="render.js?v=0.35"></script>
-<script src="sheet.js?v=0.35"></script>
-<script src="lite.js?v=0.35"></script>
-<script src="lock.js?v=0.35"></script>
-<script src="lockui.js?v=0.35"></script>
+<script src="config.js?v=0.36"></script>
+<script src="money.js?v=0.36"></script>
+<script src="render.js?v=0.36"></script>
+<script src="sheet.js?v=0.36"></script>
+<script src="lite.js?v=0.36"></script>
+<script src="lock.js?v=0.36"></script>
+<script src="lockui.js?v=0.36"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.35">
-<link rel="stylesheet" href="lite.css?v=0.35">
+<link rel="stylesheet" href="look.css?v=0.36">
+<link rel="stylesheet" href="lite.css?v=0.36">
 </head>
 <body class="demo">
 
@@ -264,7 +264,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.35</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.36</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -565,6 +565,41 @@
       items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
       items.push(['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
         .then(yes => { if (yes) send('/bill/delete', {key}); })]);
+      menu(btn, items);
+    }));
+
+    // v0.36 (mock A3): '+ date' / '+ category' on a bill that is missing them
+    document.querySelectorAll('.dbills tr.bill .addlink').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = btn.closest('tr'), key = row.dataset.key;
+      if (btn.dataset.add === 'due') Sheet.day('📅 ' + row.dataset.name + ': which day does it come out?').then(day => { if (day !== null) send('/bill/due', {key, day}); });
+      else Sheet.pick('🏷 ' + row.dataset.name + ': category', Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), row.dataset.cat)
+        .then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); });
+    }));
+    // mock D: the bill just added glows once
+    try {
+      const glow = sessionStorage.getItem('lite_glow');
+      if (glow) { sessionStorage.removeItem('lite_glow'); const r = document.querySelector('.dbills tr.bill[data-key="' + CSS.escape(glow) + '"]'); if (r) r.classList.add('newglow'); }
+    } catch (e) { /* no storage */ }
+
+    // v0.36 (mock H2): spends. Paid / Upcoming switch (Upcoming shows the expected date box); ⋯ = Change date / Paid / Remove
+    document.querySelectorAll('[data-card="spend"] .spendseg').forEach(seg => {
+      const form = seg.parentElement.querySelector('form[action="/add"]'), box = form.querySelector('.spenddate');
+      seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        const up = b.dataset.up === '1';
+        seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+        form.elements.upcoming.value = up ? '1' : '0';
+        box.hidden = !up;
+        if (up) form.elements.date.focus();
+      }));
+    });
+    document.querySelectorAll('[data-card="spend"] tr.drow .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = btn.closest('tr'), id = row.dataset.id, items = [];
+      items.push(['📅 Change date', '', () => Sheet.ask('📅 ' + row.dataset.name + ': date', 'The day it went out (or will)', row.dataset.date, 'date')
+        .then(date => { if (date !== null) send('/spend/date', {id, date}); })]);
+      if (row.dataset.up === '1') items.push(['✅ Paid (it went out today)', '', () => send('/spend/paid', {id})]);
+      items.push(['🗑 Remove', 'stop', () => row.querySelector('form[action="/remove"]').submit()]);
       menu(btn, items);
     }));
 

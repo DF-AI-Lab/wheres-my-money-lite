@@ -281,7 +281,8 @@
     const potsTotal = potsSet + potsOver;
     const potsSpent = sum(pots.filter(p => !p.blank).map(p => p.spent)), potsLeft = sum(pots.map(p => p.left));
     const potBills = billsAll - billsTotal;
-    const shown = spends.map(x => Object.assign({}, x, {pot: potOf[x.cat] ? potOf[x.cat].name : null}));
+    const shown = spends.map(x => Object.assign({}, x, {pot: potOf[x.cat] ? potOf[x.cat].name : null,
+      upcoming: !!x.upcoming && !!today && today < x.date, autoPaid: !!x.upcoming && !!today && today >= x.date}));
     const spendsTotal = sum(shown.filter(x => !x.pot).map(x => x.amount));
     const moneyForSpending = pay + left - billsTotal - potsSet;
     const startSpare = moneyForSpending;
@@ -380,7 +381,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.35';
+  const APP = 'wheres-my-money-lite', VERSION = '0.36';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -391,11 +392,31 @@
   const backupName = day => `wheres-my-money-backup-${day}.json`;
 
   // ---------- the routes (web.py), as functions on the state ----------
-  function addSpend(s, iso, amountText, nameText) {              // POST /add
+  // a real calendar date 'YYYY-MM-DD' (not 2024-13-40)
+  const isDate = t => { const d = new Date(t + 'T00:00:00Z'); return /^\d{4}-\d{2}-\d{2}$/.test(t) && !isNaN(d) && d.toISOString().slice(0, 10) === t; };
+  // POST /add. expectText = Upcoming (v0.36, mock H2): the date it should go out; from that day it counts as paid by itself
+  function addSpend(s, iso, amountText, nameText, expectText) {
     const amount = parseMoney(amountText), name = String(nameText == null ? '' : nameText).trim();
-    if (amount === null || !name) return 'spend';
+    const expect = String(expectText == null ? '' : expectText).trim();
+    if (amount === null || !name || (expect && !isDate(expect))) return 'spend';
     s.spends = s.spends || [];
-    s.spends.push({id: Math.max(0, ...s.spends.map(x => x.id)) + 1, date: iso, amount, name, cat: guessCategory(name)});
+    const x = {id: Math.max(0, ...s.spends.map(x => x.id)) + 1, date: expect || iso, amount, name, cat: guessCategory(name)};
+    if (expect) x.upcoming = true;
+    s.spends.push(x);
+    return null;
+  }
+  const findSpend = (s, idText) => (s.spends || []).find(x => String(x.id) === String(idText).trim());
+  function paySpend(s, idText, iso) {                            // POST /spend/paid: an upcoming spend went out today
+    const x = findSpend(s, idText);
+    if (!x) return null;
+    x.date = iso; delete x.upcoming;
+    return null;
+  }
+  function setSpendDate(s, idText, text) {                       // POST /spend/date (⋯ → Change date)
+    const x = findSpend(s, idText), d = String(text == null ? '' : text).trim();
+    if (!x) return null;
+    if (!isDate(d)) return 'spend';
+    x.date = d; x.dated = true;
     return null;
   }
   function removeSpend(s, idText) {                              // POST /remove (a bad id is ignored)
@@ -538,17 +559,19 @@
     leftText = String(leftText == null ? '' : leftText).trim();
     const left = leftText === '' || isZeroText(leftText) ? 0 : parseMoney(leftText);
     if (pay === null || left === null) return 'pay';
-    const spends = s.spends || [], pots = s.pots || [];
+    const all = s.spends || [], pots = s.pots || [];
+    const next = x => x.upcoming && x.date >= day;               // an upcoming spend dated from the new payday on = next month's
+    const spends = all.filter(x => !next(x));
     const first = spends.length ? spends.map(x => x.date).sort()[0] : day;
     s.history = s.history || [];
     s.history.push({
-      start: s.payday || first, end: dayBefore(day), pay: s.pay || 0, left: s.left || 0, spare: monthEndSpare(s),
+      start: s.payday || first, end: dayBefore(day), pay: s.pay || 0, left: s.left || 0, spare: monthEndSpare(Object.assign({}, s, {spends})),
       bills: (s.bills || []).map(b => ({key: b.key, name: b.name, cat: b.cat, amount: typeof b.amount === 'number' ? b.amount : null, stopped: !!b.stopped})),
       spends: clone(spends),
       pots: pots.map(p => ({key: p.key, name: p.name, cat: p.cat, amount: isSet(p) ? p.amount : null,
-                            spent: (compute(s).pots.find(q => q.key === p.key) || {spent: 0}).spent})),
+                            spent: (compute(Object.assign({}, s, {spends})).pots.find(q => q.key === p.key) || {spent: 0}).spent})),
     });
-    s.payday = day; s.pay = pay; s.left = left; s.spends = [];
+    s.payday = day; s.pay = pay; s.left = left; s.spends = all.filter(next);
     (s.bills || []).forEach(b => { b.paid = false; delete b.asked; });
     return null;
   }
@@ -799,7 +822,7 @@
 
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
-    addSpend, removeSpend, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
+    addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
     nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,
