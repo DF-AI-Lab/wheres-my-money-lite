@@ -58,15 +58,10 @@ def test_header_shows_the_lite_icon():
     assert 'lite-192.png' in (DOCS / "sw.js").read_text()        # kept offline too
 
 
-def test_install_id_is_fresh_so_old_installs_cannot_block_it():
-    # v0.34 (Darren, 24 Oct): phones said "Could not open app": Chrome remembered the old install (id "./", synced from
-    # the PC). A new id = a new app to Chrome, so it offers a clean Install. Change it again if this ever repeats.
+def test_install_id_is_lites_own_folder():
+    # v0.35 (Darren, 24 Oct): Chrome reads an id like "./?app=lite2" from the SITE root, so it became
+    # https://df-ai-lab.github.io/?app=lite2, next to Food Tracker's .../?app=live and .../?app=v4-demo. Lite would not
+    # install until every other df-ai-lab app was removed. A full path id = Lite's own folder, shared with no other app.
     m = _manifest()
-    assert m["id"] == "./?app=lite2" and m["start_url"] == "./" and m["scope"] == "./"
-
-
-def test_install_id_is_fresh_so_old_installs_cannot_block_it():
-    # v0.34 (Darren, 24 Oct): phones said "Could not open app": Chrome remembered the old install (id "./", synced from
-    # the PC). A new id = a new app to Chrome, so it offers a clean Install. Change it again if this ever repeats.
-    m = _manifest()
-    assert m["id"] == "./?app=lite2" and m["start_url"] == "./" and m["scope"] == "./"
+    assert m["id"] == "/wheres-my-money-lite/demo/" and m["start_url"] == "./" and m["scope"] == "./"
+    assert "?" not in m["id"]

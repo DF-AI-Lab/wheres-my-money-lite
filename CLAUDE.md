@@ -105,6 +105,11 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   PC Lite install (Windows Start → My Money Lite → Uninstall; PC install was made only while debugging; chrome://apps is gone in new
   Chrome). Can't clear df-ai-lab.github.io site data (other apps share that origin). Ideas: different origin for Lite (own Pages repo/
   account or Netlify/Cloudflare), or 'Create shortcut' as a fallback. Live is still v0.30; Google Branding/Publish not done yet.
+- **24 Oct v0.35 (demo) INSTALL CAUSE FOUND:** Chrome resolves a manifest id like "./?app=x" against the SITE ROOT
+  (chrome://webapks showed Food Tracker = https://df-ai-lab.github.io/?app=live). Lite's "./" / "./?app=lite2" sat at the same
+  root as Food Tracker's ids. Darren's 2nd phone: removed every df-ai-lab app -> Lite installed. Fix: full path ids, no "?":
+  demo id "/wheres-my-money-lite/demo/"; on move to live give live "/wheres-my-money-lite/". Food Tracker should do the same
+  (its own repo/chat). Changing an id = a new app to Chrome: old installs must be removed + reinstalled once.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
