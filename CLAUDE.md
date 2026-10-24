@@ -127,6 +127,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   2) bell: bills due the same day = ONE line (mock B https://claude.ai/artifact/31cf2qYr4eH4kupgwUCUfj): '1st · 5 bills · £X',
   ▸ opens one short line per bill inside the bell, ✓ ticks all; a group has no Show (tap a bill
   line inside = jump + flash that bill), a 1-bill day keeps Show + ✓. NO phone notifications (Darren: no noise).
+  3) ⏸ Pause replaces 'Stop counting' in every bill's ⋯ (mock https://claude.ai/artifact/N7eHnWEmeMiW8EGR9A9dhK): paused bills leave
+  the list into ONE folded line at the bottom of Bills '▸ ⏸ 3 paused · £X not counted', open = name, £, ▶ Resume. Bills stays clean.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
