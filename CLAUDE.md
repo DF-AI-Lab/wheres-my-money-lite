@@ -122,6 +122,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   ✅ Paid /spend/paid, Remove = hidden /remove form). Upcoming spends count against spare like bills. newPayday keeps upcoming
   spends dated from the new payday on. tools/move_to_live.py now keeps live's manifest id. Tests 69 node + 145 browser.
   Ideas not built: bell reminder for upcoming spends; '+ category' on Unsorted spends.
+- **24 Oct BUILD LIST (collect, then build ALL in one version):** 1) spends like bills: '+ category' on Unsorted spends
+  (Sheet.pick, mock https://claude.ai/artifact/Dm56Qv5wkxwt7R2D6bD4Pz) + ⋯ → 🏷 Category; set = plain grey text. Darren: yes.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
