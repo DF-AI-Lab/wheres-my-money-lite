@@ -151,6 +151,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   memory only. Saves stay local (localStorage). Drive = ONE FILE PER PAY MONTH ('wheres-my-money-backup Oct 2026.json'), overwritten on
   every visit (send once when the app is hidden/closed, only if something changed); new pay month = new file; keep the last 3 (app deletes
   older); Load = newest. Monthly bell '📥 Download a backup' for people without Gmail. Passcode unlock reconnects Drive the same way.
+- **NEXT FIX LIST (Darren, 24 Oct: "on next"):** 1) Drive 'last saved' time shows 1 hour early: lite.js driveShow slices the UTC
+  ISO string (DRIVE_LAST = toISOString). Show LOCAL time (new Date(at), getHours/getMinutes) so BST/GMT both read right (UK clocks
+  go back 25 Oct). Only that spot is UTC: today() already uses local dates. Test: TZ Europe/London page, save at 18:19Z = '19:19'.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
