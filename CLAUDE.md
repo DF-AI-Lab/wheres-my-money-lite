@@ -154,6 +154,13 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **NEXT FIX LIST (Darren, 24 Oct: "on next"):** 1) Drive 'last saved' time shows 1 hour early: lite.js driveShow slices the UTC
   ISO string (DRIVE_LAST = toISOString). Show LOCAL time (new Date(at), getHours/getMinutes) so BST/GMT both read right (UK clocks
   go back 25 Oct). Only that spot is UTC: today() already uses local dates. Test: TZ Europe/London page, save at 18:19Z = '19:19'.
+  2) Remember the Gmail: after Connect, GET drive/v3/about?fields=user(emailAddress) (works with drive.file), save it, pass
+  login_hint on the quiet reconnect (Darren has 2 Google accounts: Google asked 'which account' every visit).
+  3) Save 1 minute after the last change too (PC side-by-side windows never hide the page; closing a PC window can cut the save).
+  4) A change not sent (dirty) = send it after the next visit's quiet reconnect.
+  5) SAVE SIGN = mock A (https://claude.ai/artifact/QgQz31vDgMXdgiV2y9wyqr, Darren: "simple and professional"): a small cloud after
+  'Lite' in the header, only when Drive is connected: saved = cloud + tick (draws in, tiny pop), saving = arrow floats up, waiting
+  (dirty, not sent) = amber dot. Reduced motion = no animation.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
