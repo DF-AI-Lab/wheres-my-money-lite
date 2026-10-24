@@ -129,6 +129,10 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   line inside = jump + flash that bill), a 1-bill day keeps Show + ✓. NO phone notifications (Darren: no noise).
   3) ⏸ Pause replaces 'Stop counting' in every bill's ⋯ (mock https://claude.ai/artifact/N7eHnWEmeMiW8EGR9A9dhK): paused bills leave
   the list into ONE folded line at the bottom of Bills '▸ ⏸ 3 paused · £X not counted', open = name, £, ▶ Resume. Bills stays clean.
+  4) DRIVE AUTO (grill 24 Oct, NO server, NO email sign-in): after the fingerprint/passcode unlock (= a user gesture) the app quietly
+  gets a Google token (GIS prompt:'' + login_hint = saved Gmail; may flash a second; first time = full Google sign-in once). Token = 1 hour,
+  memory only. Saves stay local (localStorage); Drive gets the same ONE file (overwritten; Google keeps ~30 days of versions) plus one
+  copy per month, keep the last 3. Monthly bell '📥 Download a backup' for people without Gmail. WHEN to send = see Q6 (open).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
