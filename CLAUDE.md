@@ -97,6 +97,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   it; contact = GitHub issues; own body bg/colour so dark mode reads), link under the Drive buttons (.drivepp), in sw.js FILES.
   Tests 61 node + 131 browser (test_privacy.py). NEXT: Darren fills Google Branding (home page, privacy link, authorised domain
   df-ai-lab.github.io) then Audience → Publish app. Privacy URL is /demo/privacy.html until "move to live", then the root one.
+- **24 Oct v0.34 (demo only):** phones said "Could not open app" on install: Chrome remembered the old install (manifest id "./",
+  synced from the PC through the Google account). manifest id is now "./?app=lite2" = a new app to Chrome. If it repeats, change the id again.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

@@ -56,3 +56,17 @@ def test_header_shows_the_lite_icon():
     html = (DOCS / "index.html").read_text()
     assert re.search(r'class="brand"[^>]*><img src="lite-192.png"', html)
     assert 'lite-192.png' in (DOCS / "sw.js").read_text()        # kept offline too
+
+
+def test_install_id_is_fresh_so_old_installs_cannot_block_it():
+    # v0.34 (Darren, 24 Oct): phones said "Could not open app": Chrome remembered the old install (id "./", synced from
+    # the PC). A new id = a new app to Chrome, so it offers a clean Install. Change it again if this ever repeats.
+    m = _manifest()
+    assert m["id"] == "./?app=lite2" and m["start_url"] == "./" and m["scope"] == "./"
+
+
+def test_install_id_is_fresh_so_old_installs_cannot_block_it():
+    # v0.34 (Darren, 24 Oct): phones said "Could not open app": Chrome remembered the old install (id "./", synced from
+    # the PC). A new id = a new app to Chrome, so it offers a clean Install. Change it again if this ever repeats.
+    m = _manifest()
+    assert m["id"] == "./?app=lite2" and m["start_url"] == "./" and m["scope"] == "./"
