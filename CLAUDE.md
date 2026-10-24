@@ -113,6 +113,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **24 Oct: v0.35 MOVED TO LIVE (Darren: "make the live same as the demo").** live = demo = v0.35, live id "/wheres-my-money-lite/".
   Darren installs LIVE on the phone; demo is tested in the browser only. Live's Drive uses the same client id; privacy page now at
   /wheres-my-money-lite/privacy.html (use that one for Google Branding).
+- **24 Oct: Darren: "all works" = live v0.35 INSTALLS on the phone. Install problem CLOSED.** Next: Google Branding + Publish app.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
