@@ -6,7 +6,7 @@
 <title>Privacy · Where's My Money? Lite</title>
 <link rel="icon" href="lite-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.36">
+<link rel="stylesheet" href="look.css?v=0.41">
 <style>
   /* the privacy page: plain words, same colours and font as the app */
   body { margin: 0; background: var(--bg); color: var(--text); font-family: Manrope, system-ui, sans-serif; }
@@ -42,10 +42,12 @@
   <h2>Google Drive (only if you choose it)</h2>
   <ul>
     <li>If you tap <b>Connect Google Drive</b>, Google asks you to sign in. The app then asks for <code>drive.file</code>
-      only: it can see <b>just the backup file it made</b>, never the rest of your Drive.</li>
+      only: it can see <b>just the backup files it made</b>, never the rest of your Drive.</li>
     <li>The backup is <b>scrambled with your passcode</b> before it leaves your device, so only you can open it.</li>
     <li>It goes into <b>your own</b> Google Drive. We never get a copy.</li>
-    <li>The sign-in only lasts while the page is open. The app does not see your Google password or your email.</li>
+    <li>Once connected, the app saves a copy by itself a minute after a change, and when you close it: one file per pay month in a folder called <b>Where's My Money Lite</b>, the last 3 kept. Turn it off any time in ☁️ Google Drive.</li>
+    <li>The app keeps your Google email address <b>on this phone only</b>, so Google does not ask which account each time. Turning Drive off forgets it.</li>
+    <li>Google's sign-in lasts up to an hour and is kept only in this tab; the app reconnects quietly when you next open it. The app does not see your Google password or your email.</li>
   </ul>
 
   <h2>What we do not do</h2>
@@ -57,7 +59,7 @@
   <h2>Remove your data</h2>
   <ul>
     <li><b>On this device:</b> clear this website's data in your browser settings.</li>
-    <li><b>In Google Drive:</b> delete the file <code>wheres-my-money-backup.json</code> from your Drive.</li>
+    <li><b>In Google Drive:</b> delete the folder <b>Where's My Money Lite</b> (or the files named <code>wheres-my-money-backup …</code>) from your Drive.</li>
     <li><b>Stop Google access:</b> remove the app at
       <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
   </ul>

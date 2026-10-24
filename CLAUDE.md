@@ -167,7 +167,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   sends a change not sent (driveAuto); a change during an upload stays dirty. Header .tagline .savesign (cloud, mock A): driveSign()
   saved / 'saved pop' / saving / wait; hidden unless Drive on. Privacy page mentions the email. Tests 78 node + 167 browser (test_v040.py).
   NEXT: Darren tries it on the demo; then Branding + Publish; 'move to live' when he says.
-- **24 Oct v0.41 (demo only):** after a save the page showed the top until 'load' (Google fonts + the Google sign-in script), then
+- **24 Oct v0.41 MOVED TO LIVE (Darren: "move to live", clouds work): live = demo = v0.41.** after a save the page showed the top until 'load' (Google fonts + the Google sign-in script), then
   jumped back (Darren: 'flickers'). lite.js backToPlace: placeNow() right after render in start(), again after DOMContentLoaded
   (setTimeout, after the lock opens) and on load; page content hidden (style body > * visibility) until placed, 1.5 s max;
   stops re-placing once the person scrolls (wheel/touch/key). Tests 78 node + 168 browser (test_v041.py).
