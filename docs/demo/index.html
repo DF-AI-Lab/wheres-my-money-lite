@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.36"></script>
-<script src="money.js?v=0.36"></script>
-<script src="render.js?v=0.36"></script>
-<script src="sheet.js?v=0.36"></script>
-<script src="lite.js?v=0.36"></script>
-<script src="lock.js?v=0.36"></script>
-<script src="lockui.js?v=0.36"></script>
+<script src="config.js?v=0.37"></script>
+<script src="money.js?v=0.37"></script>
+<script src="render.js?v=0.37"></script>
+<script src="sheet.js?v=0.37"></script>
+<script src="lite.js?v=0.37"></script>
+<script src="lock.js?v=0.37"></script>
+<script src="lockui.js?v=0.37"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.36">
-<link rel="stylesheet" href="lite.css?v=0.36">
+<link rel="stylesheet" href="look.css?v=0.37">
+<link rel="stylesheet" href="lite.css?v=0.37">
 </head>
 <body class="demo">
 
@@ -264,7 +264,7 @@
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.36</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.37</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -333,6 +333,8 @@
     <button type="button" id="driveconnect">Connect Google Drive</button>
     <button type="button" id="drivesave" hidden>☁️ Save a copy now</button>
     <button type="button" id="driveload" hidden>📥 Load the copy from Drive</button>
+    <p class="driveauto" id="driveauto" hidden>☁️ Auto-save is on · <span id="drivelast"></span></p>
+    <button type="button" class="small" id="driveoff" hidden>Turn off auto-save</button>
     <p class="driveok" id="driveok" hidden role="status">✅ Saved to your Drive.</p>
     <p class="err" id="driveerr" hidden role="alert"></p>
   </div>
@@ -562,7 +564,7 @@
         const names = (window.LITE_PAGE && window.LITE_PAGE.cards) || [];
         Sheet.ask('💳 Which credit card does this bill pay?', names.join(', ') + ' (empty = none)', row.dataset.card).then(card => {
           if (card !== null) send('/bill/card', {key, card}); }); }]);
-      items.push([stopped ? '▶ Count it again' : '⏸ Stop counting', stopped ? '' : 'stop', () => row.querySelector('form.stopform').submit()]);
+      items.push([stopped ? '▶ Resume' : '⏸ Pause', '', () => row.querySelector('form.stopform').submit()]);   // v0.37: paused = folded away
       items.push(['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
         .then(yes => { if (yes) send('/bill/delete', {key}); })]);
       menu(btn, items);
@@ -593,12 +595,23 @@
         if (up) form.elements.date.focus();
       }));
     });
+    // v0.37: a spend's category, the same pick list as bills ('+ category' on an Unsorted one, or ⋯ → 🏷 Category)
+    const spendCat = row => Sheet.pick('🏷 ' + row.dataset.name + ': category', Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), row.dataset.cat)
+      .then(cat => { if (cat !== null) send('/spend/cat', {id: row.dataset.id, cat}); });
+    document.querySelectorAll('[data-card="spend"] tr.drow .addlink').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); spendCat(btn.closest('tr')); }));
+    // v0.37: the folded line of paused bills opens / closes
+    document.querySelectorAll('.dbills .pausedfold').forEach(btn => btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open);
+      btn.closest('tbody').querySelectorAll('tr.pbill').forEach(r => { r.hidden = !open; });
+    }));
     document.querySelectorAll('[data-card="spend"] tr.drow .more').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
       const row = btn.closest('tr'), id = row.dataset.id, items = [];
       items.push(['📅 Change date', '', () => Sheet.ask('📅 ' + row.dataset.name + ': date', 'The day it went out (or will)', row.dataset.date, 'date')
         .then(date => { if (date !== null) send('/spend/date', {id, date}); })]);
       if (row.dataset.up === '1') items.push(['✅ Paid (it went out today)', '', () => send('/spend/paid', {id})]);
+      items.push(['🏷 Category', '', () => spendCat(row)]);
       items.push(['🗑 Remove', 'stop', () => row.querySelector('form[action="/remove"]').submit()]);
       menu(btn, items);
     }));
@@ -1097,31 +1110,52 @@
       setTimeout(() => { el.scrollIntoView({behavior: 'smooth', block: 'center'}); pulse(el); }, wait);
     }
     window.refreshBell = function () {
-      const list = Money.reminders(Lite.state(), Lite.today());
+      // v0.37 (mock B): bills due the same day = one line; ▸ opens one short line per bill (tap = jump + flash)
+      const list = Money.remindLines(Lite.state(), Lite.today());
       count.textContent = list.length || ''; count.hidden = !list.length;
       menu.innerHTML = '';
       if (!list.length) { menu.innerHTML = '<div class="remempty">Nothing to check 👍</div>'; return; }
-      const clear = document.createElement('button'); clear.type = 'button'; clear.className = 'small'; clear.id = 'bellclear'; clear.textContent = 'Clear all';
-      clear.addEventListener('click', () => {
-        const f = document.createElement('form'); f.method = 'post'; f.action = '/reminders/clear';
+      const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+      const postForm = (action, fields) => {
+        const f = document.createElement('form'); f.method = 'post'; f.action = action;
+        Object.entries(fields).forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
         document.body.appendChild(f); f.submit();
-      });
+      };
+      const clear = el('button', 'small', 'Clear all'); clear.type = 'button'; clear.id = 'bellclear';
+      clear.addEventListener('click', () => postForm('/reminders/clear', {}));
       list.forEach(r => {
-        const row = document.createElement('div'); row.className = 'remind'; row.dataset.kind = r.kind; row.dataset.key = r.key || '';
-        const text = document.createElement('span'); text.className = 'remtext'; text.textContent = r.text; row.appendChild(text);
-        const go = document.createElement('button'); go.type = 'button'; go.className = 'small remgo'; go.textContent = 'Show';
-        go.addEventListener('click', () => jump(r.go)); row.appendChild(go);
-        if (r.kind === 'bill') {
-          const done = document.createElement('button'); done.type = 'button'; done.className = 'small remdone'; done.textContent = '✓';
-          done.title = 'Checked in my bank app'; done.setAttribute('aria-label', 'Checked ' + r.key);
-          done.addEventListener('click', () => {
-            const f = document.createElement('form'); f.method = 'post'; f.action = '/bill/paid';
-            [['key', r.key], ['paid', '1']].forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
-            document.body.appendChild(f); f.submit();
+        const row = el('div', 'remind'); row.dataset.kind = r.kind; row.dataset.key = r.key || '';
+        const group = r.kind === 'bills';
+        let kids = null;
+        if (group) {
+          const chev = el('button', 'remchev'); chev.type = 'button';
+          chev.innerHTML = '<svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; chev.setAttribute('aria-expanded', 'false');
+          chev.setAttribute('aria-label', 'Show the bills on the ' + r.items[0].dueText);
+          kids = el('div', 'remkids'); kids.hidden = true;
+          r.items.forEach(i => {
+            const sub = el('button', 'remsub'); sub.type = 'button'; sub.dataset.key = i.key;
+            sub.appendChild(el('span', '', i.name)); sub.appendChild(el('span', 'n', Money.fmt.money(i.amount)));
+            sub.addEventListener('click', () => jump(i.go));
+            kids.appendChild(sub);
           });
+          chev.addEventListener('click', () => { const o = kids.hidden; kids.hidden = !o; chev.setAttribute('aria-expanded', o); });
+          row.appendChild(chev);
+        }
+        const text = el('span', 'remtext', r.text);
+        if (r.sub) text.appendChild(el('small', '', r.sub));
+        row.appendChild(text);
+        if (!group) {
+          const go = el('button', 'small remgo', 'Show'); go.type = 'button';
+          go.addEventListener('click', () => jump(r.go)); row.appendChild(go);
+        }
+        if (r.kind === 'bill' || group) {
+          const done = el('button', 'small remdone', '✓'); done.type = 'button';
+          done.title = 'Checked in my bank app'; done.setAttribute('aria-label', 'Checked ' + (group ? 'the bills on the ' + r.items[0].dueText : r.key));
+          done.addEventListener('click', () => group ? postForm('/bills/paid', {keys: JSON.stringify(r.keys)}) : postForm('/bill/paid', {key: r.key, paid: '1'}));
           row.appendChild(done);
         }
         menu.appendChild(row);
+        if (kids) menu.appendChild(kids);
       });
       menu.appendChild(clear);
     };

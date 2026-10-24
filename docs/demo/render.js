@@ -74,13 +74,14 @@
   };
   const shortDay = iso => F.day(iso).replace(/ \d{4}$/, '');           // '20 Nov'
   function spendRow(s) {
-    const where = s.pot ? `<i class="dot pot"></i>${esc(s.pot)}` : esc(s.cat || 'Unsorted');
+    const unsorted = !s.cat || s.cat === 'Unsorted';                  // v0.37: like bills, '+ category' until one is set
+    const where = s.pot ? `<i class="dot pot"></i>${esc(s.pot)}` : (unsorted ? addLink('cat', '+ category') : esc(s.cat));
     const when = s.upcoming ? `expected ${shortDay(s.date)}` : F.day(s.date);
     const tip = s.upcoming ? SPEND_TIP.upcoming : (s.autoPaid ? SPEND_TIP.gone : (s.dated ? SPEND_TIP.dated : SPEND_TIP.added));
     const cls = s.upcoming ? ' upcoming' : (s.autoPaid ? ' paid' : '');
     return `
 
-          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}</td>
+          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-cat="${esc(s.cat || 'Unsorted')}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}</td>
               <td class="n smore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or remove ${esc(s.name)}">⋯</button><form method="post" action="/remove" hidden><input type="hidden" name="id" value="${s.id}"></form></td></tr>
 
         `;
@@ -237,6 +238,18 @@
     `;
   }
 
+  // v0.37 (Darren, 24 Oct): ⏸ Pause takes a bill out of the list into ONE folded line at the bottom (Bills stays clean);
+  // open it for each paused bill and ▶ Resume (the same /stopped switch as before)
+  function pausedRows(list) {
+    if (!list.length) return '';
+    const sum = list.reduce((a, b) => a + (b.amount || 0), 0);
+    return `<tbody class="paused">
+      <tr class="pausedrow"><td colspan="5"><button type="button" class="pausedfold" aria-expanded="false"><span><svg class="pch" viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> ⏸ ${list.length} paused</span><span>${money(sum)} not counted</span></button></td></tr>
+      ${list.map(b => `<tr class="pbill" data-key="${esc(b.key)}" hidden><td colspan="5"><div class="pline"><span class="pname">${esc(b.name)}</span><span class="n">${b.amount ? money(b.amount) : ''}</span>
+        <form method="post" action="/stopped"><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="0"><button class="small resume" type="submit">▶ Resume</button></form></div></td></tr>`).join('')}
+    </tbody>`;
+  }
+
   function billsCard(r, err) {
     const bd = r.billsDiff, tone = bd < -0.005 ? 'good' : (bd > 0.005 ? 'bad' : '');
     return `<div class="card" data-id="bills" data-card="bills">
@@ -245,13 +258,14 @@
   <table id="bills" class="dbills">
     <thead><tr><th>Bill</th><th class="n">${r.cycles}-mth avg</th><th class="n">Last month</th><th class="n">Diff</th><th></th></tr></thead>
     <tbody data-sort="bills">
-    ${r.bills.map(billRow).join('')}
+    ${r.bills.filter(b => !b.stopped).map(billRow).join('')}
     </tbody>
 
     <tbody>${r.pots.map(potBill).join('')}</tbody>
 
     <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg ${money(r.billsAvg + r.potsSet)}</span></td><td class="n bavg">${money(r.billsAvg + r.potsSet)}</td><td class="n bamt" id="btotal">${money(r.billsTotal + r.potsSet)}</td>
       <td class="n diff ${tone}" id="bdiff">${F.diff(bd)}</td><td></td></tr></tbody>
+    ${pausedRows(r.bills.filter(b => b.stopped))}
   </table>
   <form class="inline" method="post" action="/bill/add" style="margin-top:12px">
     <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.99" aria-label="Amount">

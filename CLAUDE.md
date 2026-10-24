@@ -122,6 +122,15 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   ✅ Paid /spend/paid, Remove = hidden /remove form). Upcoming spends count against spare like bills. newPayday keeps upcoming
   spends dated from the new payday on. tools/move_to_live.py now keeps live's manifest id. Tests 69 node + 145 browser.
   Ideas not built: bell reminder for upcoming spends; '+ category' on Unsorted spends.
+- **24 Oct v0.37 BUILT (demo only; live still v0.36): the BUILD LIST below, all 4.** Money: setSpendCat (/spend/cat), setBillsPaid
+  (/bills/paid keys=JSON), remindLines (bell lines: kind 'bills' = a day group {keys, items, total}, 'bill' = lone), driveName, drivePrune.
+  Bell: .remind[data-kind=bills] has .remchev (svg) + .remdone, no .remgo; .remkids .remsub[data-key] = jump + pulse. Pause = the old
+  stopped flag: ⋯ '⏸ Pause'; render puts stopped bills in tbody.paused (.pausedfold + tr.pbill hidden, button.resume posts /stopped 0).
+  Drive (lite.js): token in sessionStorage lite_drive_token {t,exp}; localStorage lite_drive_on / _dirty (set by every route) / _last /
+  _file = {name,id} (demo: lite_demo_drive_*); visibilitychange hidden (not our own reload: `leaving`) + dirty + token = driveSave(true);
+  a new month file -> prune to 3; first pointerdown of a visit = driveConnect(quiet, prompt ''); #driveauto + #driveoff in ?view=drive.
+  Privacy page updated. Old tests changed on purpose (bell counts 5->4, Stop counting -> Pause, Drive file names). Tests 77 node + 154 browser.
+  NOT tried on a real phone/Google yet: Darren to test Drive auto on the demo (quiet reconnect may flash a Google box).
 - **24 Oct BUILD LIST (collect, then build ALL in one version):** 1) spends like bills: '+ category' on Unsorted spends
   (Sheet.pick, mock https://claude.ai/artifact/Dm56Qv5wkxwt7R2D6bD4Pz) + ⋯ → 🏷 Category; set = plain grey text. Darren: yes.
   2) bell: bills due the same day = ONE line (mock B https://claude.ai/artifact/31cf2qYr4eH4kupgwUCUfj): '1st · 5 bills · £X',

@@ -67,6 +67,8 @@
       : M.addSpend(s, today(), get('amount'), get('name'), get('upcoming') === '1' ? get('date') : ''),
     '/spend/paid': (s, get) => M.paySpend(s, get('id'), today()),
     '/spend/date': (s, get) => M.setSpendDate(s, get('id'), get('date')),
+    '/spend/cat': (s, get) => M.setSpendCat(s, get('id'), get('cat')),
+    '/bills/paid': (s, get) => { let k = []; try { k = JSON.parse(get('keys') || '[]'); } catch (e) { /* none */ } return M.setBillsPaid(s, k); },
     '/remove': (s, get) => M.removeSpend(s, get('id')),
     '/pay': (s, get) => M.setPay(s, get('pay'), get('clear') === '1'),
     '/left': (s, get) => M.setLeft(s, get('amount')),
@@ -121,7 +123,7 @@
     }
     const before = path === '/bill/add' ? state.bills.length : 0;
     const error = fn(state, getter(data));
-    if (!error) Store.save(state);
+    if (!error) { Store.save(state); lsSet(DRIVE_DIRTY, '1'); }   // Drive sends it when the app is next hidden
     // a new bill glows once on the next page (v0.36, mock D)
     if (path === '/bill/add' && !error && state.bills.length > before) {
       try { root.sessionStorage.setItem('lite_glow', state.bills[state.bills.length - 1].key); } catch (e) { /* ignore */ }
@@ -176,6 +178,7 @@
   // ---------- forms: apply, then go where live's redirect goes ----------
   function leave(error) {
     keepPlace();
+    leaving = true;
     if (error) {
       const u = new URL(location.href);
       u.searchParams.set('error', error);
@@ -233,14 +236,28 @@
   });
 
   // ---------- ☁️ a copy of the scrambled backup in the person's own Google Drive (?view=drive) ----------
-  // The token stays in memory only. The scope drive.file means the app only ever sees the file it made.
-  // the demo (fake data) keeps its own Drive file + key, so a live Load can never pick up the demo's copy
-  const DRIVE_NAME = demo ? 'wheres-my-money-demo-backup.json' : 'wheres-my-money-backup.json';
-  const DRIVE_ID = demo ? 'lite_demo_drive_file' : 'lite_drive_file', GSI = 'https://accounts.google.com/gsi/client';
+  // The scope drive.file means the app only ever sees the files it made.
+  // the demo (fake data) keeps its own Drive files + keys, so a live Load can never pick up the demo's copy
+  // v0.37 (Darren, 24 Oct, no server): once connected, the first tap of each visit (the unlock tap) quietly gets a new
+  // Google token (no account picker); when the app is hidden and something changed, one save goes to Drive.
+  // One file per pay month ('wheres-my-money-backup Oct 2026.json'), saved over all month; the last 3 are kept.
+  const DRIVE_BASE = demo ? 'wheres-my-money-demo-backup' : 'wheres-my-money-backup';
+  const DK = n => (demo ? 'lite_demo_drive_' : 'lite_drive_') + n;           // localStorage keys: file, on, dirty, last
+  const DRIVE_ID = DK('file'), DRIVE_ON = DK('on'), DRIVE_DIRTY = DK('dirty'), DRIVE_LAST = DK('last');
+  const TOKEN_KEY = demo ? 'lite_demo_drive_token' : 'lite_drive_token';     // sessionStorage: survives the reload after a save
+  const GSI = 'https://accounts.google.com/gsi/client';
   const DRIVE_API = 'https://www.googleapis.com/drive/v3/files', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
-  let driveToken = '';
   const lsGet = k => { try { return root.localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { if (v === null) root.localStorage.removeItem(k); else root.localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+  function getToken() {
+    try { const t = JSON.parse(root.sessionStorage.getItem(TOKEN_KEY)); if (t && t.t && t.exp > Date.now() + 60000) return t.t; } catch (e) { /* none */ }
+    return '';
+  }
+  function setToken(t, secs) {
+    try { if (t) root.sessionStorage.setItem(TOKEN_KEY, JSON.stringify({t, exp: Date.now() + (secs || 3600) * 1000}));
+          else root.sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
+  }
+  const clientId = () => (root.LITE_CONFIG || {}).googleClientId;
   function loadGsi() {
     return new Promise((resolve, reject) => {
       if (root.google && root.google.accounts && root.google.accounts.oauth2) return resolve();
@@ -251,71 +268,106 @@
       document.head.appendChild(s);
     });
   }
+  // quiet = no account picker (the person said yes before); the first time is the full Google sign-in
+  function driveConnect(quiet) {
+    return new Promise((resolve, reject) => {
+      const client = root.google.accounts.oauth2.initTokenClient({
+        client_id: clientId(), scope: 'https://www.googleapis.com/auth/drive.file',
+        callback: t => { if (t && t.access_token) { setToken(t.access_token, Number(t.expires_in) || 3600); lsSet(DRIVE_ON, '1'); resolve(); }
+                         else reject(new Error('Google did not let you in. Try again.')); },
+        error_callback: () => reject(new Error('Google sign-in was closed or blocked. Try again.')),
+      });
+      if (quiet) client.requestAccessToken({prompt: ''}); else client.requestAccessToken();
+    });
+  }
   async function driveFetch(url, opts) {
     opts = opts || {};
-    opts.headers = Object.assign({Authorization: 'Bearer ' + driveToken}, opts.headers || {});
+    opts.headers = Object.assign({Authorization: 'Bearer ' + getToken()}, opts.headers || {});
     let r;
     try { r = await root.fetch(url, opts); } catch (e) { throw new Error('Could not reach Google Drive. Check your internet and try again.'); }
-    if (r.status === 401) { driveToken = ''; driveShow(false); throw new Error('Google Drive signed you out. Tap Connect Google Drive again.'); }
+    if (r.status === 401) { setToken(''); driveShow(false); throw new Error('Google Drive signed you out. Tap Connect Google Drive again.'); }
     return r;
   }
-  async function driveSave() {
-    const text = JSON.stringify(await backupFile());
+  async function driveList() {                                     // this app's backup files, the newest first
+    const q = encodeURIComponent(`name contains '${DRIVE_BASE}' and trashed=false`);
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&orderBy=modifiedTime%20desc&fields=files(id,name,modifiedTime)`);
+    if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
+    return ((await r.json()).files || []).filter(f => f.name && f.name.indexOf(DRIVE_BASE) === 0);
+  }
+  async function driveSave(hidden) {
+    const text = JSON.stringify(await backupFile()), name = M.driveName(state, today(), demo);
+    let saved = null;
+    try { saved = JSON.parse(lsGet(DRIVE_ID)); } catch (e) { /* an old plain id: a new month file */ }
     const send = async id => {
-      const meta = id ? {name: DRIVE_NAME} : {name: DRIVE_NAME, mimeType: 'application/json'}, b = 'wmm' + Date.now();
+      const meta = id ? {name} : {name, mimeType: 'application/json'}, b = 'wmm' + Date.now();
       const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
                    `--${b}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${b}--`;
       return driveFetch(id ? `${DRIVE_UP}/${encodeURIComponent(id)}?uploadType=multipart` : `${DRIVE_UP}?uploadType=multipart`,
-        {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body});
+        {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body,
+         keepalive: !!hidden && body.length < 60000});              // the app is closing: let the save finish
     };
-    let id = lsGet(DRIVE_ID), r = await send(id);
-    if (id && r.status === 404) { lsSet(DRIVE_ID, null); id = null; r = await send(null); }   // deleted in Drive: make a new one
+    let id = saved && saved.name === name ? saved.id : null, r = await send(id);
+    if (id && r.status === 404) { id = null; r = await send(null); }   // deleted in Drive: make a new one
     if (!r.ok) throw new Error('Google Drive would not take the copy (error ' + r.status + ').');
-    if (!id) { const j = await r.json(); if (j && j.id) lsSet(DRIVE_ID, j.id); }
+    if (!id) {                                                     // a new pay month: a new file, then keep the last 3
+      const j = await r.json();
+      if (j && j.id) lsSet(DRIVE_ID, JSON.stringify({name, id: j.id}));
+      try { for (const old of M.drivePrune(await driveList(), 3)) await driveFetch(`${DRIVE_API}/${encodeURIComponent(old)}`, {method: 'DELETE'}); }
+      catch (e) { /* tidy next time */ }
+    }
+    lsSet(DRIVE_DIRTY, null); lsSet(DRIVE_LAST, new Date().toISOString());
+    M.setBackupDay(state, today()); Store.save(state);             // counts as a backup (no bell reminder)
   }
   async function driveLoad() {
-    let id = lsGet(DRIVE_ID);
-    if (!id) {
-      const q = encodeURIComponent(`name='${DRIVE_NAME}' and trashed=false`);
-      const r = await driveFetch(`${DRIVE_API}?q=${q}&orderBy=modifiedTime%20desc&fields=files(id,name,modifiedTime)`);
-      if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
-      const list = (await r.json()).files || [];
-      if (!list.length) throw new Error('There is no copy in your Google Drive yet. Save one first.');
-      id = list[0].id;
-    }
-    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}?alt=media`);
-    if (r.status === 404) { lsSet(DRIVE_ID, null); throw new Error('That copy is gone from your Google Drive. Save a new one first.'); }
+    const list = await driveList();
+    if (!list.length) throw new Error('There is no copy in your Google Drive yet. Save one first.');
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(list[0].id)}?alt=media`);
     if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
     await loadBackup(await r.text());
   }
   function driveShow(connected) {
     const set = (id, hide) => { const el = document.getElementById(id); if (el) el.hidden = hide; };
     set('driveconnect', connected); set('drivesave', !connected); set('driveload', !connected);
+    set('driveauto', !connected); set('driveoff', !connected);
+    const last = document.getElementById('drivelast'), at = lsGet(DRIVE_LAST);
+    if (last) last.textContent = at ? 'last saved ' + M.fmt.day(at.slice(0, 10)) + ' ' + at.slice(11, 16) : 'saves when you close the app';
   }
   function driveStart() {
-    const box = document.getElementById('drive'), id = (root.LITE_CONFIG || {}).googleClientId;
+    const box = document.getElementById('drive'), id = clientId();
     if (!box || new URLSearchParams(location.search).get('view') !== 'drive') return;
     const set = document.getElementById('driveset'), none = document.getElementById('drivenone');
     if (!id) { set.remove(); none.hidden = false; return; }   // no client id: no buttons at all
     set.hidden = false;
+    driveShow(!!getToken());
     const ok = document.getElementById('driveok'), err = document.getElementById('driveerr');
     const fail = e => { ok.hidden = true; err.textContent = (e && e.message) || 'Something went wrong. Try again.'; err.hidden = false; };
     const run = fn => async () => { ok.hidden = true; err.hidden = true; try { await fn(); } catch (e) { fail(e); } };
     document.getElementById('driveconnect').addEventListener('click', run(async () => {
       await loadGsi();
-      await new Promise((resolve, reject) => {
-        const client = root.google.accounts.oauth2.initTokenClient({
-          client_id: id, scope: 'https://www.googleapis.com/auth/drive.file',
-          callback: t => { if (t && t.access_token) { driveToken = t.access_token; resolve(); } else reject(new Error('Google did not let you in. Try again.')); },
-          error_callback: () => reject(new Error('Google sign-in was closed or blocked. Try again.')),
-        });
-        client.requestAccessToken();
-      });
+      await driveConnect(false);
       driveShow(true);
     }));
-    document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(); ok.hidden = false; }));
+    document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.hidden = false; driveShow(true); }));
     document.getElementById('driveload').addEventListener('click', run(driveLoad));
+    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); setToken(''); driveShow(false); });
   }
+  // the quiet reconnect: the first tap of a visit (a popup needs a tap), when Drive was connected before
+  function driveWake() {
+    if (!lsGet(DRIVE_ON) || !clientId()) return;
+    loadGsi().catch(() => {});                                     // ready before the tap
+    const once = () => {
+      document.removeEventListener('pointerdown', once, true);
+      if (getToken() || !(root.google && root.google.accounts && root.google.accounts.oauth2)) return;
+      driveConnect(true).catch(() => { /* blocked or closed: try again next visit */ });
+    };
+    document.addEventListener('pointerdown', once, true);
+  }
+  let leaving = false;                                             // our own reload after a save is not "closing the app"
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'hidden' || leaving || !lsGet(DRIVE_ON) || !lsGet(DRIVE_DIRTY) || !getToken()) return;
+    driveSave(true).catch(() => { /* offline: it stays changed, the next visit sends it */ });
+  });
+  document.addEventListener('DOMContentLoaded', driveWake);
   document.addEventListener('DOMContentLoaded', driveStart);
 
   function handleForm(form, submitter) {

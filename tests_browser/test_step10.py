@@ -162,20 +162,20 @@ def test_the_bell_sits_by_settings_with_a_count_and_never_covers_the_name(page, 
     assert bell["y"] >= cog["y"] + cog["height"] - 1
     assert bell["x"] >= name["x"] + name["width"] or bell["y"] >= name["y"] + name["height"]   # no overlap
     assert bell["x"] + bell["width"] <= 390
-    assert page.locator("#bellcount").inner_text() == "5"             # Rent, Council Tax, Energy Co, Bills, Tv Licence
+    assert page.locator("#bellcount").inner_text() == "4"             # Tv Licence, the 1st (Rent + Council Tax), Bills, Energy Co (v0.37: one line per day)
 
 
 def test_tap_the_bell_for_the_list_and_an_item_jumps_to_its_place(page, base):
     page.goto(base + DEMO)
     page.click("#bellbtn")
     items = page.locator("#bellmenu .remind")
-    assert page.locator("#bellmenu").is_visible() and items.count() == 5
-    rent = page.locator('#bellmenu .remind[data-key="Rent"]')
-    assert "Rent" in rent.inner_text()
+    assert page.locator("#bellmenu").is_visible() and items.count() == 4
+    rent = page.locator('#bellmenu .remind[data-key="Energy Co"]')
+    assert "Energy Co" in rent.inner_text()
     rent.locator(".remgo").click()
     page.wait_for_timeout(800)
     assert page.locator("#bellmenu").is_hidden()
-    r = box(page, 'tr.bill[data-key="Rent"]')
+    r = box(page, 'tr.bill[data-key="Energy Co"]')
     assert 0 <= r["y"] <= 844
 
 

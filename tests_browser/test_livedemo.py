@@ -117,9 +117,9 @@ def test_demo_drive_copy_is_its_own_file_never_the_live_one(phone, site):
     phone.click("#drivesave")
     phone.wait_for_selector("#driveok:not([hidden])")
     body = files["_uploads"][-1]["body"]
-    assert "wheres-my-money-demo-backup.json" in body and '"wheres-my-money-backup.json"' not in body
+    assert "wheres-my-money-demo-backup " in body and '"wheres-my-money-backup ' not in body
     assert phone.evaluate("localStorage.getItem('lite_drive_file')") is None
-    assert phone.evaluate("localStorage.getItem('lite_demo_drive_file')") == "file1"
+    assert json.loads(phone.evaluate("localStorage.getItem('lite_demo_drive_file')"))["id"] == "file1"
     assert json.loads(phone.evaluate("localStorage.getItem('lite_state_v1')")) == REAL
 
 

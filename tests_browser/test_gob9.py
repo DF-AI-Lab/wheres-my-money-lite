@@ -71,7 +71,7 @@ def test_save_a_scrambled_copy_to_drive(page, base):
     body = up["body"]
     sealed = json.loads(body[body.index("{\"app\""):body.rindex("}") + 1])
     assert open_scrambled(sealed, PIN)["spends"][0]["name"] == "PlainCheck"
-    assert "wheres-my-money-backup.json" in body                      # one file, the same name each time
+    assert "wheres-my-money-backup Nov 2024.json" in body             # v0.37: one file per pay month, the same name all month
     # saving again updates the same file (PATCH), it does not make a new one each time
     page.click("#drivesave")
     page.wait_for_timeout(500)

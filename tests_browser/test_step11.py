@@ -35,10 +35,10 @@ def test_due_bill_name_and_date_turn_green_with_a_tick(page, base):
 
 
 def test_the_bell_list_scrolls(page, base):
-    page.goto(base + TODAY)
+    page.goto(base + "?today=2024-11-28")                             # 14 due days, all gone
     for i in range(14):
         post(page, 'form[action="/bill/add"]', {"amount": "10", "name": f"Bill {i}"})
-        bill_menu(page, f"Bill {i}", "Due day", "1")
+        bill_menu(page, f"Bill {i}", "Due day", str(i + 1))   # v0.37: one line per day
     page.click("#bellbtn")
     m = page.locator("#bellmenu")
     b = m.bounding_box()
@@ -51,7 +51,7 @@ def test_the_bell_list_scrolls(page, base):
 
 def test_clear_all(page, base):
     page.goto(base + DEMO)
-    assert page.locator("#bellcount").inner_text() == "5"
+    assert page.locator("#bellcount").inner_text() == "4"
     page.click("#bellbtn")
     with page.expect_navigation():
         page.click("#bellclear")
@@ -96,9 +96,9 @@ def test_show_makes_the_item_pulse(page, base):
     """Darren, 21 Oct evening: after Show jumps to an item, it pulses so you can see where it is."""
     page.goto(base + DEMO)
     page.click("#bellbtn")
-    page.locator('#bellmenu .remind[data-key="Rent"] .remgo').click()
+    page.locator('#bellmenu .remind[data-key="Energy Co"] .remgo').click()
     page.wait_for_timeout(700)
-    rent = page.locator('tr.bill[data-key="Rent"]')
+    rent = page.locator('tr.bill[data-key="Energy Co"]')
     assert "pulse" in rent.get_attribute("class")
     assert rent.evaluate("e => getComputedStyle(e).animationName") not in ("", "none")
     page.wait_for_timeout(3500)
@@ -174,7 +174,7 @@ def test_mark_a_bill_paid_by_hand(page, base):
 def test_marking_a_due_bill_paid_clears_its_reminder(page, base):
     page.goto(base + DEMO)
     before = page.locator("#bellcount").inner_text()
-    bill_menu(page, "Rent", "Mark as paid")
+    bill_menu(page, "Energy Co", "Mark as paid")              # a lone bill on its day (v0.37)
     assert int(page.locator("#bellcount").inner_text()) == int(before) - 1
 
 

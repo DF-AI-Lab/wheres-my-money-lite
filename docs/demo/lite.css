@@ -303,3 +303,37 @@ body.demo [data-card="spend"] table tr.drow.paid td b::before { content: "✓ ";
 body.demo [data-card="spend"] table tr.drow td.smore { position: relative; }
 body.demo [data-card="spend"] table tr.drow .more { width: 32px; height: 32px; padding: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; border: 0; }
 body.demo [data-card="spend"] table tr.drow .labels button.info { font-size: 13px; vertical-align: 1px; }
+
+/* v0.37: bell = one line per day (mock B) */
+.remind .remtext small { display: block; color: var(--muted); font-size: 12.5px; }
+.demo .remind .remchev { background: none; border: 0; color: var(--muted); padding: 2px 4px; margin: 0; font-size: 15px; line-height: 1; transition: transform .2s; }
+.demo .remind .remchev { transform: rotate(-90deg); }
+.demo .remind .remchev[aria-expanded="true"] { transform: none; }
+.remkids { display: grid; gap: 2px; margin: -4px 0 4px 22px; }
+.remkids[hidden] { display: none; }
+.demo .remkids .remsub { display: flex; justify-content: space-between; gap: 10px; background: none; border: 0; border-radius: 8px; padding: 6px 6px; margin: 0;
+  color: var(--text); font-size: 13.5px; font-weight: 600; text-align: left; }
+.demo .remkids .remsub:hover { background: var(--row); }
+.remkids .remsub .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* v0.37: paused bills folded into one line at the bottom of Bills */
+body.demo [data-card] table.dbills tbody.paused td { border: 0; }
+body.demo [data-card] table.dbills tr.pausedrow td { padding: 10px 0 4px; }
+.demo .pausedfold { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; background: none; border: 0; padding: 4px 0; margin: 0;
+  color: var(--muted); font-size: 14px; font-weight: 700; text-align: left; }
+.pausedfold .pch { display: inline-block; margin-right: 4px; vertical-align: 1px; transform: rotate(-90deg); transition: transform .2s; }
+.pausedfold[aria-expanded="true"] .pch { transform: none; }
+body.demo [data-card] table.dbills tr.pbill td { color: var(--muted); padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.demo tr.pbill .resume { border: 1px solid var(--good); color: var(--good); background: none; border-radius: 999px; padding: 3px 10px; font-weight: 800; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .remchev, .pausedfold .pch { transition: none; } }
+body.demo [data-card] table.dbills tr.pbill[hidden] { display: none; }
+.pbill .pline { display: flex; align-items: center; gap: 10px; }
+.pbill .pline .pname { flex: 1; min-width: 0; }
+.pbill .pline form { margin: 0; }
+.demo .remind .remchev { color: var(--accent); font-size: 18px; padding: 4px 6px; }
+body.demo [data-card] table.dbills tbody.paused tr { display: block; }
+body.demo [data-card] table.dbills tbody.paused tr[hidden] { display: none; }
+body.demo [data-card] table.dbills tbody.paused td { display: block; width: auto; }
+.demo .remind .remchev svg { display: block; }
+.demo .remind .remchev { width: 28px; height: 28px; min-width: 28px; display: grid; place-items: center; overflow: visible; padding: 0; }
+body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }

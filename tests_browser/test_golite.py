@@ -102,7 +102,7 @@ def test_bill_menu_has_the_agreed_items_and_no_replaces(page, base):
     page.click('tr.bill[data-key="Rent"] button.more')
     items = page.locator(".bmenu [role=menuitem]").all_inner_texts()
     text = " | ".join(items)
-    for want in ("Change amount", "Change name", "Due day", "Stop counting", "Delete"):
+    for want in ("Change amount", "Change name", "Due day", "Pause", "Delete"):
         assert want in text, text
     assert "Replaces" not in text
 
@@ -161,16 +161,7 @@ def test_last_month_rows_have_avg_diff_and_shops(page, base):
     page.wait_for_load_state()
     assert page.locator('tr.bill[data-key="Tesco"]').count() == 1
 
-def test_stop_counting_greys_it_and_takes_it_off_the_total(page, base):
-    page.goto(base + DEMO)
-    before = page.locator("#btotal").inner_text()
-    bill_menu(page, "Gym Club", "Stop counting")
-    row = page.locator('tr.bill[data-key="Gym Club"]')
-    assert "stopped" in row.get_attribute("class")
-    assert "Stopped" in row.inner_text() and row.locator("button.info").count() == 1
-    assert page.locator("#btotal").inner_text() != before
-    bill_menu(page, "Gym Club", "Count it again")
-    assert page.locator("#btotal").inner_text() == before
+# Stop counting became ⏸ Pause in v0.37 (paused bills fold away): see test_v037.py
 
 
 # ---------- step 3: payday + history ----------

@@ -254,7 +254,7 @@
       return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, pot: inPot, last: amount || 0, used, blank, stopped,
               saved: was && typeof was.amount === 'number' ? was.amount : null,
               changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
-              due, dueText: due ? ordinal(due) : '', duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
+              due, dueAt, dueText: due ? ordinal(due) : '', duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
               card: billCardKey(cardList, b), asked: b.asked === start,
               diff: (blank || stopped) ? null : used - avg};
     });
@@ -381,7 +381,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.36';
+  const APP = 'wheres-my-money-lite', VERSION = '0.37';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -511,6 +511,20 @@
     b.cat = known || cat;
     return null;
   }
+  // v0.37: ⋯ → 🏷 Category on a spend (and '+ category' on an Unsorted one), the same list as bills
+  function setSpendCat(s, idText, text) {                        // POST /spend/cat
+    const x = findSpend(s, idText), cat = String(text == null ? '' : text).trim().slice(0, 30);
+    if (!x) return null;
+    if (!cat) return 'spend';
+    const known = categories(s).find(c => c.toLowerCase() === cat.toLowerCase());
+    if (!known) { s.cats = Array.isArray(s.cats) ? s.cats : []; s.cats.push(cat); }
+    x.cat = known || cat;
+    return null;
+  }
+  function setBillsPaid(s, keys) {                               // POST /bills/paid: the bell's ✓ on a whole day
+    (Array.isArray(keys) ? keys : []).forEach(k => { const b = findBill(s, k); if (b) b.paid = true; });
+    return null;
+  }
   function deleteBill(s, key) {                                  // POST /bill/delete
     if (!findBill(s, key)) return 'unknown';
     s.bills = s.bills.filter(x => x.key !== key);
@@ -632,6 +646,38 @@
     if (s.lastBackup ? days >= 30 : (r.pay > 0 || r.hasHistory)) list.push({kind: 'backup',
       text: s.lastBackup ? `No backup for ${days} days.` : 'No backup saved yet.', go: '#qsave'});
     return list;
+  }
+
+  // v0.37 (Darren, 24 Oct, mock B): the bell shows bills due the same day as ONE line ('1st · 2 bills · £711.00');
+  // a lone bill keeps its own line. Bill lines in date order, then payday, card, backup.
+  function remindLines(s, todayIso) {
+    const r = compute(s, todayIso), all = reminders(s, todayIso), bills = all.filter(x => x.kind === 'bill');
+    const days = new Map();
+    bills.forEach(x => {
+      const b = r.bills.find(y => y.key === x.key), at = b.dueAt || '';
+      if (!days.has(at)) days.set(at, []);
+      days.get(at).push({key: b.key, name: b.name, amount: b.used, dueText: b.dueText, go: x.go});
+    });
+    const lines = [...days.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([at, items]) => {
+      const total = items.reduce((a, i) => a + i.amount, 0);
+      if (items.length === 1) {
+        const i = items[0];
+        return {kind: 'bill', key: i.key, dueAt: at, items, total, text: `${i.name} · ${i.dueText}`, sub: `${money(i.amount)} · check your bank app`, go: i.go};
+      }
+      return {kind: 'bills', keys: items.map(i => i.key), dueAt: at, items, total,
+              text: `${items[0].dueText} · ${items.length} bills · ${money(total)}`, sub: 'check your bank app'};
+    });
+    return lines.concat(all.filter(x => x.kind !== 'bill'));
+  }
+
+  // ---------- v0.37: Google Drive keeps one file per pay month, the last 3 ----------
+  function driveName(s, todayIso, demo) {
+    const d = (s && s.payday) || todayIso, m = MONTHS[Number(d.slice(5, 7)) - 1];
+    return `wheres-my-money-${demo ? 'demo-' : ''}backup ${m} ${d.slice(0, 4)}.json`;
+  }
+  function drivePrune(files, keep) {                            // the ids to delete: everything but the newest `keep`
+    return files.slice().sort((a, b) => (a.modifiedTime < b.modifiedTime ? 1 : a.modifiedTime > b.modifiedTime ? -1 : 0))
+      .slice(keep).map(f => f.id);
   }
 
   // POST /reminders/clear: bills ticked as checked; payday, card and backup quiet for today only
@@ -823,6 +869,7 @@
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
+    setSpendCat, setBillsPaid, remindLines, driveName, drivePrune,
     nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,
