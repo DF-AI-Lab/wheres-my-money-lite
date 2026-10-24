@@ -136,6 +136,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   of a month. Backups now go in a Drive folder "Where's My Money Lite" (demo: "... (demo)", localStorage lite_drive_folder; folder made
   only when a new month file is made; no folder = saves loose). Darren added df.ai.lab.hq@gmail.com as a test user; NEXT = Branding +
   Publish app (no logo = no review). Tests 78 node + 157 browser.
+- **24 Oct v0.39 (demo only):** Darren binned the old demo files, then 'Saved to your Drive' saved INTO the bin (Drive lets a PATCH
+  update a binned file; a file in a binned folder too). Uploads now ask fields=id,trashed; trashed = gone: make a new file (and a new
+  folder if that was binned). Tests 78 node + 159 browser.
 - **24 Oct BUILD LIST (collect, then build ALL in one version):** 1) spends like bills: '+ category' on Unsorted spends
   (Sheet.pick, mock https://claude.ai/artifact/Dm56Qv5wkxwt7R2D6bD4Pz) + ⋯ → 🏷 Category; set = plain grey text. Darren: yes.
   2) bell: bills due the same day = ONE line (mock B https://claude.ai/artifact/31cf2qYr4eH4kupgwUCUfj): '1st · 5 bills · £X',

@@ -18,10 +18,14 @@ def drive(page):
     def meta(body):
         return json.loads(body[body.index("{"):body.index("}") + 1])
 
+    def gone(fid):                                                     # in the bin, or inside a binned folder
+        f = d["files"].get(fid, {})
+        return f.get("trashed") or any(d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))
+
     def api(route):
         req, url = route.request, route.request.url
         if req.method == "GET" and "/drive/v3/files" in url and "/files/" not in url:
-            files = [dict(f, id=i) for i, f in d["files"].items()]
+            files = [dict(f, id=i) for i, f in d["files"].items() if not gone(i)]
             return route.fulfill(status=200, content_type="application/json", body=json.dumps({"files": files}))
         if req.method == "POST":
             d["n"] += 1
@@ -32,12 +36,13 @@ def drive(page):
             d["posts"].append(m)
             if "upload/" in url:
                 page.wait_for_timeout(300)
-            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid}))
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid, "trashed": bool(gone(fid))}))
         if req.method == "PATCH":
             fid = url.split("/files/")[1].split("?")[0]
             if fid not in d["files"]:
                 return route.fulfill(status=404, body="")
-            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid}))
+            d["patches"] = d.get("patches", 0) + 1
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid, "trashed": bool(gone(fid))}))
         if req.method == "DELETE":
             d["files"].pop(url.split("/files/")[1].split("?")[0], None)
             return route.fulfill(status=204, body="")

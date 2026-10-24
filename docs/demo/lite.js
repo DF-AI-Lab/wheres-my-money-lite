@@ -324,24 +324,27 @@
     if (!saved || saved.name !== name) {                           // no id for this month here: is the file in Drive already?
       try { const f = (await driveList()).find(x => x.name === name); if (f) saved = {name, id: f.id}; } catch (e) { /* make one */ }
     }
-    const folder = saved && saved.name === name ? null : await driveFolder();
+    let folder = null;
     const send = async id => {
       const meta = id ? {name} : Object.assign({name, mimeType: 'application/json'}, folder ? {parents: [folder]} : {});
       const b = 'wmm' + Date.now();
       const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
                    `--${b}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${b}--`;
-      return driveFetch(id ? `${DRIVE_UP}/${encodeURIComponent(id)}?uploadType=multipart` : `${DRIVE_UP}?uploadType=multipart`,
+      const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id,trashed`,
         {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body,
          keepalive: !!hidden && body.length < 60000});              // the app is closing: let the save finish
+      if (!r.ok) return {status: r.status};
+      const j = await r.json().catch(() => ({}));
+      return {status: r.status, ok: true, id: j.id || id, trashed: !!j.trashed};
     };
-    let id = saved && saved.name === name ? saved.id : null, r = await send(id);
-    if (id && r.status === 404) { id = null; r = await send(null); }   // deleted in Drive: make a new one
-    if (!id && r.status === 404 && folder) { lsSet(DRIVE_DIR, null); r = await send(null); }   // folder gone: next time makes one
+    const fresh = async () => { folder = await driveFolder(); return send(null); };
+    let id = saved && saved.name === name ? saved.id : null, r = id ? await send(id) : await fresh();
+    // v0.39: Drive lets you save into a binned file (or a binned folder): that counts as gone too
+    if (id && (r.status === 404 || r.trashed)) { id = null; r = await fresh(); }   // deleted in Drive: make a new one
+    if (!id && (r.status === 404 || r.trashed) && folder) { lsSet(DRIVE_DIR, null); r = await fresh(); }   // folder gone: a new one
     if (!r.ok) throw new Error('Google Drive would not take the copy (error ' + r.status + ').');
-    if (id) lsSet(DRIVE_ID, JSON.stringify({name, id}));            // found by name: remember it
+    if (r.id) lsSet(DRIVE_ID, JSON.stringify({name, id: r.id}));
     if (!id) {                                                     // a new pay month: a new file, then keep the last 3
-      const j = await r.json();
-      if (j && j.id) lsSet(DRIVE_ID, JSON.stringify({name, id: j.id}));
       try { for (const old of M.drivePrune(await driveList(), 3)) await driveFetch(`${DRIVE_API}/${encodeURIComponent(old)}`, {method: 'DELETE'}); }
       catch (e) { /* tidy next time */ }
     }
