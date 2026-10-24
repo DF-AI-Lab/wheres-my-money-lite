@@ -110,6 +110,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   root as Food Tracker's ids. Darren's 2nd phone: removed every df-ai-lab app -> Lite installed. Fix: full path ids, no "?":
   demo id "/wheres-my-money-lite/demo/"; on move to live give live "/wheres-my-money-lite/". Food Tracker should do the same
   (its own repo/chat). Changing an id = a new app to Chrome: old installs must be removed + reinstalled once.
+- **24 Oct: v0.35 MOVED TO LIVE (Darren: "make the live same as the demo").** live = demo = v0.35, live id "/wheres-my-money-lite/".
+  Darren installs LIVE on the phone; demo is tested in the browser only. Live's Drive uses the same client id; privacy page now at
+  /wheres-my-money-lite/privacy.html (use that one for Google Branding).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

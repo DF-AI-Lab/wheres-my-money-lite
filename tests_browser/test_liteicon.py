@@ -65,3 +65,9 @@ def test_install_id_is_lites_own_folder():
     m = _manifest()
     assert m["id"] == "/wheres-my-money-lite/demo/" and m["start_url"] == "./" and m["scope"] == "./"
     assert "?" not in m["id"]
+
+
+def test_live_install_id_is_lites_own_folder():
+    # v0.35 moved to live (Darren, 24 Oct): live gets its own full path id too, so it installs next to Food Tracker
+    m = json.loads((DOCS.parent / "manifest.json").read_text())
+    assert m["id"] == "/wheres-my-money-lite/" and m["start_url"] == "./" and m["scope"] == "./"

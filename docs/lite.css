@@ -269,3 +269,6 @@ body.hasupd { padding-bottom: 72px; }
   border: 2px solid var(--accent); background: var(--row); color: var(--text); font: inherit; font-size: 20px; font-weight: 800; }
 .sheetback .sheetin:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
 .sheetback form.sheetform { margin: 0; }
+/* v0.33: the privacy link under the Drive buttons */
+.drivepp { text-align: center; font-size: 14px; margin: 14px 0 0; }
+.drivepp a { color: var(--muted); }

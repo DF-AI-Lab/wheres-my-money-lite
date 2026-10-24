@@ -226,7 +226,9 @@
 
   // ---------- ☁️ a copy of the scrambled backup in the person's own Google Drive (?view=drive) ----------
   // The token stays in memory only. The scope drive.file means the app only ever sees the file it made.
-  const DRIVE_NAME = 'wheres-my-money-backup.json', DRIVE_ID = 'lite_drive_file', GSI = 'https://accounts.google.com/gsi/client';
+  // the demo (fake data) keeps its own Drive file + key, so a live Load can never pick up the demo's copy
+  const DRIVE_NAME = demo ? 'wheres-my-money-demo-backup.json' : 'wheres-my-money-backup.json';
+  const DRIVE_ID = demo ? 'lite_demo_drive_file' : 'lite_drive_file', GSI = 'https://accounts.google.com/gsi/client';
   const DRIVE_API = 'https://www.googleapis.com/drive/v3/files', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
   let driveToken = '';
   const lsGet = k => { try { return root.localStorage.getItem(k); } catch (e) { return null; } };

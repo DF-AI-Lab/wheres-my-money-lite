@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · Where's My Money? Lite</title>
+<link rel="icon" href="lite-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="look.css?v=0.35">
+<style>
+  /* the privacy page: plain words, same colours and font as the app */
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Manrope, system-ui, sans-serif; }
+  .pp { max-width: 640px; margin: 0 auto; padding: 20px 16px 40px; line-height: 1.55; }
+  .pp .brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; margin-bottom: 18px; }
+  .pp .brand img { width: 44px; height: 44px; border-radius: 11px; }
+  .pp .brand b { font-size: 18px; font-weight: 800; }
+  .pp h1 { font-size: 26px; font-weight: 800; margin: 0 0 4px; }
+  .pp h2 { font-size: 18px; font-weight: 700; margin: 26px 0 6px; }
+  .pp p, .pp li { color: var(--text); }
+  .pp ul { padding-left: 20px; margin: 6px 0; }
+  .pp .muted { color: var(--muted); font-size: 14px; }
+  .pp a { color: var(--accent); overflow-wrap: anywhere; }
+  .pp code { font-size: 14px; }
+</style>
+</head>
+<body class="demo">
+<main class="pp">
+  <a class="brand" href="./"><img src="lite-192.png" alt=""><b>Where's My Money? Lite</b></a>
+  <h1>Privacy</h1>
+  <p class="muted">Last updated 23 October 2026</p>
+
+  <h2>The short version</h2>
+  <p>Your money stays with you. The app has no server and no account, and nobody but you can see your bills or spends.</p>
+
+  <h2>Where your data lives</h2>
+  <ul>
+    <li>Everything you type is saved <b>in this browser, on this device</b> only.</li>
+    <li>There is <b>no account</b> and no sign-up. The app never sends your money data to us or to anyone else.</li>
+    <li>If you clear this browser's site data, the data on this device is gone, so keep a backup.</li>
+  </ul>
+
+  <h2>Google Drive (only if you choose it)</h2>
+  <ul>
+    <li>If you tap <b>Connect Google Drive</b>, Google asks you to sign in. The app then asks for <code>drive.file</code>
+      only: it can see <b>just the backup file it made</b>, never the rest of your Drive.</li>
+    <li>The backup is <b>scrambled with your passcode</b> before it leaves your device, so only you can open it.</li>
+    <li>It goes into <b>your own</b> Google Drive. We never get a copy.</li>
+    <li>The sign-in only lasts while the page is open. The app does not see your Google password or your email.</li>
+  </ul>
+
+  <h2>What we do not do</h2>
+  <ul>
+    <li>No ads, no tracking, no analytics, no cookies for tracking.</li>
+    <li>We do not sell, share or look at your data. We cannot: it never reaches us.</li>
+  </ul>
+
+  <h2>Remove your data</h2>
+  <ul>
+    <li><b>On this device:</b> clear this website's data in your browser settings.</li>
+    <li><b>In Google Drive:</b> delete the file <code>wheres-my-money-backup.json</code> from your Drive.</li>
+    <li><b>Stop Google access:</b> remove the app at
+      <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
+  </ul>
+
+  <h2>Questions</h2>
+  <p>Ask on the app's page:
+    <a href="https://github.com/DF-AI-Lab/wheres-my-money-lite/issues">github.com/DF-AI-Lab/wheres-my-money-lite</a>.</p>
+
+  <p class="muted"><a href="./">‹ Back to the app</a></p>
+</main>
+</body>
+</html>
