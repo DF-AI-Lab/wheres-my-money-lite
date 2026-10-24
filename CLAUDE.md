@@ -99,6 +99,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   df-ai-lab.github.io) then Audience → Publish app. Privacy URL is /demo/privacy.html until "move to live", then the root one.
 - **24 Oct v0.34 (demo only):** phones said "Could not open app" on install: Chrome remembered the old install (manifest id "./",
   synced from the PC through the Google account). manifest id is now "./?app=lite2" = a new app to Chrome. If it repeats, change the id again.
+- **24 Oct INSTALL STILL BROKEN (open):** v0.34's new id did NOT help. Both Samsung phones: Chrome ⋮ → Install → "This app is already
+  installed" → tap = "Could not open app". Samsung Internet: "Couldn't install web app". chrome://webapks on the phone shows NO Lite app
+  (only Food Tracker live + V4 demo, DinnerSync demo, Petitions, v3 'My Money'). Android Apps list: no Lite. Not tried yet: uninstall the
+  PC Lite install (Windows Start → My Money Lite → Uninstall; PC install was made only while debugging; chrome://apps is gone in new
+  Chrome). Can't clear df-ai-lab.github.io site data (other apps share that origin). Ideas: different origin for Lite (own Pages repo/
+  account or Netlify/Cloudflare), or 'Create shortcut' as a fallback. Live is still v0.30; Google Branding/Publish not done yet.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
