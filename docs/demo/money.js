@@ -381,7 +381,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.37';
+  const APP = 'wheres-my-money-lite', VERSION = '0.38';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -675,9 +675,11 @@
     const d = (s && s.payday) || todayIso, m = MONTHS[Number(d.slice(5, 7)) - 1];
     return `wheres-my-money-${demo ? 'demo-' : ''}backup ${m} ${d.slice(0, 4)}.json`;
   }
-  function drivePrune(files, keep) {                            // the ids to delete: everything but the newest `keep`
-    return files.slice().sort((a, b) => (a.modifiedTime < b.modifiedTime ? 1 : a.modifiedTime > b.modifiedTime ? -1 : 0))
-      .slice(keep).map(f => f.id);
+  function drivePrune(files, keep) {                            // the ids to delete: a 2nd copy of a month, then all but the newest `keep`
+    const seen = new Set(), kept = [], drop = [];
+    files.slice().sort((a, b) => (a.modifiedTime < b.modifiedTime ? 1 : a.modifiedTime > b.modifiedTime ? -1 : 0))
+      .forEach(f => { if (seen.has(f.name)) drop.push(f.id); else { seen.add(f.name); kept.push(f); } });
+    return drop.concat(kept.slice(keep).map(f => f.id));
   }
 
   // POST /reminders/clear: bills ticked as checked; payday, card and backup quiet for today only

@@ -75,7 +75,7 @@ test('drive file name = the pay month (demo has its own name)', () => {
 });
 
 test('drive prune: keep the newest 3, delete the rest', () => {
-  const f = (id, t) => ({id, name: 'x', modifiedTime: t});
+  const f = (id, t) => ({id, name: id, modifiedTime: t});         // v0.38: same names = duplicates, so each its own name
   const files = [f('a', '2024-07-01T00:00:00Z'), f('b', '2024-10-01T00:00:00Z'), f('c', '2024-08-01T00:00:00Z'),
                  f('d', '2024-11-01T00:00:00Z'), f('e', '2024-09-01T00:00:00Z')];
   assert.deepStrictEqual(M.drivePrune(files, 3).sort(), ['a', 'c']);

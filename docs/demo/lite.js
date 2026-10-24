@@ -242,10 +242,12 @@
   // Google token (no account picker); when the app is hidden and something changed, one save goes to Drive.
   // One file per pay month ('wheres-my-money-backup Oct 2026.json'), saved over all month; the last 3 are kept.
   const DRIVE_BASE = demo ? 'wheres-my-money-demo-backup' : 'wheres-my-money-backup';
-  const DK = n => (demo ? 'lite_demo_drive_' : 'lite_drive_') + n;           // localStorage keys: file, on, dirty, last
-  const DRIVE_ID = DK('file'), DRIVE_ON = DK('on'), DRIVE_DIRTY = DK('dirty'), DRIVE_LAST = DK('last');
+  const DRIVE_FOLDER = demo ? "Where's My Money Lite (demo)" : "Where's My Money Lite";   // v0.38: every backup in one folder
+  const DK = n => (demo ? 'lite_demo_drive_' : 'lite_drive_') + n;           // localStorage keys: file, folder, on, dirty, last
+  const DRIVE_ID = DK('file'), DRIVE_DIR = DK('folder'), DRIVE_ON = DK('on'), DRIVE_DIRTY = DK('dirty'), DRIVE_LAST = DK('last');
   const TOKEN_KEY = demo ? 'lite_demo_drive_token' : 'lite_drive_token';     // sessionStorage: survives the reload after a save
   const GSI = 'https://accounts.google.com/gsi/client';
+  const FOLDER_TYPE = 'application/vnd.google-apps.folder';
   const DRIVE_API = 'https://www.googleapis.com/drive/v3/files', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
   const lsGet = k => { try { return root.localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { if (v === null) root.localStorage.removeItem(k); else root.localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
@@ -294,12 +296,38 @@
     if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
     return ((await r.json()).files || []).filter(f => f.name && f.name.indexOf(DRIVE_BASE) === 0);
   }
-  async function driveSave(hidden) {
+  async function driveFolder() {                                   // the folder's id (found or made once); null = save loose
+    if (lsGet(DRIVE_DIR)) return lsGet(DRIVE_DIR);
+    try {
+      const q = encodeURIComponent(`name='${DRIVE_FOLDER.replace(/'/g, "\\'")}' and mimeType='${FOLDER_TYPE}' and trashed=false`);
+      const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name,mimeType)`);
+      let f = r.ok ? ((await r.json()).files || []).find(x => x.name === DRIVE_FOLDER && x.mimeType === FOLDER_TYPE) : null;
+      if (!f) {
+        const m = await driveFetch(DRIVE_API, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                               body: JSON.stringify({name: DRIVE_FOLDER, mimeType: FOLDER_TYPE})});
+        f = m.ok ? await m.json() : null;
+      }
+      if (f && f.id) { lsSet(DRIVE_DIR, f.id); return f.id; }
+    } catch (e) { /* no folder this time */ }
+    return null;
+  }
+  // one save at a time: Save tapped and the app hidden straight after = one file, not two (v0.38)
+  let driveBusy = null;
+  function driveSave(hidden) {
+    if (!driveBusy) driveBusy = driveSaveNow(hidden).finally(() => { driveBusy = null; });
+    return driveBusy;
+  }
+  async function driveSaveNow(hidden) {
     const text = JSON.stringify(await backupFile()), name = M.driveName(state, today(), demo);
     let saved = null;
     try { saved = JSON.parse(lsGet(DRIVE_ID)); } catch (e) { /* an old plain id: a new month file */ }
+    if (!saved || saved.name !== name) {                           // no id for this month here: is the file in Drive already?
+      try { const f = (await driveList()).find(x => x.name === name); if (f) saved = {name, id: f.id}; } catch (e) { /* make one */ }
+    }
+    const folder = saved && saved.name === name ? null : await driveFolder();
     const send = async id => {
-      const meta = id ? {name} : {name, mimeType: 'application/json'}, b = 'wmm' + Date.now();
+      const meta = id ? {name} : Object.assign({name, mimeType: 'application/json'}, folder ? {parents: [folder]} : {});
+      const b = 'wmm' + Date.now();
       const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
                    `--${b}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${b}--`;
       return driveFetch(id ? `${DRIVE_UP}/${encodeURIComponent(id)}?uploadType=multipart` : `${DRIVE_UP}?uploadType=multipart`,
@@ -308,7 +336,9 @@
     };
     let id = saved && saved.name === name ? saved.id : null, r = await send(id);
     if (id && r.status === 404) { id = null; r = await send(null); }   // deleted in Drive: make a new one
+    if (!id && r.status === 404 && folder) { lsSet(DRIVE_DIR, null); r = await send(null); }   // folder gone: next time makes one
     if (!r.ok) throw new Error('Google Drive would not take the copy (error ' + r.status + ').');
+    if (id) lsSet(DRIVE_ID, JSON.stringify({name, id}));            // found by name: remember it
     if (!id) {                                                     // a new pay month: a new file, then keep the last 3
       const j = await r.json();
       if (j && j.id) lsSet(DRIVE_ID, JSON.stringify({name, id: j.id}));

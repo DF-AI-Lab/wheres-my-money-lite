@@ -131,6 +131,11 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   a new month file -> prune to 3; first pointerdown of a visit = driveConnect(quiet, prompt ''); #driveauto + #driveoff in ?view=drive.
   Privacy page updated. Old tests changed on purpose (bell counts 5->4, Stop counting -> Pause, Drive file names). Tests 77 node + 154 browser.
   NOT tried on a real phone/Google yet: Darren to test Drive auto on the demo (quiet reconnect may flash a Google box).
+- **24 Oct v0.38 (demo only):** Darren's Drive showed TWO 'Oct 2024' demo files (Save tapped, then the app hidden = 2 saves at once).
+  Fix: driveSave = one at a time (driveBusy); no saved id = look for this month's file by name first; drivePrune also drops a 2nd copy
+  of a month. Backups now go in a Drive folder "Where's My Money Lite" (demo: "... (demo)", localStorage lite_drive_folder; folder made
+  only when a new month file is made; no folder = saves loose). Darren added df.ai.lab.hq@gmail.com as a test user; NEXT = Branding +
+  Publish app (no logo = no review). Tests 78 node + 157 browser.
 - **24 Oct BUILD LIST (collect, then build ALL in one version):** 1) spends like bills: '+ category' on Unsorted spends
   (Sheet.pick, mock https://claude.ai/artifact/Dm56Qv5wkxwt7R2D6bD4Pz) + ⋯ → 🏷 Category; set = plain grey text. Darren: yes.
   2) bell: bills due the same day = ONE line (mock B https://claude.ai/artifact/31cf2qYr4eH4kupgwUCUfj): '1st · 5 bills · £X',
