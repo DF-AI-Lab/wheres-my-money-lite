@@ -95,8 +95,8 @@ def open_scrambled(file, secret):
 LOCK = make_lock()
 
 
-def _context(browser, seed_lock=True, unlocked=True):
-    ctx = browser.new_context(viewport={"width": 390, "height": 844}, accept_downloads=True)
+def _context(browser, seed_lock=True, unlocked=True, **more):
+    ctx = browser.new_context(viewport={"width": 390, "height": 844}, accept_downloads=True, **more)
     script = ""
     if seed_lock:
         script += "if (!localStorage.getItem('lite_lock_v1')) localStorage.setItem('lite_lock_v1', %s);" % json.dumps(json.dumps(LOCK))

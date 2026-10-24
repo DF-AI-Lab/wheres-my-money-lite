@@ -161,6 +161,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   5) SAVE SIGN = mock A (https://claude.ai/artifact/QgQz31vDgMXdgiV2y9wyqr, Darren: "simple and professional"): a small cloud after
   'Lite' in the header, only when Drive is connected: saved = cloud + tick (draws in, tiny pop), saving = arrow floats up, waiting
   (dirty, not sent) = amber dot. Reduced motion = no animation.
+- **24 Oct v0.40 BUILT (demo only; live still v0.36): the NEXT FIX LIST, all 5.** lite.js: 'last saved' = localTime() (UK time);
+  DK('email') = the Gmail from drive/v3/about after a connect, passed as login_hint on the quiet reconnect (Turn off forgets it);
+  DRIVE_DIRTY = time of the change, driveSoon() sends 1 minute after it (window.LITE_DRIVE_WAIT in tests); quiet reconnect then
+  sends a change not sent (driveAuto); a change during an upload stays dirty. Header .tagline .savesign (cloud, mock A): driveSign()
+  saved / 'saved pop' / saving / wait; hidden unless Drive on. Privacy page mentions the email. Tests 78 node + 167 browser (test_v040.py).
+  NEXT: Darren tries it on the demo; then Branding + Publish; 'move to live' when he says.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

@@ -337,3 +337,25 @@ body.demo [data-card] table.dbills tbody.paused td { display: block; width: auto
 .demo .remind .remchev svg { display: block; }
 .demo .remind .remchev { width: 28px; height: 28px; min-width: 28px; display: grid; place-items: center; overflow: visible; padding: 0; }
 body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
+
+/* v0.40 the save sign after 'Lite' (mock A): saved = tick (draws in + tiny pop), saving = arrow up, wait = amber dot */
+.demo .tagline .savesign { display: inline-block; width: 20px; height: 16px; vertical-align: -3px; margin-left: 2px; }
+.demo .tagline .savesign[hidden] { display: none; }
+.savesign svg { width: 20px; height: 16px; display: block; overflow: visible; }
+.savesign .arr, .savesign .tick, .savesign .dot { opacity: 0; transition: opacity .25s; }
+:root { --saveamber: #c98a00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --saveamber: #f5b731; } }
+:root[data-theme="dark"] { --saveamber: #f5b731; }
+.savesign .dot circle { fill: var(--saveamber); }
+.savesign.saving .arr { opacity: 1; animation: savesign-up 1s ease-in-out infinite; }
+.savesign.saved .tick, .savesign.wait .dot { opacity: 1; }
+.savesign.saved.pop .tick path { stroke-dasharray: 12; stroke-dashoffset: 12; animation: savesign-draw .45s ease forwards; }
+.savesign.saved.pop svg { animation: savesign-pop .45s ease; }
+@keyframes savesign-up { 0% { transform: translateY(3px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-3px); opacity: 0; } }
+@keyframes savesign-draw { to { stroke-dashoffset: 0; } }
+@keyframes savesign-pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .savesign .arr, .savesign .tick, .savesign .dot { transition: none; }
+  .savesign.saving .arr, .savesign.saved.pop svg { animation: none; }
+  .savesign.saved.pop .tick path { animation: none; stroke-dashoffset: 0; }
+}

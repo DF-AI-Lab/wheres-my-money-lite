@@ -123,7 +123,7 @@
     }
     const before = path === '/bill/add' ? state.bills.length : 0;
     const error = fn(state, getter(data));
-    if (!error) { Store.save(state); lsSet(DRIVE_DIRTY, '1'); }   // Drive sends it when the app is next hidden
+    if (!error) { Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon(); }   // Drive: 1 minute on, or when hidden
     // a new bill glows once on the next page (v0.36, mock D)
     if (path === '/bill/add' && !error && state.bills.length > before) {
       try { root.sessionStorage.setItem('lite_glow', state.bills[state.bills.length - 1].key); } catch (e) { /* ignore */ }
@@ -245,6 +245,7 @@
   const DRIVE_FOLDER = demo ? "Where's My Money Lite (demo)" : "Where's My Money Lite";   // v0.38: every backup in one folder
   const DK = n => (demo ? 'lite_demo_drive_' : 'lite_drive_') + n;           // localStorage keys: file, folder, on, dirty, last
   const DRIVE_ID = DK('file'), DRIVE_DIR = DK('folder'), DRIVE_ON = DK('on'), DRIVE_DIRTY = DK('dirty'), DRIVE_LAST = DK('last');
+  const DRIVE_EMAIL = DK('email');                                           // v0.40: the Gmail, so Google skips 'which account?'
   const TOKEN_KEY = demo ? 'lite_demo_drive_token' : 'lite_drive_token';     // sessionStorage: survives the reload after a save
   const GSI = 'https://accounts.google.com/gsi/client';
   const FOLDER_TYPE = 'application/vnd.google-apps.folder';
@@ -272,15 +273,24 @@
   }
   // quiet = no account picker (the person said yes before); the first time is the full Google sign-in
   function driveConnect(quiet) {
+    const hint = quiet ? lsGet(DRIVE_EMAIL) : '';
     return new Promise((resolve, reject) => {
-      const client = root.google.accounts.oauth2.initTokenClient({
+      const client = root.google.accounts.oauth2.initTokenClient(Object.assign({
         client_id: clientId(), scope: 'https://www.googleapis.com/auth/drive.file',
         callback: t => { if (t && t.access_token) { setToken(t.access_token, Number(t.expires_in) || 3600); lsSet(DRIVE_ON, '1'); resolve(); }
                          else reject(new Error('Google did not let you in. Try again.')); },
         error_callback: () => reject(new Error('Google sign-in was closed or blocked. Try again.')),
-      });
-      if (quiet) client.requestAccessToken({prompt: ''}); else client.requestAccessToken();
-    });
+      }, hint ? {login_hint: hint} : {}));
+      if (quiet) client.requestAccessToken(Object.assign({prompt: ''}, hint ? {login_hint: hint} : {})); else client.requestAccessToken();
+    }).then(driveEmail);
+  }
+  async function driveEmail() {                                    // which Google account: asked once, kept
+    if (lsGet(DRIVE_EMAIL)) return;
+    try {
+      const r = await driveFetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)');
+      const e = r.ok && ((await r.json()).user || {}).emailAddress;
+      if (e) lsSet(DRIVE_EMAIL, e);
+    } catch (e) { /* ask next time */ }
   }
   async function driveFetch(url, opts) {
     opts = opts || {};
@@ -314,10 +324,15 @@
   // one save at a time: Save tapped and the app hidden straight after = one file, not two (v0.38)
   let driveBusy = null;
   function driveSave(hidden) {
-    if (!driveBusy) driveBusy = driveSaveNow(hidden).finally(() => { driveBusy = null; });
+    if (!driveBusy) {
+      driveSign('saving');
+      driveBusy = driveSaveNow(hidden).then(() => driveSign('saved pop'), e => { driveSign(); throw e; })
+                                      .finally(() => { driveBusy = null; });
+    }
     return driveBusy;
   }
   async function driveSaveNow(hidden) {
+    const was = lsGet(DRIVE_DIRTY);                                // a change made while this one is going stays to send
     const text = JSON.stringify(await backupFile()), name = M.driveName(state, today(), demo);
     let saved = null;
     try { saved = JSON.parse(lsGet(DRIVE_ID)); } catch (e) { /* an old plain id: a new month file */ }
@@ -348,7 +363,8 @@
       try { for (const old of M.drivePrune(await driveList(), 3)) await driveFetch(`${DRIVE_API}/${encodeURIComponent(old)}`, {method: 'DELETE'}); }
       catch (e) { /* tidy next time */ }
     }
-    lsSet(DRIVE_DIRTY, null); lsSet(DRIVE_LAST, new Date().toISOString());
+    if (lsGet(DRIVE_DIRTY) === was) lsSet(DRIVE_DIRTY, null);
+    lsSet(DRIVE_LAST, new Date().toISOString());
     M.setBackupDay(state, today()); Store.save(state);             // counts as a backup (no bell reminder)
   }
   async function driveLoad() {
@@ -363,7 +379,40 @@
     set('driveconnect', connected); set('drivesave', !connected); set('driveload', !connected);
     set('driveauto', !connected); set('driveoff', !connected);
     const last = document.getElementById('drivelast'), at = lsGet(DRIVE_LAST);
-    if (last) last.textContent = at ? 'last saved ' + M.fmt.day(at.slice(0, 10)) + ' ' + at.slice(11, 16) : 'saves when you close the app';
+    if (last) last.textContent = at ? 'last saved ' + localTime(at) : 'saves a minute after a change';
+    driveSign();
+  }
+  function localTime(iso) {                                       // v0.40: UK time (BST or GMT), not the UTC in the string
+    const d = new Date(iso), z = n => String(n).padStart(2, '0');
+    if (isNaN(d)) return '';
+    return M.fmt.day(`${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
+  }
+  // v0.40 the save sign after 'Lite' (mock A), only when Drive is on: saved = tick, saving = arrow up, wait = amber dot
+  const SIGN = {saved: 'Saved to Google Drive', saving: 'Saving to Google Drive', wait: 'A change not sent to Google Drive yet'};
+  function driveSign(st) {
+    const el = document.querySelector('.savesign');
+    if (!el) return;
+    if (!lsGet(DRIVE_ON)) { el.hidden = true; return; }
+    if (driveBusy && !st) st = 'saving';
+    st = st || (lsGet(DRIVE_DIRTY) ? 'wait' : 'saved');
+    if (st === 'saved' && el.classList.contains('saved') && !el.hidden) return;   // let a pop finish
+    el.className = 'savesign ' + st;                               // 'saved pop' = the tick draws in with a tiny pop
+    el.setAttribute('aria-label', SIGN[st.split(' ')[0]]);
+    el.title = SIGN[st.split(' ')[0]];
+    el.hidden = false;
+  }
+  // v0.40: send 1 minute after the last change (a PC window side by side is never hidden)
+  let driveTimer = 0;
+  function driveSoon() {
+    clearTimeout(driveTimer);
+    const at = Number(lsGet(DRIVE_DIRTY));
+    if (!at || !lsGet(DRIVE_ON) || !getToken()) return;
+    const wait = root.LITE_DRIVE_WAIT || 60000;                    // tests make it short
+    driveTimer = setTimeout(() => driveAuto(false), Math.max(0, at + wait - Date.now()));
+  }
+  function driveAuto(hidden) {
+    if (!lsGet(DRIVE_ON) || !lsGet(DRIVE_DIRTY) || !getToken()) return;
+    driveSave(hidden).catch(() => { /* offline: it stays changed, the next visit sends it */ });
   }
   function driveStart() {
     const box = document.getElementById('drive'), id = clientId();
@@ -382,7 +431,7 @@
     }));
     document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.hidden = false; driveShow(true); }));
     document.getElementById('driveload').addEventListener('click', run(driveLoad));
-    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); setToken(''); driveShow(false); });
+    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); });
   }
   // the quiet reconnect: the first tap of a visit (a popup needs a tap), when Drive was connected before
   function driveWake() {
@@ -391,15 +440,17 @@
     const once = () => {
       document.removeEventListener('pointerdown', once, true);
       if (getToken() || !(root.google && root.google.accounts && root.google.accounts.oauth2)) return;
-      driveConnect(true).catch(() => { /* blocked or closed: try again next visit */ });
+      driveConnect(true).then(() => driveAuto(false))            // v0.40: a change not sent last time goes now
+        .catch(() => { /* blocked or closed: try again next visit */ });
     };
     document.addEventListener('pointerdown', once, true);
   }
   let leaving = false;                                             // our own reload after a save is not "closing the app"
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState !== 'hidden' || leaving || !lsGet(DRIVE_ON) || !lsGet(DRIVE_DIRTY) || !getToken()) return;
-    driveSave(true).catch(() => { /* offline: it stays changed, the next visit sends it */ });
+    if (document.visibilityState !== 'hidden' || leaving) return;
+    driveAuto(true);
   });
+  document.addEventListener('DOMContentLoaded', () => { driveSign(); driveSoon(); });
   document.addEventListener('DOMContentLoaded', driveWake);
   document.addEventListener('DOMContentLoaded', driveStart);
 
