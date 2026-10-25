@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.41"></script>
-<script src="money.js?v=0.41"></script>
-<script src="render.js?v=0.41"></script>
-<script src="sheet.js?v=0.41"></script>
-<script src="lite.js?v=0.41"></script>
-<script src="lock.js?v=0.41"></script>
-<script src="lockui.js?v=0.41"></script>
+<script src="config.js?v=0.44"></script>
+<script src="money.js?v=0.44"></script>
+<script src="render.js?v=0.44"></script>
+<script src="sheet.js?v=0.44"></script>
+<script src="lite.js?v=0.44"></script>
+<script src="lock.js?v=0.44"></script>
+<script src="lockui.js?v=0.44"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,15 +178,15 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.41">
-<link rel="stylesheet" href="lite.css?v=0.41">
+<link rel="stylesheet" href="look.css?v=0.44">
+<link rel="stylesheet" href="lite.css?v=0.44">
 </head>
 <body class="demo">
 
 <div id="lock" hidden data-step=""><main class="box">
   <img src="lite-192.png" alt="">
-  <h1>Where's My Money?</h1>
-  <p class="tag">Payday to payday · Lite</p>
+  <h1 id="lockhi">Where's My Money?</h1>
+  <p class="tag" id="locktag">Payday to payday · Lite</p>
   <p class="err" id="lockerr" role="alert" hidden></p>
 
   <section data-for="unlock" hidden>
@@ -206,6 +206,9 @@
     <p><b>Choose a 6-number passcode</b></p>
     <p class="tag">You'll type it each time you open the app (or use your fingerprint).</p>
     <form id="pinform" novalidate>
+      <label id="namebox">Your first name
+        <input id="myname" name="myname" autocomplete="given-name" maxlength="20" autocapitalize="words">
+        <span class="hint">Shown when you open the app. Stays on this phone.</span></label>
       <label>Passcode
         <input class="code" id="pin" name="pin" type="password" inputmode="numeric" autocomplete="new-password" maxlength="6"></label>
       <label>Same again
@@ -218,6 +221,8 @@
     <p><b>Your backup codes</b></p>
     <p>Keep these in your phone's notes. Each works once. You need one if you forget your passcode, or to open a backup file.</p>
     <ul class="codes"></ul>
+    <button type="button" class="copycodes" id="copycodes">📋 Copy all codes</button>
+    <p class="note" id="codescopied" hidden>✓ Copied. Paste them into your notes.</p>
     <p class="tag">You won't see them again. Old backup codes no longer work.</p>
     <button type="button" id="codesdone">I've saved them</button>
   </section>
@@ -259,16 +264,21 @@
         <button type="button" class="small" id="setback">⬅️ Back</button>
         <div class="v3links">
           <div class="grp"><a class="small" href="?view=ideas" data-view="ideas">💡 Ideas &amp; feedback</a><a class="small" href="?view=invite" data-view="invite">📱 Invite</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
-          <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button>
-          <button type="button" class="small" id="savebackup">💾 Save backup</button>
-          <button type="button" class="small" id="loadbackup">📂 Load backup</button>
-          <a class="small" id="drivelink" href="?view=drive" data-view="drive">☁️ Google Drive</a>
-          <button type="button" class="small" id="newcodes">🔑 New backup codes</button>
-          <button type="button" class="small" id="fingerprint">👆 Fingerprint</button>
+          <div class="grp"><p class="sethead">Account</p>
+          <a class="small" id="acclink" href="?view=account" data-view="account">👤 Account<span class="sub">Add your name</span></a></div>
+          <div class="grp"><p class="sethead">On this phone</p>
+          <button type="button" class="small" id="savebackup">💾 Save backup<span class="sub">Download a file to this phone</span></button>
+          <button type="button" class="small" id="loadbackup">📂 Load backup<span class="sub">Open a backup file from this phone</span></button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
-          <div class="grp"><button type="button" class="small" id="locknow">🔒 Lock now</button></div>
+          <div class="grp"><p class="sethead">Cloud</p>
+          <a class="small" id="drivelink" href="?view=drive" data-view="drive">☁️ Google Drive backup<span class="sub">Off · tap to connect</span></a></div>
+          <div class="grp"><p class="sethead">Lock</p>
+          <button type="button" class="small" id="fingerprint">👆 Set up fingerprint<span class="sub">Open the app with your finger</span></button>
+          <button type="button" class="small" id="newcodes">🔑 New backup codes<span class="sub">If you forget your passcode</span></button>
+          <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
+          <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.41</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.44</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -326,6 +336,29 @@
   <p class="invlink">https://df-ai-lab.github.io/wheres-my-money-lite/</p>
   <div class="invbtns"><button type="button" id="sharebtn">📤 Share</button><button type="button" id="copylink">📋 Copy link</button></div>
   <p class="invmsg" id="sharemsg" role="status" hidden>✅ Link copied</p>
+</div>
+
+<div id="account" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>👤 Account</h1>
+  <form id="nameform" class="acccard" novalidate>
+    <label>Your first name
+      <input id="accname" name="accname" autocomplete="given-name" maxlength="20" autocapitalize="words">
+      <span class="hint">Shown on the lock screen: "Hi Name 👋". Stays on this phone.</span></label>
+    <button type="submit">Save name</button>
+    <p class="driveok" id="nameok" hidden role="status">✅ Name saved</p>
+  </form>
+  <div class="acccard" id="accdrive">
+    <p class="acchead">☁️ Google Drive</p>
+    <p id="accstate"></p>
+    <p class="hint" id="acchint">Backups go to this Google account.</p>
+    <div class="accbtns" id="accon">
+      <button type="button" class="small" id="accswitch">🔄 Use another Google account</button>
+      <button type="button" class="small" id="accoff">Turn off</button>
+    </div>
+    <a class="small accconnect" id="accconnect" href="?view=drive" data-view="drive">Connect Google Drive</a>
+    <p class="err" id="accerr" hidden role="alert"></p>
+  </div>
 </div>
 
 <div id="drive" class="box" hidden>

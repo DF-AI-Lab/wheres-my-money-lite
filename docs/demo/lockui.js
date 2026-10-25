@@ -124,6 +124,7 @@
     const ul = document.querySelector('#lock ul.codes');
     ul.innerHTML = '';
     codes.forEach(c => { const li = document.createElement('li'); li.textContent = c; ul.appendChild(li); });
+    $('codescopied').hidden = true;
     step('codes');
   }
   async function onUnlock(e) {
@@ -224,6 +225,13 @@
     on('unlockform', 'submit', onUnlock);
     on('codeform', 'submit', onCode);
     on('codesdone', 'click', enter);
+    on('copycodes', 'click', async () => {                   // all 10 in one paste for the phone's notes
+      const codes = [...document.querySelectorAll('#lock ul.codes li')].map(li => li.textContent);
+      const text = "Where's My Money? Lite backup codes (each works once)\n" + codes.join('\n');
+      try { await navigator.clipboard.writeText(text); }
+      catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+      $('codescopied').hidden = false;
+    });
     // start the check while typing; the button waits (greyed) until it is done, so a tap never races it
     const early = (input, long, run) => {
       if (!input) return;

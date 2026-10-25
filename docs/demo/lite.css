@@ -119,6 +119,8 @@ html.lockon .wrap { display: none; }
 .box button.linkbtn { background: none; border: 0; padding: 0; font-weight: 500; font-size: inherit; text-decoration: underline; }
 .box ul.codes { list-style: none; padding: 0; margin: 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
                 font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 18px; }
+.box button.copycodes { width: 100%; margin: 0 0 12px; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+#lock .note[hidden] { display: none; }
 .box .fpbtn { width: 100%; font-size: 19px; padding: 16px; }
 .box .or { color: var(--muted); margin: 14px 0 10px; }
 .box ul.codes li { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; }

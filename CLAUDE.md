@@ -186,6 +186,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   #accswitch 'Use another Google account' = driveConnect(false, pick) prompt 'select_account', a NEW Gmail clears lite_drive_file/_folder and
   marks dirty; #accoff Turn off; #accconnect → ?view=drive when off). Demo has no lock, so the greeting shows on live only.
   Tests 78 node + 180 browser (test_v043.py). NEXT: Darren tries the Account page on the demo; 'move to live' when he says.
+- **25 Oct v0.44 MOVED TO LIVE (Darren: "straight to live"): live = demo = v0.44 (so v0.42 menu + v0.43 Lock 1/Account are live too).**
+  Backup codes screen: #copycodes '📋 Copy all codes' (clipboard, textarea fallback; text = a title line + the 10 codes) + #codescopied
+  note (reset on each new set). Demo hides the Lock group + Drive menu line on purpose (no lock in the demo). Tests 78 node + 182 browser (test_v044.py).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
