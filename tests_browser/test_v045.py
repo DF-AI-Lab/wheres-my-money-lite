@@ -112,13 +112,13 @@ def test_sync_is_hidden_without_the_beta_link(browser, base):
     d = Drive()
     ctx, pg = device(browser, d)
     connect(pg, base)
-    assert pg.locator("#syncbox").is_hidden()
+    assert pg.locator("#synctoggle").is_disabled()                       # v0.54: shown greyed out, 'In development'
     pg.goto(base + TODAY + "&beta=sync&view=drive")
-    assert pg.locator("#syncbox").is_visible()
+    assert pg.locator("#synctoggle").is_enabled()
     pg.goto(base + TODAY + "&view=drive")                                # remembered on this device
-    assert pg.locator("#syncbox").is_visible()
+    assert pg.locator("#synctoggle").is_enabled()
     pg.goto(base + TODAY + "&beta=off&view=drive")
-    assert pg.locator("#syncbox").is_hidden()
+    assert pg.locator("#synctoggle").is_disabled()
     assert not pg.errors
     d.close()
 

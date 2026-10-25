@@ -231,6 +231,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   button.info ⓘ ('This is a guide. Check your bank app...'). Pots line (render potsLine): .potword; net < 0 = tr .r.pots.over, 'Pots over' +
   #st-potleft '−£X' in red (var(--bad)), dot stays orange, no '(£X over)' note; Pots left with a pot over = red '.potnote £X over' AFTER the ⓘ,
   all one line (nowrap). Tests 87 node + 223 browser (test_v053.py).
+- **25 Oct v0.54 (demo only; live still v0.53):** Darren asked why phone + PC don't match (Drive backup only saves; each device has its own data).
+  '🔁 Keep my devices in step' (#syncbox) now shows to EVERYONE with Drive on, greyed out (.syncbox.locked, input disabled, tag 'In development');
+  only a device opened once with ?beta=sync can tick it (tag 'TEST'). test_v045 hidden test changed on purpose. Tests 87 node + 225 browser (test_v054.py).
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

@@ -498,3 +498,7 @@ tr.potbill.over .potbar i { background: var(--bad); }
 .st-rows .r.pots > span:first-child { white-space: nowrap; }
 .st-rows .r.pots .potnote { display: inline; color: var(--bad); font-weight: 700; margin-left: 2px; }
 .st-rows .r.pots.over .potword, .st-rows .r.pots.over .k-pot { color: var(--bad); font-weight: 800; }
+
+/* v0.54: 'Keep my devices in step' greyed out for everyone without ?beta=sync */
+#drive .syncbox.locked .syncrow { opacity: .5; cursor: not-allowed; }
+#drive .syncbox.locked .hint { opacity: .7; }

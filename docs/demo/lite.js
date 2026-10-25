@@ -633,7 +633,12 @@
   function syncBox() {                                             // the TEST switch in ?view=drive
     const box = document.getElementById('syncbox'), t = document.getElementById('synctoggle');
     if (!box) return;
-    box.hidden = !lsGet(BETA) || !lsGet(DRIVE_ON);
+    const beta = !!lsGet(BETA);                                    // v0.54: everyone sees it; only ?beta=sync can tick it
+    box.hidden = !lsGet(DRIVE_ON);
+    box.classList.toggle('locked', !beta);
+    t.disabled = !beta;
+    const tag = box.querySelector('.beta');
+    if (tag) tag.textContent = beta ? 'TEST' : 'In development';
     t.checked = syncOn();
   }
   function syncToast() {                                           // after a copy from the other device: ↩️ Undo
