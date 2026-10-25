@@ -4,6 +4,7 @@
    Sheet.tell(title, text)                 -> Promise<undefined>
    Sheet.day(title)                        -> Promise<'1'..'31'|null>   (a grid of days, v0.36)
    Sheet.pick(title, names, current)       -> Promise<name|null>        (a list to tap; ＋ New category asks for the name)
+   Sheet.choose(title, text, a, b)         -> Promise<'a'|'b'|null>      (two ways; Not now = null, v0.45)
    Sheet.ask(..., 'date')                  -> a date box (YYYY-MM-DD)
    Escape or a tap outside = Cancel. Enter in the box = Save. */
 (function (root) {
@@ -52,6 +53,17 @@
     });
   }
 
+  function choose(title, text, a, b) {
+    return open(`<h3>${esc(title)}</h3>${text ? `<p>${esc(text)}</p>` : ''}
+      <button type="button" class="ok pri">${esc(a)}</button>
+      <button type="button" class="alt sec">${esc(b)}</button>
+      <button type="button" class="ter cancel">Not now</button>`, null, (back, close) => {
+      back.querySelector('button.ok').addEventListener('click', () => close('a'));
+      back.querySelector('button.alt').addEventListener('click', () => close('b'));
+      back.querySelector('button.ok').focus();
+    });
+  }
+
   function day(title) {
     const days = Array.from({length: 31}, (_, i) => `<button type="button" data-v="${i + 1}">${i + 1}</button>`).join('');
     return open(`<h3>${esc(title)}</h3><div class="daygrid">${days}</div>
@@ -73,5 +85,5 @@
   }
   const NEW = {};
 
-  root.Sheet = {confirm, ask, tell, day, pick};
+  root.Sheet = {confirm, ask, tell, day, pick, choose};
 })(typeof window !== 'undefined' ? window : globalThis);

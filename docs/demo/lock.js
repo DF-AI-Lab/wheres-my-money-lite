@@ -129,8 +129,33 @@
     return null;
   }
 
+  // v0.45 🔁 sync: a copy from this device's own key (no passcode asked), and linking to another device's key
+  async function openWith(rec, sealed) {                        // the state, or null (another device's key)
+    try {
+      const key = await subtle().importKey('raw', mbOf(rec), 'AES-GCM', false, ['decrypt']);
+      const plain = await subtle().decrypt({name: 'AES-GCM', iv: unb64(sealed.iv)}, key, unb64(sealed.data));
+      return JSON.parse(dec.decode(plain));
+    } catch (e) { return null; }
+  }
+  async function adopt(sealed, secret) {                        // {state, mb, pin, codes, iter} of the other device, or null
+    try {
+      secret = String(secret == null ? '' : secret);
+      for (const k of sealed.keys) {
+        const mb = await unwrap(k, k.kind === 'pin' ? secret : secretOf(secret), sealed.iter);
+        if (!mb) continue;
+        const key = await subtle().importKey('raw', mb, 'AES-GCM', false, ['decrypt']);
+        const plain = await subtle().decrypt({name: 'AES-GCM', iv: unb64(sealed.iv)}, key, unb64(sealed.data));
+        const strip = x => ({salt: x.salt, iv: x.iv, ct: x.ct});
+        return {state: JSON.parse(dec.decode(plain)), mb: b64(mb), iter: sealed.iter,
+                pin: strip(sealed.keys.find(x => x.kind === 'pin')),
+                codes: sealed.keys.filter(x => x.kind === 'code').map(x => Object.assign(strip(x), {used: false}))};
+      }
+    } catch (e) { /* tampered or wrong */ }
+    return null;
+  }
+
   const Lock = {ITER, IDLE_MS, MAX_TRIES, LOCK_MS, makeCodes, secretOf, pinProblem, create, checkPin, findCode, useCode, codesLeft,
-                setPin, newCodes, fail, lockedUntil, ok, needs, seal, open};
+                setPin, newCodes, fail, lockedUntil, ok, needs, seal, open, openWith, adopt};
   if (typeof module !== 'undefined' && module.exports) module.exports = Lock;
   else root.Lock = Lock;
 })(typeof window !== 'undefined' ? window : globalThis);

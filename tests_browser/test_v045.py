@@ -15,7 +15,7 @@ CONFIG = "window.LITE_CONFIG = {googleClientId: 'test-client.apps.googleusercont
 class Drive:
     """One Google Drive both browsers see: files keep their text; every upload moves modifiedTime on."""
     def __init__(self):
-        self.files, self.n, self.t = {}, 0, 0
+        self.files, self.n, self.t, self.pages = {}, 0, 0, []
 
     def tick(self):
         self.t += 1
@@ -28,7 +28,14 @@ class Drive:
     def state(self):
         return json.loads(self.newest()["text"])
 
+    def close(self):
+        """Unhook the fake Drive first: an open app keeps checking, and a check mid-way would hang the close."""
+        for pg in self.pages:
+            pg.unroute_all(behavior="ignoreErrors")
+            pg.context.close()
+
     def attach(self, page):
+        self.pages.append(page)
         page.route(GSI + "*", lambda r: r.fulfill(status=200, content_type="text/javascript", body=HINT_GSI))
         page.route("https://www.googleapis.com/**", self.api)
 
@@ -113,7 +120,7 @@ def test_sync_is_hidden_without_the_beta_link(browser, base):
     pg.goto(base + TODAY + "&beta=off&view=drive")
     assert pg.locator("#syncbox").is_hidden()
     assert not pg.errors
-    ctx.close()
+    d.close()
 
 
 # ---------- the first device sends its copy ----------
@@ -125,7 +132,7 @@ def test_turning_on_with_an_empty_drive_sends_this_copy(browser, base):
     pg.wait_for_function("localStorage.getItem('lite_drive_synced')")
     assert d.newest() and pg.evaluate("localStorage.getItem('lite_drive_sync')") == "1"
     assert pg.evaluate("localStorage.getItem('lite_drive_synced')") == d.newest()["id"] + "@" + d.newest()["modifiedTime"]
-    ctx.close()
+    d.close()
 
 
 # ---------- phone -> PC by itself ----------
@@ -149,7 +156,7 @@ def test_a_change_on_the_phone_shows_on_the_pc_with_undo(browser, base):
     pc.click(".synctoast .syncundo")                                     # ↩️ Undo
     wait_spend(pc, "FromPhone", present=False)
     assert not phone.errors and not pc.errors
-    pctx.close(); cctx.close()
+    d.close()
 
 
 # ---------- both changed: ask, never overwrite ----------
@@ -167,12 +174,33 @@ def _both_changed(browser, base, d):
     post(phone, 'form[action="/add"]', {"amount": "3", "name": "FromPhone"})
     phone.wait_for_function("!localStorage.getItem('lite_drive_dirty')", timeout=8000)
     phones = d.newest()["text"]
-    pc.goto(base + TODAY + "&view=drive")
-    pc.click("#drivesave")                                               # the PC tries to save over it
+    pc.goto(base + TODAY)                                                # the PC opens the app again
     pc.wait_for_selector(".litesheet")
     assert "both devices" in pc.locator(".litesheet h3").inner_text()
     assert d.newest()["text"] == phones                                  # still the phone's copy
     return pctx, phone, cctx, pc
+
+
+def test_a_save_never_writes_over_a_newer_copy(browser, base):
+    from test_v037 import hide
+    d = Drive()
+    pctx, phone = device(browser, d)
+    cctx, pc = device(browser, d, wait=600000, every=600000)
+    sync_on(phone, base)
+    phone.wait_for_function("localStorage.getItem('lite_drive_synced')")
+    sync_on(pc, base)
+    pc.wait_for_function("localStorage.getItem('lite_drive_synced')")
+    pc.goto(base + TODAY)                                                # the PC sits open (checked: nothing new)
+    phone.goto(base + TODAY)
+    post(phone, 'form[action="/add"]', {"amount": "3", "name": "FromPhone"})
+    phone.wait_for_function("!localStorage.getItem('lite_drive_dirty')", timeout=8000)
+    phones = d.newest()["text"]
+    pc.evaluate("Lite.run('/add', new URLSearchParams('amount=4&name=FromPC'))")   # a change, no reload
+    hide(pc)                                                             # the PC window closes: it tries to save
+    assert d.newest()["text"] == phones
+    pc.wait_for_selector(".litesheet")
+    assert "both devices" in pc.locator(".litesheet h3").inner_text()
+    d.close()
 
 
 def test_both_changed_keep_this_device(browser, base):
@@ -184,7 +212,7 @@ def test_both_changed_keep_this_device(browser, base):
     assert d.newest()["modifiedTime"] > before
     assert "FromPC" in spends(pc) and "FromPhone" not in spends(pc)
     wait_spend(phone, "FromPC")                                          # and the phone follows
-    pctx.close(); cctx.close()
+    d.close()
 
 
 def test_both_changed_use_the_other_device(browser, base):
@@ -195,7 +223,7 @@ def test_both_changed_use_the_other_device(browser, base):
     pc.wait_for_load_state()
     assert "FromPhone" in spends(pc) and "FromPC" not in spends(pc)
     assert not pc.evaluate("localStorage.getItem('lite_drive_dirty')")
-    pctx.close(); cctx.close()
+    d.close()
 
 
 def test_not_now_leaves_both_alone(browser, base):
@@ -205,7 +233,7 @@ def test_not_now_leaves_both_alone(browser, base):
     sheet(pc, None)                                                      # Not now
     pc.wait_for_timeout(500)
     assert d.newest()["text"] == text and "FromPC" in spends(pc)
-    pctx.close(); cctx.close()
+    d.close()
 
 
 # ---------- a PC with another passcode links once ----------
@@ -228,7 +256,7 @@ def test_a_device_with_another_passcode_links_once(browser, base):
     assert "PhoneOnly" in spends(pc)
     rec = json.loads(pc.evaluate("localStorage.getItem('lite_lock_v1')"))
     assert rec["mb"] == LOCK["mb"]                                       # the same key as the phone
-    pctx.close(); cctx.close()
+    d.close()
 
 
 def test_turning_off_stops_following(browser, base):
@@ -246,4 +274,4 @@ def test_turning_off_stops_following(browser, base):
     phone.wait_for_function("!localStorage.getItem('lite_drive_dirty')", timeout=8000)
     pc.wait_for_timeout(1500)
     assert "NotFollowed" not in spends(pc)
-    pctx.close(); cctx.close()
+    d.close()

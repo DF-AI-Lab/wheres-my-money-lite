@@ -275,5 +275,12 @@
     setInterval(check, 30000);
   });
 
-  root.LockUI = {record: () => (demo ? null : load()), demo};
+  // v0.45 🔁 linked to another device: its key, passcode and backup codes (fingerprints stay)
+  function adopt(o) {
+    rec = load();
+    if (!rec || !o || !o.pin) return;
+    Object.assign(rec, {mb: o.mb, iter: o.iter, pin: o.pin, codes: o.codes});
+    save();
+  }
+  root.LockUI = {record: () => (demo ? null : load()), demo, adopt};
 })(window);

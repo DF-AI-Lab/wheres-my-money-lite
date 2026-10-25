@@ -385,3 +385,14 @@ body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
 #account .driveok { color: var(--good); font-weight: 700; margin: 0; }
 #account .err { margin: 0; }
 #account .accconnect[hidden], #account .accbtns[hidden] { display: none; }
+
+/* v0.45 🔁 keep my devices in step (TEST, only after ?beta=sync) */
+#drive .syncbox { margin: 14px 0 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#drive .syncrow { display: flex; flex-direction: row; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; }
+#drive .syncrow input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+#drive .syncbox .beta { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 5px; }
+#drive .syncbox .hint { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+.synctoast { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px;
+             max-width: calc(100% - 32px); box-sizing: border-box; padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--bg);
+             font-weight: 600; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.synctoast .syncundo { font: inherit; font-weight: 800; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; padding: 4px; white-space: nowrap; }

@@ -189,6 +189,13 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **25 Oct v0.44 MOVED TO LIVE (Darren: "straight to live"): live = demo = v0.44 (so v0.42 menu + v0.43 Lock 1/Account are live too).**
   Backup codes screen: #copycodes '📋 Copy all codes' (clipboard, textarea fallback; text = a title line + the 10 codes) + #codescopied
   note (reset on each new set). Demo hides the Lock group + Drive menu line on purpose (no lock in the demo). Tests 78 node + 182 browser (test_v044.py).
+- **25 Oct v0.45 (demo only; live still v0.44): 🔁 KEEP MY DEVICES IN STEP (TEST, hidden).** Shows only after `?beta=sync`
+  (localStorage lite_sync_beta; `?beta=off` hides) as #syncbox/#synctoggle in ?view=drive. On = DK('sync'). The newest Drive file =
+  the shared copy; DK('synced') = 'id@modifiedTime' of the copy this device last sent/loaded. Change -> Drive in 5 s; checks on load,
+  when shown and every 30 s (LITE_SYNC_EVERY), not while typing/menus/sheets/lock (syncBlocked). Newer + nothing unsent = load it,
+  reload, .synctoast '↩️ Undo' (DK('undo')). Newer + unsent = Sheet.choose (new) 'Changes on both devices'. driveSaveNow refuses to
+  write over a newer copy. Another lock: Lock.openWith fails -> 'Link this device' asks the other passcode once, Lock.adopt +
+  LockUI.adopt = same key/passcode/codes. Turn on = 'Which copy to start with?' if different. Tests 78 node + 191 browser (test_v045.py).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

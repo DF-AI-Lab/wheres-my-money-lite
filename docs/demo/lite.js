@@ -350,6 +350,13 @@
   }
   async function driveSaveNow(hidden) {
     const was = lsGet(DRIVE_DIRTY);                                // a change made while this one is going stays to send
+    if (syncOn()) {                                                // v0.45: never write over a newer copy from the other device
+      const f = (await driveList())[0];
+      if (f && stampOf(f) !== lsGet(DRIVE_SYNCED)) {
+        setTimeout(() => syncCheck(), 0);
+        throw new Error('Your other device saved a newer copy first. Nothing was written over it.');
+      }
+    }
     const text = JSON.stringify(await backupFile()), name = M.driveName(state, today(), demo);
     let saved = null;
     try { saved = JSON.parse(lsGet(DRIVE_ID)); } catch (e) { /* an old plain id: a new month file */ }
@@ -362,12 +369,12 @@
       const b = 'wmm' + Date.now();
       const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
                    `--${b}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${b}--`;
-      const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id,trashed`,
+      const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id,trashed,modifiedTime`,
         {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body,
          keepalive: !!hidden && body.length < 60000});              // the app is closing: let the save finish
       if (!r.ok) return {status: r.status};
       const j = await r.json().catch(() => ({}));
-      return {status: r.status, ok: true, id: j.id || id, trashed: !!j.trashed};
+      return {status: r.status, ok: true, id: j.id || id, trashed: !!j.trashed, mt: j.modifiedTime || ''};
     };
     const fresh = async () => { folder = await driveFolder(); return send(null); };
     let id = saved && saved.name === name ? saved.id : null, r = id ? await send(id) : await fresh();
@@ -376,6 +383,7 @@
     if (!id && (r.status === 404 || r.trashed) && folder) { lsSet(DRIVE_DIR, null); r = await fresh(); }   // folder gone: a new one
     if (!r.ok) throw new Error('Google Drive would not take the copy (error ' + r.status + ').');
     if (r.id) lsSet(DRIVE_ID, JSON.stringify({name, id: r.id}));
+    lsSet(DRIVE_SYNCED, r.id && r.mt ? r.id + '@' + r.mt : null);    // v0.45: the copy in Drive is this device's now
     if (!id) {                                                     // a new pay month: a new file, then keep the last 3
       try { for (const old of M.drivePrune(await driveList(), 3)) await driveFetch(`${DRIVE_API}/${encodeURIComponent(old)}`, {method: 'DELETE'}); }
       catch (e) { /* tidy next time */ }
@@ -398,6 +406,7 @@
     const last = document.getElementById('drivelast'), at = lsGet(DRIVE_LAST);
     if (last) last.textContent = at ? 'last saved ' + localTime(at) : 'saves a minute after a change';
     driveSign();
+    syncBox();
   }
   function localTime(iso) {                                       // v0.40: UK time (BST or GMT), not the UTC in the string
     const d = new Date(iso), z = n => String(n).padStart(2, '0');
@@ -482,7 +491,7 @@
     clearTimeout(driveTimer);
     const at = Number(lsGet(DRIVE_DIRTY));
     if (!at || !lsGet(DRIVE_ON) || !getToken()) return;
-    const wait = root.LITE_DRIVE_WAIT || 60000;                    // tests make it short
+    const wait = root.LITE_DRIVE_WAIT || (syncOn() ? 5000 : 60000);   // tests make it short; in step = 5 s
     driveTimer = setTimeout(() => driveAuto(false), Math.max(0, at + wait - Date.now()));
   }
   function driveAuto(hidden) {
@@ -512,14 +521,136 @@
   function driveWake() {
     if (!lsGet(DRIVE_ON) || !clientId()) return;
     loadGsi().catch(() => {});                                     // ready before the tap
+    let tried = 0;
     const once = () => {
-      document.removeEventListener('pointerdown', once, true);
-      if (getToken() || !(root.google && root.google.accounts && root.google.accounts.oauth2)) return;
-      driveConnect(true).then(() => driveAuto(false))            // v0.40: a change not sent last time goes now
+      if (!syncOn()) document.removeEventListener('pointerdown', once, true);   // in step: a long-open PC asks again
+      if (getToken() || Date.now() - tried < 60000 || !(root.google && root.google.accounts && root.google.accounts.oauth2)) return;
+      tried = Date.now();
+      driveConnect(true).then(() => syncOn() ? syncCheck() : driveAuto(false))   // v0.40: a change not sent last time goes now
         .catch(() => { /* blocked or closed: try again next visit */ });
     };
     document.addEventListener('pointerdown', once, true);
   }
+  // ---------- v0.45 🔁 keep my devices in step (TEST: only after ?beta=sync, Darren 25 Oct) ----------
+  // The phone and the PC follow the newest copy in the same Google Drive. A change goes in ~5 s; an open app looks every
+  // 30 s and when it comes back into view, and loads a newer copy by itself (↩️ Undo). Changes on both = ask. A device
+  // with another lock links once with the other device's passcode (then both use the same passcode and backup codes).
+  const BETA = 'lite_sync_beta', DRIVE_SYNC = DK('sync'), DRIVE_SYNCED = DK('synced'), DRIVE_UNDO = DK('undo');
+  try {
+    const b = new URLSearchParams(location.search).get('beta');
+    if (b === 'sync') lsSet(BETA, '1'); else if (b === 'off') lsSet(BETA, null);
+  } catch (e) { /* ignore */ }
+  const syncOn = () => !!(lsGet(BETA) && lsGet(DRIVE_SYNC) && lsGet(DRIVE_ON));
+  const stampOf = f => (f ? f.id + '@' + f.modifiedTime : '');     // which copy: changes with every save
+  const bare = st => { const c = Object.assign({}, st); delete c.lastBackup; return JSON.stringify(c); };
+  let syncBusy = false, syncLater = false, linkAsked = false;
+  async function driveOpen(text) {                                 // the state in a Drive copy, or null
+    let obj = null;
+    try { obj = JSON.parse(text); } catch (e) { return null; }
+    if (obj && obj.scrambled) {
+      const rec = root.LockUI && root.LockUI.record();
+      let st = rec ? await root.Lock.openWith(rec, obj.scrambled) : null;
+      if (!st) st = await syncLink(obj.scrambled);
+      if (!st) return null;
+      obj = {app: obj.app, saved: obj.saved, state: st};
+    }
+    return M.importBackup(obj);
+  }
+  async function syncLink(sealed) {                                // another device's key: its passcode, asked once
+    if (linkAsked || !root.LockUI || !root.LockUI.adopt) return null;
+    linkAsked = true;
+    const secret = await root.Sheet.ask('🔗 Link this device', 'The passcode you use on your other device', '', 'numeric');
+    if (secret === null) { syncLater = true; return null; }
+    const o = await root.Lock.adopt(sealed, secret);
+    if (!o) { await root.Sheet.tell("😕 That didn't open", 'Check the passcode and try again later.'); syncLater = true; return null; }
+    root.LockUI.adopt(o);
+    await root.Sheet.tell('🔗 Linked', 'This device now uses the same passcode and backup codes as your other device.');
+    return o.state;
+  }
+  function syncBlocked() {                                         // like v3: never reload while typing, opened or moved
+    const a = document.activeElement, open = id => { const el = document.getElementById(id); return el && !el.hidden; };
+    return document.documentElement.classList.contains('lockon') || document.body.classList.contains('editing') ||
+      !!document.querySelector('.litesheet, .bmenu') || open('setmenu') || open('quick') || open('newmonth') ||
+      !!(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'checkbox');
+  }
+  function syncUse(theirs, st) {                                   // load the other device's copy (the old one kept for Undo)
+    lsSet(DRIVE_UNDO, JSON.stringify(state));
+    state = theirs; Store.save(theirs);
+    lsSet(DRIVE_SYNCED, st); lsSet(DRIVE_DIRTY, null);
+    try { root.sessionStorage.setItem('lite_synced', '1'); } catch (e) { /* ignore */ }
+    leave();
+  }
+  async function syncCheck(first) {
+    if (!syncOn() || !getToken() || syncBusy || driveBusy || (syncLater && !first)) return;
+    if (!first && syncBlocked()) return;
+    syncBusy = true;
+    let after = null;
+    try {
+      const f = (await driveList())[0], st = stampOf(f);
+      if (!f) { lsSet(DRIVE_DIRTY, lsGet(DRIVE_DIRTY) || String(Date.now())); after = () => driveSave(false); return; }
+      if (st === lsGet(DRIVE_SYNCED)) { driveSoon(); return; }
+      const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+      if (!r.ok) return;
+      const theirs = await driveOpen(await r.text());
+      if (!theirs) { if (first) { lsSet(DRIVE_SYNC, null); syncBox(); } return; }
+      if (bare(theirs) === bare(state)) { lsSet(DRIVE_SYNCED, st); driveSoon(); return; }
+      if (first || lsGet(DRIVE_DIRTY)) {
+        const pick = first
+          ? await root.Sheet.choose('🔁 Which copy do you want to start with?', 'The copy in Google Drive is different from this device.',
+                                    '☁️ The copy in Drive', '📱 This device')
+          : await root.Sheet.choose('🔁 Changes on both devices', 'Your other device saved changes while this one had changes not sent yet. Which copy do you want to keep?',
+                                    "☁️ Use the other device's copy", "📱 Keep this device's copy");
+        if (pick === null) { syncLater = true; if (first) { lsSet(DRIVE_SYNC, null); syncBox(); } return; }
+        if (pick === 'b') { lsSet(DRIVE_SYNCED, st); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); after = () => driveSave(false); return; }
+      }
+      syncUse(theirs, st);
+    } catch (e) { /* offline or signed out: try again later */ }
+    finally {
+      syncBusy = false;
+      if (after) after().catch(() => {});
+    }
+  }
+  function syncBox() {                                             // the TEST switch in ?view=drive
+    const box = document.getElementById('syncbox'), t = document.getElementById('synctoggle');
+    if (!box) return;
+    box.hidden = !lsGet(BETA) || !lsGet(DRIVE_ON);
+    t.checked = syncOn();
+  }
+  function syncToast() {                                           // after a copy from the other device: ↩️ Undo
+    let shown = false;
+    try { shown = root.sessionStorage.getItem('lite_synced') === '1'; root.sessionStorage.removeItem('lite_synced'); } catch (e) { /* ignore */ }
+    if (!shown) return;
+    const t = document.createElement('div');
+    t.className = 'synctoast'; t.setAttribute('role', 'status');
+    t.innerHTML = '<span>🔁 Updated from your other device</span>' + (lsGet(DRIVE_UNDO) ? '<button type="button" class="syncundo">↩️ Undo</button>' : '');
+    document.body.appendChild(t);
+    const gone = setTimeout(() => t.remove(), 10000);
+    const u = t.querySelector('.syncundo');
+    if (u) u.addEventListener('click', () => {
+      clearTimeout(gone);
+      let old = null;
+      try { old = M.importBackup({app: 'wheres-my-money-lite', state: JSON.parse(lsGet(DRIVE_UNDO))}); } catch (e) { /* gone */ }
+      if (!old) { t.remove(); return; }
+      state = old; Store.save(old); lsSet(DRIVE_UNDO, null);
+      lsSet(DRIVE_DIRTY, String(Date.now()));                        // it goes back to Drive too
+      leave();
+    });
+  }
+  function syncStart() {
+    syncBox(); syncToast();
+    const t = document.getElementById('synctoggle');
+    if (t) t.addEventListener('change', () => {
+      if (!t.checked) { lsSet(DRIVE_SYNC, null); lsSet(DRIVE_SYNCED, null); return; }
+      lsSet(DRIVE_SYNC, '1'); syncLater = false;
+      (getToken() ? Promise.resolve() : loadGsi().then(() => driveConnect(true)))
+        .then(() => syncCheck(true), () => { lsSet(DRIVE_SYNC, null); syncBox(); });
+    });
+    if (syncOn()) setTimeout(() => syncCheck(), 300);
+    setInterval(() => { if (document.visibilityState === 'visible') syncCheck(); }, root.LITE_SYNC_EVERY || 30000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { syncLater = false; syncCheck(); } });
+  }
+  document.addEventListener('DOMContentLoaded', syncStart);
+
   let leaving = false;                                             // our own reload after a save is not "closing the app"
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'hidden' || leaving) return;
