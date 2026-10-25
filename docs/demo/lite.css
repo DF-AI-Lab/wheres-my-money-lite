@@ -415,3 +415,14 @@ body.editing .setmenu[hidden] { display: none; }
 
 /* v0.49: a long sheet (the category list) scrolls inside and its top stays on screen */
 .sheetback .sheet { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+
+/* v0.50 bill ⋯ = mock B: two big buttons on top (Amount + Mark paid) and at the bottom (Pause + Delete) */
+.bmenu .brow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 2px 0 6px; }
+.bmenu .brow:last-child { margin: 6px 0 2px; padding-top: 8px; border-top: 1px solid var(--border); }
+.bmenu .brow:first-child:last-child { border-top: 0; padding-top: 0; }
+.demo .bmenu .brow button { text-align: center; font-weight: 800; padding: 11px 6px; border-radius: 10px; border: 1px solid var(--border); background: var(--row); }
+.demo .bmenu .brow button.pri { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.demo .bmenu .brow button.stop { background: none; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.demo .bmenu { min-width: 240px; }
+/* v0.50: the bill's category dropdown scrolls too when the list is long */
+.bmenu.catmenu { max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; }

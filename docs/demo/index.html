@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.49"></script>
-<script src="money.js?v=0.49"></script>
-<script src="render.js?v=0.49"></script>
-<script src="sheet.js?v=0.49"></script>
-<script src="lite.js?v=0.49"></script>
-<script src="lock.js?v=0.49"></script>
-<script src="lockui.js?v=0.49"></script>
+<script src="config.js?v=0.50"></script>
+<script src="money.js?v=0.50"></script>
+<script src="render.js?v=0.50"></script>
+<script src="sheet.js?v=0.50"></script>
+<script src="lite.js?v=0.50"></script>
+<script src="lock.js?v=0.50"></script>
+<script src="lockui.js?v=0.50"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.49">
-<link rel="stylesheet" href="lite.css?v=0.49">
+<link rel="stylesheet" href="look.css?v=0.50">
+<link rel="stylesheet" href="lite.css?v=0.50">
 </head>
 <body class="demo">
 
@@ -278,7 +278,7 @@
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.49</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.50</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -578,9 +578,13 @@
     const menu = (btn, items, extra) => {
       const open = btn.parentElement.querySelector('.bmenu'); close(); if (open) return;
       const m = document.createElement('div'); m.className = 'bmenu' + (extra ? ' ' + extra : ''); m.setAttribute('role', 'menu');
-      items.forEach(([text, cls, fn]) => {
+      const add = (to, [text, cls, fn]) => {
         const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (cls) b.className = cls;
-        b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); m.appendChild(b);
+        b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); to.appendChild(b);
+      };
+      items.forEach(it => {                                  // v0.50 (mock B): {row: [...]} = big buttons side by side
+        if (!it.row) return add(m, it);
+        const r = document.createElement('div'); r.className = 'brow'; it.row.forEach(x => add(r, x)); m.appendChild(r);
       });
       btn.parentElement.appendChild(m); m.querySelector('button').focus();
     };
@@ -588,27 +592,28 @@
     // bills
     document.querySelectorAll('.dbills tr.bill .more').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
+      // v0.50 mock B: Amount + Mark paid on top, the details, then Pause + Delete side by side
       const row = btn.closest('tr'), key = row.dataset.key, stopped = row.dataset.stopped === '1', items = [];
-      if (!stopped) items.push(['✏️ Change amount', '', () => row.querySelector('button.link').click()]);
-      if (row.dataset.changed === '1') items.push(['↩ Put back', '', () => row.querySelector('button.x').click()]);
-      if (!stopped) items.push(row.dataset.paid === '1'                                  // paid by hand (Darren, 22 Oct)
-        ? ['↩️ Not paid yet', '', () => send('/bill/paid', {key, paid: '0'})]
-        : ['✅ Mark as paid', '', () => send('/bill/paid', {key, paid: '1'})]);
-      items.push(['✏️ Change name', '', () => {
+      if (!stopped) items.push({row: [['Amount', 'quick', () => row.querySelector('button.link').click()],
+        row.dataset.paid === '1'                                                         // paid by hand (Darren, 22 Oct)
+          ? ['Not paid yet', 'quick', () => send('/bill/paid', {key, paid: '0'})]
+          : ['Mark paid', 'quick pri', () => send('/bill/paid', {key, paid: '1'})]]});
+      if (row.dataset.changed === '1') items.push(['Put back the amount', '', () => row.querySelector('button.x').click()]);
+      items.push(['Change name', '', () => {
         Sheet.ask('✏️ Name of the bill', 'Name', row.dataset.name).then(name => { if (name !== null) send('/bill/name', {key, name}); }); }]);
-      items.push(['🏷 Category', '', () => {                // a pick list of the categories, then ＋ New category
+      items.push(['Due day', '', () => {
+        Sheet.ask('📅 ' + row.dataset.name + ': due day', 'Day of the month (1-31), empty = none', row.dataset.due, 'numeric').then(day => { if (day !== null) send('/bill/due', {key, day}); }); }]);
+      items.push(['Category', '', () => {                   // a pick list of the categories, then ＋ New category
         const pick = Money.categories(Lite.state()).map(c => [(c === row.dataset.cat ? '✓ ' : '') + c, '', () => send('/bill/cat', {key, cat: c})]);
         pick.push(['＋ New category', '', () => Sheet.ask('🏷 New category', 'Name of the new category', '').then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); })]);
         menu(btn, pick, 'catmenu'); }]);
-      items.push(['📅 Due day', '', () => {
-        Sheet.ask('📅 ' + row.dataset.name + ': due day', 'Day of the month (1-31), empty = none', row.dataset.due, 'numeric').then(day => { if (day !== null) send('/bill/due', {key, day}); }); }]);
-      items.push(['💳 Pays a credit card', '', () => {
+      items.push(['Pays a credit card', '', () => {
         const names = (window.LITE_PAGE && window.LITE_PAGE.cards) || [];
         Sheet.ask('💳 Which credit card does this bill pay?', names.join(', ') + ' (empty = none)', row.dataset.card).then(card => {
           if (card !== null) send('/bill/card', {key, card}); }); }]);
-      items.push([stopped ? '▶ Resume' : '⏸ Pause', '', () => row.querySelector('form.stopform').submit()]);   // v0.39: paused = folded away
-      items.push(['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
-        .then(yes => { if (yes) send('/bill/delete', {key}); })]);
+      items.push({row: [[stopped ? 'Resume' : 'Pause', 'quick', () => row.querySelector('form.stopform').submit()],   // v0.39: paused = folded away
+        ['Delete', 'quick stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
+          .then(yes => { if (yes) send('/bill/delete', {key}); })]]});
       menu(btn, items);
     }));
 
@@ -679,6 +684,9 @@
       e.stopPropagation();
       const pot = btn.closest('.pot');
       menu(btn, [['✏️ Change amount', '', () => askPot(pot, 'amount')], ['✏️ Change name', '', () => askPot(pot, 'name')],
+                 ['🏷 Category it takes', '', () => Sheet.pick('🏷 ' + pot.dataset.name + ': which spends come out of this pot?',   // v0.50
+                    Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), pot.dataset.cat)
+                    .then(cat => { if (cat !== null) send('/pot/cat', {key: pot.dataset.key, cat}); })],
                  ['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete the ' + pot.dataset.name + ' pot?', "This can't be undone.", 'Delete', true)
                     .then(yes => { if (yes) send('/pot/delete', {key: pot.dataset.key}); })]]);
     }));

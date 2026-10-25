@@ -280,9 +280,11 @@
   function potBlock(p) {
     const status = p.blank ? `<button type="button" class="link muted potset">Set an amount</button>`
       : (p.over > 0.004 ? `<span class="bad">${money(p.over)} over</span>` : `<span class="good">${money(p.left)} left</span>`);
-    const line = p.blank ? (p.spent > 0 ? `${money(p.spent)} spent so far` : '') : `${money(p.spent)} of ${money(p.amount)}`;
+    const own = String(p.cat || '').toLowerCase().replace(/s$/, '') !== String(p.name).toLowerCase().replace(/s$/, '');
+    const line = (p.blank ? (p.spent > 0 ? `${money(p.spent)} spent so far` : '') : `${money(p.spent)} of ${money(p.amount)}`)
+      + (own ? ` · takes ${esc(p.cat)}` : '');                    // v0.50: linked to a category with another name
     return `
-    <div class="pot" data-key="${esc(p.key)}" data-name="${esc(p.name)}" data-amount="${p.blank ? '' : f2(p.amount)}">
+    <div class="pot" data-key="${esc(p.key)}" data-name="${esc(p.name)}" data-cat="${esc(p.cat || '')}" data-amount="${p.blank ? '' : f2(p.amount)}">
       <div class="potrow"><b>${esc(p.name)}</b><span class="potside">${status}<span class="potmore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or delete ${esc(p.name)}">⋯</button></span></span></div>
       <div class="potbar"><i class="${p.over > 0.004 ? 'over' : ''}" style="width:${p.blank ? 0 : p.pct}%"></i></div>
       <div class="labels">${line}</div>

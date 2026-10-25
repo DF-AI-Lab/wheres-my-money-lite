@@ -158,14 +158,14 @@ def test_mark_a_bill_paid_by_hand(page, base):
     page.goto(base + DEMO)
     row = 'tr.bill[data-key="Phone Co"]'                              # due 18th, today 8 Nov: not due yet
     assert page.locator(f"{row} .bline.paid").count() == 0
-    bill_menu(page, "Phone Co", "Mark as paid")
+    bill_menu(page, "Phone Co", "Mark paid")
     assert page.locator(f"{row} .bline.paid").count() == 1
     page.click(f"{row} button.info")
     assert "marked" in page.locator(".infotip").inner_text().lower()
     demo = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1'))")
     assert next(b for b in demo["bills"] if b["key"] == "Phone Co")["paid"] is True
     page.click(f"{row} button.more")
-    assert page.locator('.bmenu [role=menuitem]:has-text("Mark as paid")').count() == 0
+    assert page.locator('.bmenu [role=menuitem]:has-text("Mark paid")').count() == 0
     page.keyboard.press("Escape")
     bill_menu(page, "Phone Co", "Not paid yet")
     assert page.locator(f"{row} .bline.paid").count() == 0
@@ -174,7 +174,7 @@ def test_mark_a_bill_paid_by_hand(page, base):
 def test_marking_a_due_bill_paid_clears_its_reminder(page, base):
     page.goto(base + DEMO)
     before = page.locator("#bellcount").inner_text()
-    bill_menu(page, "Energy Co", "Mark as paid")              # a lone bill on its day (v0.37)
+    bill_menu(page, "Energy Co", "Mark paid")              # a lone bill on its day (v0.37)
     assert int(page.locator("#bellcount").inner_text()) == int(before) - 1
 
 

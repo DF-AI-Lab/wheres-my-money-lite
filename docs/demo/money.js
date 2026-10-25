@@ -238,8 +238,8 @@
     // bills
     const start = s.payday || (today ? today.slice(0, 8) + '01' : null);
     const cardList = cardsOf(s);
-    const potOf = {};                                            // pots that have an amount, by category
-    (s.pots || []).forEach(p => { if (isSet(p)) potOf[p.cat] = p; });
+    const potOf = {};                                            // pots that have an amount, by category (v0.50: loosely)
+    (s.pots || []).forEach(p => { if (isSet(p)) potOf[catKey(p.cat)] = p; });
     const bills = (s.bills || []).map(b => {
       const blank = typeof b.amount !== 'number', stopped = !!b.stopped;
       const amount = blank ? null : b.amount;
@@ -250,7 +250,7 @@
       const was = saved(s, b.key);
       const due = b.due || null, dueAt = due && start ? dueDate(start, due) : null;
       const name = b.name === undefined ? b.key : b.name;
-      const inPot = !stopped && potOf[b.cat] ? potOf[b.cat].name : null;   // a bill in a pot's category is paid from that pot
+      const inPot = !stopped && potOf[catKey(b.cat)] ? potOf[catKey(b.cat)].name : null;   // a bill in a pot's category is paid from that pot
       return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, pot: inPot, last: amount || 0, used, blank, stopped,
               saved: was && typeof was.amount === 'number' ? was.amount : null,
               changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
@@ -270,7 +270,7 @@
     const pay = s.pay || 0, left = s.left || 0;
     const spends = (s.spends || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
     const pots = (s.pots || []).map(p => {
-      const spent = sum(spends.filter(x => x.cat === p.cat).map(x => x.amount))
+      const spent = sum(spends.filter(x => catKey(x.cat) === catKey(p.cat)).map(x => x.amount))
         + (isSet(p) ? sum(live.filter(b => b.pot === p.name).map(b => b.used)) : 0), blank = !isSet(p);
       const amount = blank ? null : p.amount;
       return {key: p.key, name: p.name, cat: p.cat, amount, spent, blank,
@@ -281,7 +281,7 @@
     const potsTotal = potsSet + potsOver;
     const potsSpent = sum(pots.filter(p => !p.blank).map(p => p.spent)), potsLeft = sum(pots.map(p => p.left));
     const potBills = billsAll - billsTotal;
-    const shown = spends.map(x => Object.assign({}, x, {pot: potOf[x.cat] ? potOf[x.cat].name : null,
+    const shown = spends.map(x => Object.assign({}, x, {pot: potOf[catKey(x.cat)] ? potOf[catKey(x.cat)].name : null,
       upcoming: !!x.upcoming && !!today && today < x.date, autoPaid: !!x.upcoming && !!today && today >= x.date}));
     const spendsTotal = sum(shown.filter(x => !x.pot).map(x => x.amount));
     const moneyForSpending = pay + left - billsTotal - potsSet;
@@ -381,7 +381,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.49';
+  const APP = 'wheres-my-money-lite', VERSION = '0.50';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -547,6 +547,14 @@
   }
 
   // ---------- pots: a category + a monthly amount ----------
+  // v0.50: a pot and a spend/bill match loosely: 'takeaway' = 'Takeaways' (case, spaces, a trailing s)
+  const catKey = c => String(c == null ? '' : c).trim().toLowerCase().replace(/\s+/g, ' ').replace(/s$/, '');
+  function potCat(s, name) {                                     // an existing category, else the name becomes one
+    const known = categories(s).find(c => catKey(c) === catKey(name));
+    if (known) return known;
+    s.cats = Array.isArray(s.cats) ? s.cats : []; s.cats.push(name);
+    return name;
+  }
   const findPot = (s, key) => (s.pots || []).find(x => x.key === key);
   const sameName = (s, name, except) => (s.pots || []).some(p => p !== except && p.name.toLowerCase() === name.toLowerCase());
   function addPot(s, amountText, nameText) {                     // POST /pot/add
@@ -555,7 +563,7 @@
     const amount = text === '' ? null : parseMoney(text);
     if (!name || sameName(s, name) || (text !== '' && amount === null)) return 'pot';
     s.pots = s.pots || [];
-    s.pots.push({key: uniqueKey(s.pots, name), name, cat: name, amount});
+    s.pots.push({key: uniqueKey(s.pots, name), name, cat: potCat(s, name), amount});
     return null;
   }
   function setPotAmount(s, key, text) {                          // POST /pot/amount ('' = no amount: not a pot for now)
@@ -566,6 +574,13 @@
     const v = parseMoney(text);
     if (v === null) return 'pot';
     p.amount = v;
+    return null;
+  }
+  function setPotCat(s, key, text) {                             // POST /pot/cat (⋯ → 🏷 Category, v0.50)
+    const p = findPot(s, key), cat = String(text == null ? '' : text).trim().slice(0, 30);
+    if (!p) return 'unknown';
+    if (!cat) return 'pot';
+    p.cat = potCat(s, cat);
     return null;
   }
   function renamePot(s, key, nameText) {                         // POST /pot/name (the category it collects stays)
@@ -886,7 +901,7 @@
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
-    setSpendCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,
+    setSpendCat, setPotCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,
     nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,

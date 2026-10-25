@@ -102,7 +102,7 @@ def test_bill_menu_has_the_agreed_items_and_no_replaces(page, base):
     page.click('tr.bill[data-key="Rent"] button.more')
     items = page.locator(".bmenu [role=menuitem]").all_inner_texts()
     text = " | ".join(items)
-    for want in ("Change amount", "Change name", "Due day", "Pause", "Delete"):
+    for want in ("Amount", "Change name", "Due day", "Pause", "Delete"):
         assert want in text, text
     assert "Replaces" not in text
 

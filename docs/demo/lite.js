@@ -86,6 +86,7 @@
     '/pot/add': (s, get) => M.addPot(s, get('amount'), get('name')),
     '/pot/amount': (s, get) => quiet(M.setPotAmount(s, get('key'), get('amount'))),
     '/pot/name': (s, get) => quiet(M.renamePot(s, get('key'), get('name'))),
+    '/pot/cat': (s, get) => quiet(M.setPotCat(s, get('key'), get('cat'))),
     '/pot/delete': (s, get) => quiet(M.deletePot(s, get('key'))),
     '/payday/day': (s, get) => M.setPayDay(s, get('day')),
     '/backup/saved': (s, get) => M.setBackupDay(s, today()),
