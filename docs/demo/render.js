@@ -81,7 +81,7 @@
     const cls = s.upcoming ? ' upcoming' : (s.autoPaid ? ' paid' : '');
     return `
 
-          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-cat="${esc(s.cat || 'Unsorted')}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}</td>
+          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-cat="${esc(s.cat || 'Unsorted')}" data-amount="${s.amount.toFixed(2)}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}</td>
               <td class="n smore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or remove ${esc(s.name)}">⋯</button><form method="post" action="/remove" hidden><input type="hidden" name="id" value="${s.id}"></form></td></tr>
 
         `;

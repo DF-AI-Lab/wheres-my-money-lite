@@ -412,3 +412,6 @@ body.editing .setmenu[hidden] { display: none; }
 .editpill button { height: 40px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
   background: transparent; color: var(--text); border: 1px solid var(--border); }
 .editpill #editdone { background: var(--accent); color: #06251a; border-color: var(--accent); font-weight: 800; padding: 0 18px; }
+
+/* v0.49: a long sheet (the category list) scrolls inside and its top stays on screen */
+.sheetback .sheet { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }

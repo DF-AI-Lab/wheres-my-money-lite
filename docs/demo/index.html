@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.48"></script>
-<script src="money.js?v=0.48"></script>
-<script src="render.js?v=0.48"></script>
-<script src="sheet.js?v=0.48"></script>
-<script src="lite.js?v=0.48"></script>
-<script src="lock.js?v=0.48"></script>
-<script src="lockui.js?v=0.48"></script>
+<script src="config.js?v=0.49"></script>
+<script src="money.js?v=0.49"></script>
+<script src="render.js?v=0.49"></script>
+<script src="sheet.js?v=0.49"></script>
+<script src="lite.js?v=0.49"></script>
+<script src="lock.js?v=0.49"></script>
+<script src="lockui.js?v=0.49"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.48">
-<link rel="stylesheet" href="lite.css?v=0.48">
+<link rel="stylesheet" href="look.css?v=0.49">
+<link rel="stylesheet" href="lite.css?v=0.49">
 </head>
 <body class="demo">
 
@@ -278,7 +278,7 @@
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.48</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.49</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -650,6 +650,10 @@
     document.querySelectorAll('[data-card="spend"] tr.drow .more').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
       const row = btn.closest('tr'), id = row.dataset.id, items = [];
+      items.push(['✏️ Change amount', '', () => Sheet.ask('💷 ' + row.dataset.name + ': amount', 'Amount', row.dataset.amount, 'decimal')
+        .then(amount => { if (amount !== null) send('/spend/amount', {id, amount}); })]);   // v0.49
+      items.push(['✏️ Change name', '', () => Sheet.ask('✏️ Name of the spend', 'Name', row.dataset.name)
+        .then(name => { if (name !== null) send('/spend/name', {id, name}); })]);
       items.push(['📅 Change date', '', () => Sheet.ask('📅 ' + row.dataset.name + ': date', 'The day it went out (or will)', row.dataset.date, 'date')
         .then(date => { if (date !== null) send('/spend/date', {id, date}); })]);
       if (row.dataset.up === '1') items.push(['✅ Paid (it went out today)', '', () => send('/spend/paid', {id})]);

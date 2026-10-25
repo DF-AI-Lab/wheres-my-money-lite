@@ -381,7 +381,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.48';
+  const APP = 'wheres-my-money-lite', VERSION = '0.49';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -417,6 +417,21 @@
     if (!x) return null;
     if (!isDate(d)) return 'spend';
     x.date = d; x.dated = true;
+    return null;
+  }
+  // v0.49: ⋯ → ✏️ Change amount / ✏️ Change name on a spend
+  function setSpendAmount(s, idText, text) {                     // POST /spend/amount
+    const x = findSpend(s, idText), amount = parseMoney(text);
+    if (!x) return null;
+    if (amount === null) return 'spend';
+    x.amount = amount;
+    return null;
+  }
+  function renameSpend(s, idText, text) {                        // POST /spend/name
+    const x = findSpend(s, idText), name = String(text == null ? '' : text).trim();
+    if (!x) return null;
+    if (!name) return 'spend';
+    x.name = name;
     return null;
   }
   function removeSpend(s, idText) {                              // POST /remove (a bad id is ignored)
@@ -871,7 +886,7 @@
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
-    setSpendCat, setBillsPaid, remindLines, driveName, drivePrune,
+    setSpendCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,
     nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,

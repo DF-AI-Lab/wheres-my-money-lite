@@ -205,6 +205,10 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **25 Oct v0.48 MOVED TO LIVE (Darren: "straight to live"):** tap the header cloud (.savesign, now role=button tabindex=0, Enter/Space too) = save to
   Drive now (lite.js driveTap: no token = loadGsi + quiet driveConnect first; stops the 'back to the top' link; error = Sheet.tell).
   Tests 78 node + 200 browser (test_v048.py).
+- **25 Oct v0.49 (demo only; live still v0.48):** every .sheet scrolls inside (max-height 100dvh − 24px; the long category pick list
+  was cut off at the top). Spend ⋯ = ✏️ Change amount (/spend/amount, M.setSpendAmount; tr.drow data-amount) + ✏️ Change name
+  (/spend/name, M.renameSpend), then Change date / Paid / Category / Remove. Bill ⋯ order: mock https://claude.ai/artifact/DD2QGgR38yKwvGBS95FmT8
+  (A groups 'This month' / 'Details' / Pause+Delete, or B Amount + Mark paid buttons on top): Darren to pick. Tests 80 node + 204 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

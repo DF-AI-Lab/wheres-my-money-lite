@@ -68,6 +68,8 @@
     '/spend/paid': (s, get) => M.paySpend(s, get('id'), today()),
     '/spend/date': (s, get) => M.setSpendDate(s, get('id'), get('date')),
     '/spend/cat': (s, get) => M.setSpendCat(s, get('id'), get('cat')),
+    '/spend/amount': (s, get) => M.setSpendAmount(s, get('id'), get('amount')),
+    '/spend/name': (s, get) => M.renameSpend(s, get('id'), get('name')),
     '/bills/paid': (s, get) => { let k = []; try { k = JSON.parse(get('keys') || '[]'); } catch (e) { /* none */ } return M.setBillsPaid(s, k); },
     '/remove': (s, get) => M.removeSpend(s, get('id')),
     '/pay': (s, get) => M.setPay(s, get('pay'), get('clear') === '1'),
