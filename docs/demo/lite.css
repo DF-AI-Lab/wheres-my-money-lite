@@ -399,3 +399,14 @@ body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
 
 /* v0.46 the Settings menu scrolls inside when it is taller than the screen */
 .setmenu { max-height: calc(100vh - 96px); max-height: calc(100dvh - 96px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* v0.46 editing (mock C): the menu closes, a small pill at the bottom holds Reset + Done */
+body.editing .setmenu[hidden] { display: none; }
+.editpill { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; white-space: nowrap;
+  background: var(--card); border: 1px solid var(--accent); border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.editpill[hidden] { display: none; }
+.editpill span { font-size: 13px; font-weight: 700; color: var(--text); }
+.editpill button { height: 40px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  background: transparent; color: var(--text); border: 1px solid var(--border); }
+.editpill #editdone { background: var(--accent); color: #06251a; border-color: var(--accent); font-weight: 800; padding: 0 18px; }

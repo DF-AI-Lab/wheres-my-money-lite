@@ -44,3 +44,32 @@ def test_settings_menu_scrolls_on_a_small_phone(page, base):
     assert b["y"] + b["height"] <= 640 + 1
     assert page.evaluate("scrollY") == 0                                # the page behind did not move
     assert not page.errors
+
+
+# ---------- 3. editing (mock C): the menu closes, a pill at the bottom holds Reset + Done ----------
+
+def test_editing_closes_the_menu_and_shows_the_pill(page, base):
+    page.goto(base + TODAY)
+    assert page.locator("#editpill").is_hidden()
+    page.click("#setbtn"); page.click("#editbtn")
+    assert page.evaluate("document.body.classList.contains('editing')")
+    assert page.locator("#setmenu").is_hidden()
+    pill = page.locator("#editpill")
+    assert pill.is_visible()
+    b = pill.bounding_box()
+    assert b["y"] + b["height"] <= 844 and b["y"] > 844 - 120          # small, at the bottom
+    assert b["x"] >= 0 and b["x"] + b["width"] <= 390
+    page.click("#editdone")
+    assert not page.evaluate("document.body.classList.contains('editing')")
+    assert pill.is_hidden()
+    assert not page.errors
+
+
+def test_pill_reset_asks_first(page, base):
+    from conftest import sheet
+    page.goto(base + TODAY)
+    page.click("#setbtn"); page.click("#editbtn")
+    page.click("#editreset")
+    sheet(page, None)                                                    # Cancel = nothing happens
+    assert page.evaluate("document.body.classList.contains('editing')")
+    assert page.locator("#editpill").is_visible()

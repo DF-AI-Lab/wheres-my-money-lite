@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.46"></script>
-<script src="money.js?v=0.46"></script>
-<script src="render.js?v=0.46"></script>
-<script src="sheet.js?v=0.46"></script>
-<script src="lite.js?v=0.46"></script>
-<script src="lock.js?v=0.46"></script>
-<script src="lockui.js?v=0.46"></script>
+<script src="config.js?v=0.47"></script>
+<script src="money.js?v=0.47"></script>
+<script src="render.js?v=0.47"></script>
+<script src="sheet.js?v=0.47"></script>
+<script src="lite.js?v=0.47"></script>
+<script src="lock.js?v=0.47"></script>
+<script src="lockui.js?v=0.47"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.46">
-<link rel="stylesheet" href="lite.css?v=0.46">
+<link rel="stylesheet" href="look.css?v=0.47">
+<link rel="stylesheet" href="lite.css?v=0.47">
 </head>
 <body class="demo">
 
@@ -278,7 +278,7 @@
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.46</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.47</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -320,6 +320,7 @@
     <button type="button" class="small" id="editbtn">✏️ Move &amp; rename</button>
     <form method="post" action="/layout/reset" class="onlyedit"><button class="small" type="submit">↺ Put the order back</button></form>
   </div>
+  <div class="editpill" id="editpill" hidden><span>✏️ Editing</span><button type="button" id="editreset">↺ Reset</button><button type="button" id="editdone">✓ Done</button></div>
   <div class="onlyedit hint">Click ⠿ on a card or row, then use the ⬆️ ⬇️ arrow keys to move it (or drag it). Click a name to rename it (empty = the normal name). Press <b>Done</b> when finished.</div>
   
 
@@ -971,7 +972,18 @@
   if (editBtn) editBtn.addEventListener('click', () => {
     const on = document.body.classList.toggle('editing');
     editBtn.textContent = on ? '✅ Done' : '✏️ Move & rename';
+    // v0.46 the menu closes while editing; a small pill at the bottom holds Reset + Done (mock C)
+    const menu = document.getElementById('setmenu'), pill = document.getElementById('editpill');
+    if (menu && on) { menu.hidden = true; document.getElementById('setbtn').setAttribute('aria-expanded', 'false'); }
+    if (pill) pill.hidden = !on;
     document.querySelectorAll('.rname').forEach(n => n.contentEditable = on ? 'plaintext-only' : 'false');
+  });
+  const editDone = document.getElementById('editdone'), editReset = document.getElementById('editreset');
+  if (editDone) editDone.addEventListener('click', () => editBtn.click());
+  if (editReset) editReset.addEventListener('click', async () => {
+    if (!await window.Sheet.confirm('↺ Put the order back?', 'Cards and rows go back to the normal order and names.', 'Put it back')) return;
+    const f = document.querySelector('form[action="/layout/reset"]');
+    if (f) f.requestSubmit();
   });
   document.querySelectorAll('summary').forEach(sm => sm.addEventListener('click', e => {
     if (document.body.classList.contains('editing')) e.preventDefault();      // no opening while editing

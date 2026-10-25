@@ -37,8 +37,9 @@ def test_put_the_order_back(page, base):
     page.click('#cards > .card[data-id="pots"] h2 .handle')
     page.keyboard.press("ArrowUp")
     page.wait_for_timeout(200)
+    page.click("#editreset")                       # v0.46: Reset lives in the editing pill, asks first
     with page.expect_navigation():
-        page.click('form[action="/layout/reset"] button')
+        sheet(page)
     page.wait_for_load_state()
     assert card_ids(page) == before
     assert "layout" not in stored(page)

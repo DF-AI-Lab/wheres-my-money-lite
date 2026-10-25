@@ -29,7 +29,7 @@ def test_back_also_leaves_move_and_rename(page, base):
     page.click("#setbtn")
     page.click("#editbtn")
     assert page.evaluate("document.body.classList.contains('editing')")
-    page.click("#setback")
+    page.click("#editdone")                         # v0.46: the menu closes while editing; the pill's Done leaves
     assert not page.evaluate("document.body.classList.contains('editing')")
     assert page.locator("#setmenu").is_hidden()
     assert "Move" in page.locator("#editbtn").inner_text()
