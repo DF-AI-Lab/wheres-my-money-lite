@@ -171,6 +171,8 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   jumped back (Darren: 'flickers'). lite.js backToPlace: placeNow() right after render in start(), again after DOMContentLoaded
   (setTimeout, after the lock opens) and on load; page content hidden (style body > * visibility) until placed, 1.5 s max;
   stops re-placing once the person scrolls (wheel/touch/key). Tests 78 node + 168 browser (test_v041.py).
+- **25 Oct: GOOGLE BRANDING DONE + APP PUBLISHED (In production, External, no logo = no review).** Home page /wheres-my-money-lite/,
+  privacy /wheres-my-money-lite/privacy.html, authorised domain df-ai-lab.github.io. Any Gmail can now Connect Drive (not only test users).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
