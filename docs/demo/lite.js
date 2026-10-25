@@ -305,7 +305,7 @@
     try {
       const r = await driveFetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)');
       const e = r.ok && ((await r.json()).user || {}).emailAddress;
-      if (e) lsSet(DRIVE_EMAIL, e);
+      if (e) { lsSet(DRIVE_EMAIL, e); driveMenu(); }
     } catch (e) { /* ask next time */ }
   }
   async function driveFetch(url, opts) {
@@ -417,6 +417,15 @@
     el.title = SIGN[st.split(' ')[0]];
     el.hidden = false;
   }
+  // v0.42 the Settings line under Google Drive: On + the Gmail, or Off
+  function driveMenu() {
+    const sub = document.querySelector('#drivelink .sub');
+    if (!sub) return;
+    const email = lsGet(DRIVE_EMAIL);
+    if (!lsGet(DRIVE_ON)) { sub.textContent = 'Off · tap to connect'; return; }
+    sub.innerHTML = '<span class="on">● On</span>';
+    if (email) sub.append(' · ' + email);
+  }
   // v0.40: send 1 minute after the last change (a PC window side by side is never hidden)
   let driveTimer = 0;
   function driveSoon() {
@@ -447,7 +456,7 @@
     }));
     document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.hidden = false; driveShow(true); }));
     document.getElementById('driveload').addEventListener('click', run(driveLoad));
-    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); });
+    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); driveMenu(); });
   }
   // the quiet reconnect: the first tap of a visit (a popup needs a tap), when Drive was connected before
   function driveWake() {
@@ -466,7 +475,7 @@
     if (document.visibilityState !== 'hidden' || leaving) return;
     driveAuto(true);
   });
-  document.addEventListener('DOMContentLoaded', () => { driveSign(); driveSoon(); });
+  document.addEventListener('DOMContentLoaded', () => { driveSign(); driveSoon(); driveMenu(); });
   document.addEventListener('DOMContentLoaded', driveWake);
   document.addEventListener('DOMContentLoaded', driveStart);
 

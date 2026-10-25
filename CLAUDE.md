@@ -173,6 +173,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   stops re-placing once the person scrolls (wheel/touch/key). Tests 78 node + 168 browser (test_v041.py).
 - **25 Oct: GOOGLE BRANDING DONE + APP PUBLISHED (In production, External, no logo = no review).** Home page /wheres-my-money-lite/,
   privacy /wheres-my-money-lite/privacy.html, authorised domain df-ai-lab.github.io. Any Gmail can now Connect Drive (not only test users).
+- **25 Oct v0.42 (demo only; live still v0.41): Settings menu = mock B + A's grey lines** (https://claude.ai/artifact/8DuomnL4XwHkyLsUHSJjEi).
+  index.html: .grp groups with p.sethead 'On this phone' (Save / Load backup), 'Cloud' (☁️ Google Drive backup), 'Lock' (fingerprint,
+  codes, Lock now), Install last; span.sub grey line in each button. lite.js driveMenu(): '● On · Gmail' / 'Off · tap to connect';
+  lockui.js fpMenu(): 'Set up fingerprint' / 'Fingerprint · ● On for this phone'. CSS hides a .grp with no visible .small (:has).
+  Tests 78 node + 172 browser (test_v042.py). NEXT: Darren picks a lock-screen name mock (Lock 1 'Hi Darren 👋' big / Lock 2
+  letter badge + 'Welcome back'); name typed with the first passcode, kept on the phone only, Settings → ✏️ Your name.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

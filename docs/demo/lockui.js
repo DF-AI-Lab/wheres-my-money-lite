@@ -161,6 +161,15 @@
     const has = !!(rec.passkeys && rec.passkeys.length);
     $('fpok').hidden = !has;
     $('fpoff').hidden = !has;
+    fpMenu();
+  }
+  // v0.42 the Settings line says if the fingerprint is on yet
+  function fpMenu() {
+    const b = $('fingerprint'), r = load();
+    if (!b) return;
+    const has = !!(r && r.passkeys && r.passkeys.length);
+    b.innerHTML = has ? '👆 Fingerprint<span class="sub"><span class="on">● On</span> for this phone</span>'
+      : '👆 Set up fingerprint<span class="sub">Open the app with your finger</span>';
   }
   async function addFinger() {
     say('');
@@ -193,6 +202,7 @@
       const g = $('locknow') && $('locknow').parentElement; if (g) g.hidden = true;
       return;
     }
+    fpMenu();
     on('pinform', 'submit', onNewPin);
     on('unlockform', 'submit', onUnlock);
     on('codeform', 'submit', onCode);

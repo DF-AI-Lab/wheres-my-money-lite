@@ -359,3 +359,8 @@ body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
   .savesign.saving .arr, .savesign.saved.pop svg { animation: none; }
   .savesign.saved.pop .tick path { animation: none; stroke-dashoffset: 0; }
 }
+/* v0.42 Settings (mock B + A's grey lines): headings, a grey line under each, a group with nothing shown goes */
+.setmenu .sethead { margin: 2px 2px 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.setmenu .small .sub { display: block; margin: 2px 0 0; font-size: 12px; font-weight: 500; color: var(--muted); white-space: normal; }
+.setmenu .grp:not(:has(> .small:not([hidden]))) { display: none; }
+.setmenu .sub .on { color: var(--good); font-weight: 700; }
