@@ -389,11 +389,6 @@ body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
 #account .accconnect[hidden], #account .accbtns[hidden] { display: none; }
 
 /* v0.45 🔁 keep my devices in step (TEST, only after ?beta=sync) */
-#drive .syncbox { margin: 14px 0 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
-#drive .syncrow { display: flex; flex-direction: row; align-items: center; gap: 10px; font-weight: 700; cursor: pointer; }
-#drive .syncrow input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
-#drive .syncbox .beta { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 5px; }
-#drive .syncbox .hint { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
 .synctoast { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px;
              max-width: calc(100% - 32px); box-sizing: border-box; padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--bg);
              font-weight: 600; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
@@ -498,3 +493,29 @@ tr.potbill.over .potbar i { background: var(--bad); }
 .st-rows .r.pots > span:first-child { white-space: nowrap; }
 .st-rows .r.pots .potnote { display: inline; color: var(--bad); font-weight: 700; margin-left: 2px; }
 .st-rows .r.pots.over .potword, .st-rows .r.pots.over .k-pot { color: var(--bad); font-weight: 800; }
+
+/* v0.55 the Drive tab holds it all: ⬇️ Download from Drive + 🔗 Paired devices (mock XvEVsgGDZzfsVTLCdSFroq) */
+#drive .sub { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+#drive .pairbox, #drive .pairjoin { margin: 14px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#drive .pairbox h2, #drive .pairjoin h2, #drive .pairscreen h2 { font-size: 18px; margin: 0; }
+#drive .pairhead { display: flex; align-items: center; gap: 8px; }
+#drive .pairbox .beta { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+#drive .hint { color: var(--muted); font-size: 14px; margin: 6px 0 10px; }
+#drive .pairrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px dashed var(--border); }
+#drive .pairrow > span { flex: 1; min-width: 0; }
+#drive .pairrow button.unpair { width: auto; margin: 0; }
+#drive .pairlist { margin: 0 0 10px; }
+#drive .pairbox.locked #pairgo { opacity: .5; cursor: not-allowed; }
+#drive .pairbox.locked .pairsoon { text-align: center; font-size: 13px; }
+#drive .paircodeform label { display: block; font-size: 14px; color: var(--muted); margin: 6px 0; }
+#drive .pairrow2 { display: flex; gap: 8px; }
+#drive .pairrow2 input { flex: 1; min-width: 0; font-size: 18px; letter-spacing: .1em; }
+#drive .pairrow2 button { width: auto; margin: 0; }
+#drive.pairing #driveset > :not(#pairscreen), #drive.pairing > .tag, #drive.pairing > h1, #drive.pairing > .drivepp { display: none; }
+#drive button .sub { color: inherit; opacity: .75; }
+#drive .pairscreen { text-align: center; }
+#drive .pairqr { display: inline-block; background: #fff; padding: 10px; border-radius: 14px; margin: 4px auto 10px; line-height: 0; }
+#drive .pairqr svg { width: 220px; height: 220px; max-width: 100%; }
+#drive .pairor { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted); margin: 6px 0 0; }
+#drive .pairnum { font-size: 34px; font-weight: 800; letter-spacing: .14em; color: var(--accent); margin: 2px 0; }
+#drive .pairwait { border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: left; font-size: 14px; }

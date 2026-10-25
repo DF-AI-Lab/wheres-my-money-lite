@@ -403,14 +403,25 @@
     if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
     await loadBackup(await r.text());
   }
+  async function driveDownload() {                                 // v0.55: the newest Drive copy as a file here
+    const list = await driveList();
+    if (!list.length) throw new Error('There is no copy in your Google Drive yet. Save one first.');
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(list[0].id)}?alt=media`);
+    if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([await r.text()], {type: 'application/json'})); a.download = list[0].name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    return list[0].name;
+  }
   function driveShow(connected) {
     const set = (id, hide) => { const el = document.getElementById(id); if (el) el.hidden = hide; };
     set('driveconnect', connected); set('drivesave', !connected); set('driveload', !connected);
-    set('driveauto', !connected); set('driveoff', !connected);
+    set('driveauto', !connected); set('driveoff', !connected); set('drivedl', !connected);
     const last = document.getElementById('drivelast'), at = lsGet(DRIVE_LAST);
     if (last) last.textContent = at ? 'last saved ' + localTime(at) : 'saves a minute after a change';
     driveSign();
-    syncBox();
+    pairBox();
   }
   function localTime(iso) {                                       // v0.40: UK time (BST or GMT), not the UTC in the string
     const d = new Date(iso), z = n => String(n).padStart(2, '0');
@@ -533,7 +544,9 @@
       await driveConnect(false);
       driveShow(true);
     }));
-    document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.hidden = false; driveShow(true); }));
+    document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.textContent = '✅ Saved to your Drive.'; ok.hidden = false; driveShow(true); }));
+    document.getElementById('drivedl').addEventListener('click', run(async () => { const n = await driveDownload(); ok.textContent = '✅ Downloaded: ' + n; ok.hidden = false; }));
+    pairStart(run);
     document.getElementById('driveload').addEventListener('click', run(driveLoad));
     document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); driveMenu(); accMenu(); });
   }
@@ -612,7 +625,7 @@
       const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
       if (!r.ok) return;
       const theirs = await driveOpen(await r.text());
-      if (!theirs) { if (first) { lsSet(DRIVE_SYNC, null); syncBox(); } return; }
+      if (!theirs) { if (first) { lsSet(DRIVE_SYNC, null); pairBox(); } return; }
       if (bare(theirs) === bare(state)) { lsSet(DRIVE_SYNCED, st); driveSoon(); return; }
       if (first || lsGet(DRIVE_DIRTY)) {
         const pick = first
@@ -620,7 +633,7 @@
                                     '☁️ The copy in Drive', '📱 This device')
           : await root.Sheet.choose('🔁 Changes on both devices', 'Your other device saved changes while this one had changes not sent yet. Which copy do you want to keep?',
                                     "☁️ Use the other device's copy", "📱 Keep this device's copy");
-        if (pick === null) { syncLater = true; if (first) { lsSet(DRIVE_SYNC, null); syncBox(); } return; }
+        if (pick === null) { syncLater = true; if (first) { lsSet(DRIVE_SYNC, null); pairBox(); } return; }
         if (pick === 'b') { lsSet(DRIVE_SYNCED, st); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); after = () => driveSave(false); return; }
       }
       syncUse(theirs, st);
@@ -629,12 +642,6 @@
       syncBusy = false;
       if (after) after().catch(() => {});
     }
-  }
-  function syncBox() {                                             // the TEST switch in ?view=drive
-    const box = document.getElementById('syncbox'), t = document.getElementById('synctoggle');
-    if (!box) return;
-    box.hidden = !lsGet(BETA) || !lsGet(DRIVE_ON);
-    t.checked = syncOn();
   }
   function syncToast() {                                           // after a copy from the other device: ↩️ Undo
     let shown = false;
@@ -656,15 +663,197 @@
       leave();
     });
   }
-  function syncStart() {
-    syncBox(); syncToast();
-    const t = document.getElementById('synctoggle');
-    if (t) t.addEventListener('change', () => {
-      if (!t.checked) { lsSet(DRIVE_SYNC, null); lsSet(DRIVE_SYNCED, null); return; }
-      lsSet(DRIVE_SYNC, '1'); syncLater = false;
-      (getToken() ? Promise.resolve() : loadGsi().then(() => driveConnect(true)))
-        .then(() => syncCheck(true), () => { lsSet(DRIVE_SYNC, null); syncBox(); });
+  function syncTurnOn() {                                          // 'which copy to start with?' if they differ
+    lsSet(DRIVE_SYNC, '1'); syncLater = false;
+    return (getToken() ? Promise.resolve() : loadGsi().then(() => driveConnect(true)))
+      .then(() => syncCheck(true), () => { lsSet(DRIVE_SYNC, null); pairBox(); });
+  }
+  function syncTurnOff() { lsSet(DRIVE_SYNC, null); lsSet(DRIVE_SYNCED, null); lsSet(DRIVE_PAIRED, null); pairBox(); }
+  root.LiteSync = {on: syncTurnOn, off: syncTurnOff};              // (tests turn it on without pairing)
+
+  // ---------- v0.55 🔗 pair a device (mock https://claude.ai/artifact/XvEVsgGDZzfsVTLCdSFroq) ----------
+  // No server: the two devices meet in the same Google Drive. The device showing the code writes a pair note
+  // {code, exp, from, copy} (copy = its backup, scrambled like the Drive copy; an unpaired device's auto-save may have
+  // written over the month file meanwhile). The other device (camera link ?pair=CODE, or the code typed) checks it, picks
+  // which money to keep (the sharing device's first), sends that to Drive, marks the note joined, and both stay in step.
+  // TEST: ?beta=sync only.
+  const PAIR_FILE = demo ? 'wmm-lite-demo-pair.json' : 'wmm-lite-pair.json', DRIVE_PAIRED = DK('paired');
+  const PAIR_MINS = 10;
+  try {                                                            // the camera link opens the Drive tab
+    const u = new URL(location.href);
+    if (u.searchParams.get('pair') && u.searchParams.get('view') !== 'drive') { u.searchParams.set('view', 'drive'); location.replace(u.toString()); }
+  } catch (e) { /* ignore */ }
+  function deviceName() {
+    const u = navigator.userAgent;
+    return /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android phone'
+      : /Windows/.test(u) ? 'Windows PC' : /Mac/.test(u) ? 'Mac' : 'Computer';
+  }
+  const pairedList = () => { try { return JSON.parse(lsGet(DRIVE_PAIRED)) || []; } catch (e) { return []; } };
+  function pairedAdd(name) {
+    const l = pairedList().filter(p => p.name !== name);
+    l.push({name: String(name || 'Other device').slice(0, 40), at: new Date().toISOString()});
+    lsSet(DRIVE_PAIRED, JSON.stringify(l));
+  }
+  async function pairRead() {                                      // the pair note in Drive, or null
+    const q = encodeURIComponent(`name='${PAIR_FILE}' and trashed=false`);
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+    const f = r.ok ? ((await r.json()).files || []).find(x => x.name === PAIR_FILE) : null;
+    if (!f) return null;
+    const t = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    try { return t.ok ? Object.assign(JSON.parse(await t.text()), {id: f.id}) : null; } catch (e) { return null; }
+  }
+  async function pairWrite(note, id) {
+    const b = 'wmm' + Date.now(), meta = id ? {name: PAIR_FILE} : {name: PAIR_FILE, mimeType: 'application/json'};
+    const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+                 `--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(note)}\r\n--${b}--`;
+    const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id`,
+      {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body});
+    if (!r.ok) throw new Error('Google Drive would not take the pair code (error ' + r.status + ').');
+    return ((await r.json().catch(() => ({}))).id) || id;
+  }
+  const pairGone = id => (id ? driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}`, {method: 'DELETE'}).catch(() => {}) : Promise.resolve());
+  async function driveReady() {                                    // a token: quiet when connected before, else sign in
+    await loadGsi();
+    if (getToken()) return;
+    if (lsGet(DRIVE_ON) && lsGet(DRIVE_EMAIL)) { try { await driveConnect(true); return; } catch (e) { /* ask */ } }
+    await driveConnect(false);
+  }
+  function loadQr() {
+    return new Promise((resolve, reject) => {
+      if (root.qrcode) return resolve(root.qrcode);
+      const s = document.createElement('script');
+      s.src = 'qrcode.js'; s.onload = () => resolve(root.qrcode); s.onerror = () => reject(new Error('Could not make the QR code.'));
+      document.head.appendChild(s);
     });
+  }
+  function pairBox() {                                             // the Paired devices card in ?view=drive
+    const box = document.getElementById('pairbox');
+    if (!box) return;
+    const beta = !!lsGet(BETA), list = document.getElementById('pairlist');
+    box.hidden = !lsGet(DRIVE_ON);
+    box.classList.toggle('locked', !beta);                         // everyone sees it greyed out; ?beta=sync can use it
+    document.getElementById('pairgo').disabled = !beta;
+    document.getElementById('pairsoon').hidden = beta;
+    document.getElementById('paircodeform').hidden = !beta;
+    box.querySelector('.beta').textContent = beta ? 'TEST' : 'In development';
+    const rows = [{name: 'This device', note: deviceName(), me: true}];
+    const last = lsGet(DRIVE_LAST), step = syncOn() ? 'In step' + (last ? ' · ' + localTime(last) : '') : 'Not in step';
+    const paired = pairedList();
+    paired.forEach(p => rows.push({name: p.name, note: step}));
+    if (syncOn() && !paired.length) rows.push({name: 'Your other device', note: step});
+    list.textContent = '';
+    rows.forEach(r => {
+      const row = document.createElement('div'), txt = document.createElement('span'), n = document.createElement('b'), sub = document.createElement('span');
+      row.className = 'pairrow'; sub.className = 'sub'; n.textContent = r.name; sub.textContent = r.note;
+      txt.append(n, sub); row.append(txt);
+      if (!r.me) {
+        const u = document.createElement('button');
+        u.type = 'button'; u.className = 'small unpair'; u.textContent = 'Unpair';
+        u.addEventListener('click', async () => {
+          if (!await root.Sheet.confirm('Unpair ' + r.name + '?', 'This device stops following it. The money here stays as it is.', 'Unpair', true)) return;
+          const l = pairedList().filter(p => p.name !== r.name);
+          if (l.length) { lsSet(DRIVE_PAIRED, JSON.stringify(l)); pairBox(); } else syncTurnOff();
+        });
+        row.append(u);
+      }
+      list.append(row);
+    });
+  }
+  let pairTimer = 0, pairNote = null;
+  function pairClose() {
+    clearTimeout(pairTimer);
+    document.getElementById('pairscreen').hidden = true;
+    document.getElementById('drive').classList.remove('pairing');
+  }
+  async function pairShare() {                                     // this device shares: its money, a code + QR
+    await driveReady();
+    const n = new Uint32Array(1); root.crypto.getRandomValues(n);
+    const code = String(n[0] % 1000000).padStart(6, '0'), exp = Date.now() + PAIR_MINS * 60000;
+    const old = await pairRead().catch(() => null);
+    const note = {code, exp, from: deviceName()};
+    note.id = await pairWrite({code, exp, from: note.from, copy: await backupFile()}, old && old.id);
+    pairNote = note;
+    const url = location.origin + location.pathname + '?pair=' + code;
+    try {
+      const qr = (await loadQr())(0, 'M');
+      qr.addData(url); qr.make();
+      document.getElementById('pairqr').innerHTML = qr.createSvgTag(6, 2);
+    } catch (e) { document.getElementById('pairqr').textContent = ''; }
+    document.getElementById('pairnum').textContent = code.slice(0, 3) + ' ' + code.slice(3);
+    const mail = lsGet(DRIVE_EMAIL);
+    document.getElementById('pairmail').textContent = mail ? 'It will use ' + mail : 'Use the same Google account on it';
+    document.getElementById('pairwait').firstChild.textContent = '⏳ Waiting for your other device…';
+    document.getElementById('drive').classList.add('pairing');
+    document.getElementById('pairscreen').hidden = false;
+    pairPoll(note);
+  }
+  function pairPoll(note) {
+    pairTimer = setTimeout(async () => {
+      if (pairNote !== note) return;
+      let p = null;
+      try { p = await pairRead(); } catch (e) { /* offline: look again */ }
+      if (pairNote !== note) return;
+      if (p && p.code === note.code && p.joined) {
+        pairNote = null; pairGone(p.id);
+        lsSet(BETA, '1'); lsSet(DRIVE_SYNC, '1'); pairedAdd(p.joined);
+        pairClose(); pairBox();
+        await syncCheck();                                         // they kept their own money: it comes over here (a reload)
+        root.Sheet.tell('✅ Paired', 'This device and your ' + String(p.joined).slice(0, 40) + ' now show the same money.');
+        return;
+      }
+      if (Date.now() > note.exp) {
+        pairNote = null; pairGone(note.id);
+        document.getElementById('pairwait').firstChild.textContent = '⌛ The code ran out. Tap Cancel and make a new one.';
+        return;
+      }
+      pairPoll(note);
+    }, root.LITE_PAIR_EVERY || 3000);
+  }
+  async function pairJoin(code) {                                  // this device joins the one showing the code
+    code = String(code || '').replace(/\D/g, '');
+    if (code.length !== 6) throw new Error('Type the 6 numbers from your other device.');
+    await driveReady();
+    const p = await pairRead();
+    if (!p || p.code !== code || p.joined) throw new Error("That code didn't match. Check it on your other device and try again.");
+    if (Date.now() > p.exp) throw new Error('That code has run out. Make a new one on your other device.');
+    const theirs = p.copy ? await driveOpen(JSON.stringify(p.copy)) : null;
+    if (!theirs) throw new Error("Could not open your other device's money. Try again.");
+    const from = String(p.from || 'other device').slice(0, 40), spare = st => M.fmt.money(M.monthEndSpare(st));
+    const pick = bare(theirs) === bare(state) ? 'a'
+      : await root.Sheet.choose('🔗 Which money do you want to keep?', `Your ${from} is sharing its money. Both devices will show the one you pick.`,
+                                `☁️ The ${from}'s · ${spare(theirs)} spare`, `📱 This device's · ${spare(state)} spare`);
+    if (pick === null) return;
+    if (pick === 'a' && bare(theirs) !== bare(state)) {            // like a copy from the other device: ↩️ Undo
+      lsSet(DRIVE_UNDO, JSON.stringify(state));
+      state = theirs; Store.save(theirs);
+      try { root.sessionStorage.setItem('lite_synced', '1'); } catch (e) { /* ignore */ }
+    }
+    lsSet(BETA, '1'); lsSet(DRIVE_SYNC, '1'); pairedAdd(from);
+    lsSet(DRIVE_SYNCED, stampOf((await driveList())[0]));          // the picked money goes up over whatever is there
+    lsSet(DRIVE_DIRTY, String(Date.now()));
+    await driveSave(false);
+    await pairWrite({code: p.code, exp: p.exp, from: p.from, joined: deviceName()}, p.id);   // then the other device follows
+    const u = new URL(location.href); u.searchParams.delete('pair'); history.replaceState(null, '', u.toString());
+    leave();
+  }
+  function pairStart(run) {                                        // the buttons (driveStart: ?view=drive only)
+    const code = new URLSearchParams(location.search).get('pair');
+    if (code) {
+      document.getElementById('pairjoin').hidden = false;
+      document.getElementById('pairjoingo').addEventListener('click', run(() => pairJoin(code)));
+    }
+    document.getElementById('pairgo').addEventListener('click', run(pairShare));
+    document.getElementById('paircancel').addEventListener('click', () => {
+      const n = pairNote; pairNote = null; pairClose();
+      if (n) pairGone(n.id);
+    });
+    document.getElementById('paircodeform').addEventListener('submit', e => {
+      e.preventDefault();
+      run(() => pairJoin(document.getElementById('paircode').value))();
+    });
+  }
+  function syncStart() {
+    pairBox(); syncToast();
     if (syncOn()) setTimeout(() => syncCheck(), 300);
     setInterval(() => { if (document.visibilityState === 'visible') syncCheck(); }, root.LITE_SYNC_EVERY || 30000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { syncLater = false; syncCheck(); } });

@@ -234,7 +234,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **25 Oct v0.54 (demo only; live still v0.53):** Darren asked why phone + PC don't match (Drive backup only saves; each device has its own data).
   '🔁 Keep my devices in step' (#syncbox) now shows to EVERYONE with Drive on, greyed out (.syncbox.locked, input disabled, tag 'In development');
   only a device opened once with ?beta=sync can tick it (tag 'TEST'). test_v045 hidden test changed on purpose. Tests 87 node + 225 browser (test_v054.py).
-- **25 Oct v0.55 (demo only; live still v0.53): Drive tab = all in one (mock https://claude.ai/artifact/XvEVsgGDZzfsVTLCdSFroq).** #drivedl '⬇️ Download
+- **25 Oct v0.55 MOVED TO LIVE (Darren: "move to live"; live = demo = v0.55, so v0.54 too): Drive tab = all in one (mock https://claude.ai/artifact/XvEVsgGDZzfsVTLCdSFroq).** #drivedl '⬇️ Download
   from Drive' (newest Drive file as a file here, everyone). #syncbox/#synctoggle GONE: #pairbox '🔗 Paired devices' (greyed .locked 'In development'
   unless ?beta=sync): rows This device + paired (localStorage DK('paired') [{name,at}], device name from the browser) + Unpair. #pairgo = this device
   SHARES: writes Drive note wmm-lite-pair.json (demo: wmm-lite-demo-pair.json) {code 6 digits, exp 10 min, from, copy = its backupFile()}, shows
