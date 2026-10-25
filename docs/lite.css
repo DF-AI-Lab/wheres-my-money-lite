@@ -519,3 +519,17 @@ tr.potbill.over .potbar i { background: var(--bad); }
 #drive .pairor { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted); margin: 6px 0 0; }
 #drive .pairnum { font-size: 34px; font-weight: 800; letter-spacing: .14em; color: var(--accent); margin: 2px 0; }
 #drive .pairwait { border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: left; font-size: 14px; }
+
+/* v0.56 daily safety copies + Save/Load tucked under 'More options' */
+#drive .safebox { margin: 14px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#drive .safebox h2 { font-size: 18px; margin: 0; }
+#drive .saferow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--border); }
+#drive .saferow > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#drive .saferow .sub { font-size: 12px; color: var(--muted); }
+#drive .saferow button { width: auto; margin: 0; }
+#drive #safeall { margin-top: 8px; }
+#drive .drivemore { margin: 14px 0 0; text-align: left; }
+#drive .drivemore summary { cursor: pointer; color: var(--muted); font-size: 14px; font-weight: 700; padding: 8px 0; display: flex; align-items: center; justify-content: flex-start; gap: 6px; list-style: none; }
+#drive .drivemore summary::-webkit-details-marker { display: none; }
+#drive .drivemore summary::before { content: '▸'; transition: transform .15s; }
+#drive .drivemore[open] summary::before { transform: rotate(90deg); }
