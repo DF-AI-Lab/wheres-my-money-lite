@@ -20,7 +20,7 @@ def drive(page):
 
     def gone(fid):                                                     # in the bin, or inside a binned folder
         f = d["files"].get(fid, {})
-        return f.get("trashed") or any(d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))
+        return f.get("trashed") or any(gone(p) for p in f.get("parents", []) if p in d["files"])   # (v0.56: any level up)
 
     def api(route):
         req, url = route.request, route.request.url
@@ -55,17 +55,18 @@ def connect(page, base):
     page.add_init_script("window.LITE_CONFIG = {googleClientId: 'test-client.apps.googleusercontent.com'};")
     page.goto(base + TODAY + "&view=drive")
     page.click("#driveconnect")
-    page.wait_for_selector("#drivesave:not([hidden])")
+    page.wait_for_selector("#drivesave:not([hidden])", state="attached")
 
 
 def backups(d):
-    return [f for f in d["files"].values() if f["mimeType"] != FOLDER]
+    return [f for f in d["files"].values() if f["mimeType"] != FOLDER
+            and not f["name"].startswith("wmm-lite-safety")]          # v0.56: the daily safety copy is its own thing
 
 
 def test_backups_go_in_one_folder(page, base):
     d = drive(page)
     connect(page, base)
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
     folders = [(i, f) for i, f in d["files"].items() if f["mimeType"] == FOLDER]
     assert [f["name"] for _, f in folders] == ["Where's My Money Lite"]
@@ -75,7 +76,7 @@ def test_backups_go_in_one_folder(page, base):
     page.evaluate("s => { const x = JSON.parse(localStorage.getItem('lite_state_v1')); x.payday = '2024-12-25';"
                   " localStorage.setItem('lite_state_v1', JSON.stringify(x)); }", None)
     page.reload()
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
     assert len([f for f in d["files"].values() if f["mimeType"] == FOLDER]) == 1
 
@@ -86,7 +87,7 @@ def test_save_then_hide_at_once_makes_one_file(page, base):
     page.goto(base + TODAY)
     post(page, 'form[action="/add"]', {"amount": "3", "name": "Twice"})
     page.goto(base + TODAY + "&view=drive")
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     hide(page)
     page.wait_for_timeout(800)
     assert len(backups(d)) == 1, d["files"]
@@ -95,9 +96,9 @@ def test_save_then_hide_at_once_makes_one_file(page, base):
 def test_a_lost_file_id_finds_this_months_file(page, base):
     d = drive(page)
     connect(page, base)
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
     page.evaluate("localStorage.removeItem('lite_drive_file')")      # e.g. a new phone, or site data cleared
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_timeout(800)
     assert len(backups(d)) == 1

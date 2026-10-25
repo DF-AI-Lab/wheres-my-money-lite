@@ -113,8 +113,8 @@ def test_demo_drive_copy_is_its_own_file_never_the_live_one(phone, site):
     fake_google(phone, files)
     phone.goto(site + "demo/" + TODAY + "&view=drive")
     phone.click("#driveconnect")
-    phone.wait_for_selector("#drivesave:not([hidden])")
-    phone.click("#drivesave")
+    phone.wait_for_selector("#drivesave:not([hidden])", state="attached")
+    phone.locator("#drivesave").dispatch_event("click")
     phone.wait_for_selector("#driveok:not([hidden])")
     body = files["_uploads"][-1]["body"]
     assert "wheres-my-money-demo-backup " in body and '"wheres-my-money-backup ' not in body

@@ -5,12 +5,13 @@ from test_v038 import drive, connect, FOLDER
 
 def visible(d):
     return [f for i, f in d["files"].items() if f["mimeType"] != FOLDER and not f.get("trashed")
+            and not f["name"].startswith("wmm-lite-safety")                    # v0.56: the daily safety copy is its own thing
             and not any(d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))]
 
 
 def save(page):
     page.locator("#driveok").evaluate("e => e.hidden = true")
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
 
 
@@ -33,5 +34,9 @@ def test_a_binned_folder_gets_a_new_one(page, base):
         d["files"][i]["trashed"] = True                                  # the folder and the file binned
     save(page)
     assert len(visible(d)) == 1
-    live = [f for f in d["files"].values() if f["mimeType"] == FOLDER and not f.get("trashed")]
+    live = [f for f in d["files"].values() if f["mimeType"] == FOLDER and not f.get("trashed")
+            and f["name"] != "Safety copies"]                                 # v0.56: made again inside the new folder
     assert len(live) == 1 and visible(d)[0]["parents"] != []
+    safe = [i for i, f in d["files"].items() if f["name"] == "Safety copies" and not f.get("trashed") and not any(
+            d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))]
+    assert len(safe) == 1                                              # v0.56: not left inside the binned folder

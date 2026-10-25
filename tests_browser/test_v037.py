@@ -153,7 +153,7 @@ def connect(page, base):
     page.add_init_script("window.LITE_CONFIG = {googleClientId: 'test-client.apps.googleusercontent.com'};")
     page.goto(base + TODAY + "&view=drive")
     page.click("#driveconnect")
-    page.wait_for_selector("#drivesave:not([hidden])")
+    page.wait_for_selector("#drivesave:not([hidden])", state="attached")
 
 
 def test_auto_save_when_the_app_is_hidden_one_file_per_pay_month(page, base):
@@ -204,6 +204,6 @@ def test_drive_page_says_auto_save_is_on_and_can_turn_it_off(page, base):
     connect(page, base)
     text = page.locator("#drive").inner_text()
     assert "Auto-save is on" in text
-    page.click("#driveoff")
+    page.locator("#driveoff").dispatch_event("click")
     assert page.locator("#driveconnect").is_visible()
     assert page.evaluate("localStorage.getItem('lite_drive_on')") is None

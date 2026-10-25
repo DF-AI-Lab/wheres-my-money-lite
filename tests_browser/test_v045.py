@@ -22,7 +22,8 @@ class Drive:
         return "2024-11-08T10:%02d:%02d.000Z" % (self.t // 60, self.t % 60)
 
     def newest(self):
-        live = [dict(f, id=i) for i, f in self.files.items() if f["mimeType"] != "application/vnd.google-apps.folder"]
+        live = [dict(f, id=i) for i, f in self.files.items()
+                if f["mimeType"] != "application/vnd.google-apps.folder" and f["name"].startswith("wheres-my-money")]
         return sorted(live, key=lambda f: f["modifiedTime"], reverse=True)[0] if live else None
 
     def state(self):
@@ -50,6 +51,13 @@ class Drive:
         if req.method == "GET":
             files = sorted(([dict(f, id=i) for i, f in self.files.items()]), key=lambda f: f["modifiedTime"], reverse=True)
             return ok({"files": [{k: f[k] for k in ("id", "name", "mimeType", "modifiedTime")} for f in files]})
+        if req.method == "POST" and "/copy" in url:                      # v0.56: the daily safety copy
+            src = self.files[url.split("/files/")[1].split("/copy")[0]]
+            meta = json.loads(req.post_data or "{}")
+            self.n += 1
+            fid = "f%d" % self.n
+            self.files[fid] = dict(src, name=meta.get("name", src["name"]), parents=meta.get("parents", []), modifiedTime=self.tick())
+            return ok({"id": fid, "name": self.files[fid]["name"]})
         if req.method in ("POST", "PATCH"):
             body = req.post_data
             if "upload/" in url:
@@ -60,7 +68,7 @@ class Drive:
             if req.method == "POST":
                 self.n += 1
                 fid = "f%d" % self.n
-                self.files[fid] = {"name": meta["name"], "mimeType": meta.get("mimeType", "")}
+                self.files[fid] = {"name": meta["name"], "mimeType": meta.get("mimeType", ""), "parents": meta.get("parents", [])}
             else:
                 fid = url.split("/files/")[1].split("?")[0]
             self.files[fid].update(text=text, modifiedTime=self.tick())
@@ -86,14 +94,14 @@ def device(browser, drive, lock=None, wait=300, every=400):
 def connect(pg, base):
     pg.goto(base + TODAY + "&view=drive")
     pg.click("#driveconnect")
-    pg.wait_for_selector("#drivesave:not([hidden])")
+    pg.wait_for_selector("#drivesave:not([hidden])", state="attached")
 
 
 def sync_on(pg, base):
     pg.goto(base + TODAY + "&beta=sync&view=drive")
     if pg.locator("#driveconnect").is_visible():
         pg.click("#driveconnect")
-        pg.wait_for_selector("#drivesave:not([hidden])")
+        pg.wait_for_selector("#drivesave:not([hidden])", state="attached")
     pg.evaluate("void LiteSync.on()")                                      # v0.55: pairing turns it on (no tick box)
 
 

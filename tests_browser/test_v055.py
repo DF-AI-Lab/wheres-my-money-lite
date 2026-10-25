@@ -14,7 +14,7 @@ def beta(pg, base):
     pg.goto(base + TODAY + "&beta=sync&view=drive")
     if pg.locator("#driveconnect").is_visible():
         pg.click("#driveconnect")
-        pg.wait_for_selector("#drivesave:not([hidden])")
+        pg.wait_for_selector("#drivesave:not([hidden])", state="attached")
 
 
 def share(pg):
@@ -29,7 +29,7 @@ def test_download_from_drive(browser, base):
     d = Drive()
     ctx, pg = device(browser, d)
     connect(pg, base)
-    pg.click("#drivesave")
+    pg.locator("#drivesave").dispatch_event("click")
     pg.wait_for_selector("#driveok:not([hidden])")
     assert pg.locator("#drivedl").is_visible()
     with pg.expect_download() as dl:

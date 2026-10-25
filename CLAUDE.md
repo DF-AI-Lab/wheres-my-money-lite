@@ -242,6 +242,13 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   ?pair=CODE opens view=drive + #pairjoin, or #paircodeform: Sheet.choose keep the SHARING device's money (first) or its own, sends it to Drive,
   marks the note joined; sharer then turns sync on, syncCheck, deletes the note. root.LiteSync {on, off} (tests). Tests 87 node + 229 browser
   (test_v055.py; test_v054 removed, test_v045 uses LiteSync on purpose).
+- **25 Oct v0.56 MOVED TO LIVE (Darren: "build it and send straight to live"): DAILY SAFETY COPIES (Drive was the only copy).** lite.js safeDaily(mainId):
+  before a save PATCHes this month's Drive file, the day's first save copies it (files/{id}/copy) to 'wmm-lite-safety YYYY-MM-DD.json' (demo:
+  wmm-lite-demo-safety) in folder 'Safety copies' inside the app folder (DK('safedir')); once a day (DK('safeday')), never written again, newest 30
+  kept. Names do NOT start with DRIVE_BASE, so Load/newest/sync/prune never see them. A binned folder = find/make the folders again. Drive tab:
+  #safebox list (.saferow Load = loadBackup / ⬇️), #safeall 'Download all' (one JSON {copies:[{day,file}]}); Save/Load/Turn off now inside
+  details#drivemore 'More options'. Any Load (file or Drive) keeps the old money in DK('undo') + toast '📂 Backup loaded ↩️ Undo'. Old Drive
+  tests click the tucked buttons with dispatch_event and ignore safety files on purpose. Tests 87 node + 234 browser (test_v056.py).
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

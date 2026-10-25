@@ -241,6 +241,8 @@
     const s = M.importBackup(obj);
     if (!s) { await root.Sheet.tell('😕 Not a backup', "That is not a Where's My Money backup file."); return; }
     if (!await root.Sheet.confirm('📂 Load this backup?', 'Everything on this phone is replaced with the backup from ' + M.fmt.day(obj.saved) + '.', 'Replace', true)) return;
+    lsSet(DRIVE_UNDO, JSON.stringify(state));                      // v0.56: ↩️ Undo after the reload
+    try { root.sessionStorage.setItem('lite_synced', 'load'); } catch (e) { /* ignore */ }
     Store.save(s);
     location.reload();
   }
@@ -381,7 +383,9 @@
       return {status: r.status, ok: true, id: j.id || id, trashed: !!j.trashed, mt: j.modifiedTime || ''};
     };
     const fresh = async () => { folder = await driveFolder(); return send(null); };
-    let id = saved && saved.name === name ? saved.id : null, r = id ? await send(id) : await fresh();
+    let id = saved && saved.name === name ? saved.id : null;
+    if (id) await safeDaily(id);                                   // v0.56: the day's first save keeps the old copy first
+    let r = id ? await send(id) : await fresh();
     // v0.39: Drive lets you save into a binned file (or a binned folder): that counts as gone too
     if (id && (r.status === 404 || r.trashed)) { id = null; r = await fresh(); }   // deleted in Drive: make a new one
     if (!id && (r.status === 404 || r.trashed) && folder) { lsSet(DRIVE_DIR, null); r = await fresh(); }   // folder gone: a new one
@@ -414,10 +418,105 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
     return list[0].name;
   }
+  // ---------- v0.56 daily safety copies: Drive is the only copy, so a save may never lose an older day ----------
+  // Before the first save of a day writes over the Drive copy, that copy is copied into 'Safety copies' as the day's file.
+  // A day's file is made once and never written again; the newest 30 days are kept.
+  const SAFE_BASE = demo ? 'wmm-lite-demo-safety' : 'wmm-lite-safety', SAFE_DIR = DK('safedir'), SAFE_DAY = DK('safeday');
+  const SAFE_KEEP = 30;
+  async function safeList() {                                      // the safety copies, the newest day first
+    const q = encodeURIComponent(`name contains '${SAFE_BASE}' and trashed=false`);
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+    if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
+    return ((await r.json()).files || []).map(f => Object.assign(f, {day: (/(\d{4}-\d{2}-\d{2})\.json$/.exec(f.name || '') || [])[1]}))
+      .filter(f => f.name.indexOf(SAFE_BASE + ' ') === 0 && f.day).sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
+  }
+  async function safeFolder() {                                    // 'Safety copies' inside the app's folder (found or made once)
+    if (lsGet(SAFE_DIR)) return lsGet(SAFE_DIR);
+    const q = encodeURIComponent(`name='Safety copies' and mimeType='${FOLDER_TYPE}' and trashed=false`);
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name,mimeType)`);
+    let f = r.ok ? ((await r.json()).files || []).find(x => x.name === 'Safety copies' && x.mimeType === FOLDER_TYPE) : null;
+    for (let n = 0; !f && n < 2; n++) {                            // made inside a binned folder = binned: the folder again
+      const top = await driveFolder();
+      const m = await driveFetch(`${DRIVE_API}?fields=id,trashed`, {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(Object.assign({name: 'Safety copies', mimeType: FOLDER_TYPE}, top ? {parents: [top]} : {}))});
+      f = m.ok ? await m.json() : null;
+      if (f && f.trashed) { f = null; lsSet(DRIVE_DIR, null); }
+    }
+    if (f && f.id) lsSet(SAFE_DIR, f.id);
+    return f && f.id;
+  }
+  async function safeDaily(mainId) {                               // never stops the save itself
+    const day = today();
+    if (lsGet(SAFE_DAY) === day) return;
+    try {
+      let list = await safeList();
+      if (!list.some(f => f.day === day)) {
+        const copy = async () => {
+          const dir = await safeFolder().catch(() => null);
+          const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(mainId)}/copy?fields=id,trashed`, {method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(Object.assign({name: `${SAFE_BASE} ${day}.json`}, dir ? {parents: [dir]} : {}))});
+          return r.ok && !(await r.json().catch(() => ({}))).trashed;
+        };
+        // a binned folder (v0.39) = the copy lands in the bin: find or make the folders again
+        if (!await copy()) { lsSet(SAFE_DIR, null); lsSet(DRIVE_DIR, null); if (!await copy()) return; }
+        list = await safeList();
+      }
+      for (const old of list.slice(SAFE_KEEP)) await driveFetch(`${DRIVE_API}/${encodeURIComponent(old.id)}`, {method: 'DELETE'});
+      lsSet(SAFE_DAY, day);
+    } catch (e) { /* try again on the next save */ }
+  }
+  async function safeText(f) {
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    if (!r.ok) throw new Error('Could not read that copy from Google Drive (error ' + r.status + ').');
+    return r.text();
+  }
+  function fileOut(name, text) {                                   // a file to keep on this device
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], {type: 'application/json'})); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+  let safeFiles = [];
+  async function safeShow() {                                      // the list in ?view=drive
+    const list = document.getElementById('safelist'), all = document.getElementById('safeall');
+    if (!list || !getToken()) return;
+    try { safeFiles = await safeList(); } catch (e) { list.innerHTML = '<p class="hint">Could not look in your Drive just now.</p>'; return; }
+    list.textContent = '';
+    all.hidden = !safeFiles.length;
+    if (!safeFiles.length) { list.innerHTML = '<p class="hint">The first one is made the next time the app saves.</p>'; return; }
+    safeFiles.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'saferow';
+      row.innerHTML = '<span><b></b><span class="sub">Start of the day</span></span>' +
+        '<button type="button" class="small safeload">Load</button><button type="button" class="small safedl" aria-label="Download">⬇️</button>';
+      row.querySelector('b').textContent = M.fmt.day(f.day);
+      row.querySelector('.safeload').dataset.id = f.id;
+      row.querySelector('.safedl').dataset.id = f.id;
+      list.append(row);
+    });
+  }
+  function safeStart(run) {
+    const list = document.getElementById('safelist');
+    const pick = id => safeFiles.find(f => f.id === id);
+    list.addEventListener('click', e => {
+      const b = e.target.closest('button'), f = b && pick(b.dataset.id);
+      if (!f) return;
+      if (b.classList.contains('safeload')) run(async () => loadBackup(await safeText(f)))();
+      else run(async () => fileOut(f.name, await safeText(f)))();
+    });
+    document.getElementById('safeall').addEventListener('click', run(async () => {
+      const copies = [];
+      for (const f of safeFiles) { let file = null; try { file = JSON.parse(await safeText(f)); } catch (e) { /* skip */ } copies.push({day: f.day, file}); }
+      fileOut(`${SAFE_BASE} all ${today()}.json`, JSON.stringify({app: 'wheres-my-money-lite', kind: 'safety copies', copies}));
+    }));
+  }
   function driveShow(connected) {
     const set = (id, hide) => { const el = document.getElementById(id); if (el) el.hidden = hide; };
     set('driveconnect', connected); set('drivesave', !connected); set('driveload', !connected);
     set('driveauto', !connected); set('driveoff', !connected); set('drivedl', !connected);
+    set('drivemore', !connected); set('safebox', !connected);
+    if (connected) safeShow();
     const last = document.getElementById('drivelast'), at = lsGet(DRIVE_LAST);
     if (last) last.textContent = at ? 'last saved ' + localTime(at) : 'saves a minute after a change';
     driveSign();
@@ -547,6 +646,7 @@
     document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.textContent = '✅ Saved to your Drive.'; ok.hidden = false; driveShow(true); }));
     document.getElementById('drivedl').addEventListener('click', run(async () => { const n = await driveDownload(); ok.textContent = '✅ Downloaded: ' + n; ok.hidden = false; }));
     pairStart(run);
+    safeStart(run);
     document.getElementById('driveload').addEventListener('click', run(driveLoad));
     document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); driveMenu(); accMenu(); });
   }
@@ -645,11 +745,11 @@
   }
   function syncToast() {                                           // after a copy from the other device: ↩️ Undo
     let shown = false;
-    try { shown = root.sessionStorage.getItem('lite_synced') === '1'; root.sessionStorage.removeItem('lite_synced'); } catch (e) { /* ignore */ }
+    try { shown = root.sessionStorage.getItem('lite_synced'); root.sessionStorage.removeItem('lite_synced'); } catch (e) { /* ignore */ }
     if (!shown) return;
     const t = document.createElement('div');
     t.className = 'synctoast'; t.setAttribute('role', 'status');
-    t.innerHTML = '<span>🔁 Updated from your other device</span>' + (lsGet(DRIVE_UNDO) ? '<button type="button" class="syncundo">↩️ Undo</button>' : '');
+    t.innerHTML = (shown === 'load' ? '<span>📂 Backup loaded</span>' : '<span>🔁 Updated from your other device</span>') + (lsGet(DRIVE_UNDO) ? '<button type="button" class="syncundo">↩️ Undo</button>' : '');
     document.body.appendChild(t);
     const gone = setTimeout(() => t.remove(), 10000);
     const u = t.querySelector('.syncundo');

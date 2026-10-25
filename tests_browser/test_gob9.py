@@ -62,9 +62,9 @@ def test_save_a_scrambled_copy_to_drive(page, base):
     fake_google(page, files)
     drive_view(page, base, spend="PlainCheck")
     page.click("#driveconnect")
-    page.wait_for_selector("#drivesave:not([hidden])")
+    page.wait_for_selector("#drivesave:not([hidden])", state="attached")
     assert page.evaluate("window.__scope") == "https://www.googleapis.com/auth/drive.file"   # only files this app made
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
     up = files["_uploads"][-1]
     assert "PlainCheck" not in up["body"] and "scrambled" in up["body"]     # never plain data in Drive
@@ -73,7 +73,7 @@ def test_save_a_scrambled_copy_to_drive(page, base):
     assert open_scrambled(sealed, PIN)["spends"][0]["name"] == "PlainCheck"
     assert "wheres-my-money-backup Nov 2024.json" in body             # v0.37: one file per pay month, the same name all month
     # saving again updates the same file (PATCH), it does not make a new one each time
-    page.click("#drivesave")
+    page.locator("#drivesave").dispatch_event("click")
     page.wait_for_timeout(500)
     assert files["_uploads"][-1]["method"] == "PATCH" and "/files/file1" in files["_uploads"][-1]["url"]
 
@@ -92,8 +92,8 @@ def test_load_the_copy_back_from_drive(page, base, tmp_path):
     fake_google(page, files)
     drive_view(page, base)
     page.click("#driveconnect")
-    page.wait_for_selector("#driveload:not([hidden])")
-    page.click("#driveload")
+    page.wait_for_selector("#driveload:not([hidden])", state="attached")
+    page.locator("#driveload").dispatch_event("click")
     sheet(page, PIN)
     with page.expect_navigation():
         sheet(page)
