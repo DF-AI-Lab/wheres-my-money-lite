@@ -37,9 +37,10 @@
 
   // one pot line (Darren, 22 Oct): what is left in the pots, less any pot that went over
   function potsLine(r) {
-    const net = r.potsLeft - r.potsOver;
-    const over = r.potsOver > 0.004 ? ` <span class="labels">(${money(r.potsOver)} over)</span>` : '';
-    return `<div class="r pots"><span><i class="dot pot"></i>${net < -0.004 ? 'Pots over' : 'Pots left'}${over} ${infoBtn('Pot money still left to spend this month (less any pot that went over).')}</span><span class="k-pot" id="st-potleft">${money(Math.abs(net))}</span></div>`;
+    const net = r.potsLeft - r.potsOver, isOver = net < -0.004;
+    // v0.53: 'Pots over' + amount in red with a minus (dot stays orange); the ⓘ stays on the name line
+    const over = !isOver && r.potsOver > 0.004 ? ` <span class="labels potnote">${money(r.potsOver)} over</span>` : '';
+    return `<div class="r pots${isOver ? ' over' : ''}"><span><i class="dot pot"></i><span class="potword">${isOver ? 'Pots over' : 'Pots left'}</span> ${infoBtn('Pot money still left to spend this month (less any pot that went over).')}${over}</span><span class="k-pot" id="st-potleft">${isOver ? '−' : ''}${money(Math.abs(net))}</span></div>`;
   }
 
   // one tile per card; only the first keeps the ids the page script and tests look for
