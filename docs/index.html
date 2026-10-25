@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.51"></script>
-<script src="money.js?v=0.51"></script>
-<script src="render.js?v=0.51"></script>
-<script src="sheet.js?v=0.51"></script>
-<script src="lite.js?v=0.51"></script>
-<script src="lock.js?v=0.51"></script>
-<script src="lockui.js?v=0.51"></script>
+<script src="config.js?v=0.52"></script>
+<script src="money.js?v=0.52"></script>
+<script src="render.js?v=0.52"></script>
+<script src="sheet.js?v=0.52"></script>
+<script src="lite.js?v=0.52"></script>
+<script src="lock.js?v=0.52"></script>
+<script src="lockui.js?v=0.52"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.51">
-<link rel="stylesheet" href="lite.css?v=0.51">
+<link rel="stylesheet" href="look.css?v=0.52">
+<link rel="stylesheet" href="lite.css?v=0.52">
 </head>
 <body class="demo">
 
@@ -258,7 +258,7 @@
       <g class="arr"><path d="M10 12V7M7.8 9.2 10 7l2.2 2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>
       <g class="tick"><path d="M7.3 10l1.9 1.8 3.6-3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g>
       <g class="dot"><circle cx="10" cy="10" r="1.8"/></g></svg></span></div></div></a>
-    <div class="settings"><button type="button" class="small" id="setbtn" aria-expanded="false" aria-controls="setmenu">⚙ Settings</button>
+    <div class="settings"><button type="button" class="small" id="setbtn" aria-expanded="false" aria-controls="setmenu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</button>
       <div class="bellmenu" id="bellmenu" hidden></div>
       <div class="setmenu" id="setmenu" hidden>
         <button type="button" class="small" id="setback">⬅️ Back</button>
@@ -271,14 +271,16 @@
           <button type="button" class="small" id="loadbackup">📂 Load backup<span class="sub">Open a backup file from this phone</span></button>
           <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
           <div class="grp"><p class="sethead">Cloud</p>
-          <a class="small" id="drivelink" href="?view=drive" data-view="drive">☁️ Google Drive backup<span class="sub">Off · tap to connect</span></a></div>
+          <a class="small" id="drivelink" href="?view=drive" data-view="drive">☁️ Google Drive backup<span class="sub">Off · tap to connect</span></a>
+          <button type="button" id="driveinfo" class="infobtn" aria-expanded="false" aria-controls="drivenote" aria-label="No Google account?"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>
+          <p class="drivenote" id="drivenote" hidden>No Google account? It's free and takes 2 minutes.<a href="https://accounts.google.com/signup" target="_blank" rel="noopener">Make a Google account →</a></p></div>
           <div class="grp"><p class="sethead">Lock</p>
           <button type="button" class="small" id="fingerprint">👆 Set up fingerprint<span class="sub">Open the app with your finger</span></button>
           <button type="button" class="small" id="newcodes">🔑 New backup codes<span class="sub">If you forget your passcode</span></button>
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.51</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.52</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -307,6 +309,9 @@
       btn.addEventListener('click', e => { e.stopPropagation(); show(menu.hidden); });
       document.addEventListener('click', e => { if (!menu.contains(e.target) && !document.body.classList.contains('editing')) show(false); });
       document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.body.classList.contains('editing')) show(false); });
+      // v0.52: ⓘ by Google Drive = 'no Google account? make one' (opens a note, not the Drive page)
+      const info = document.getElementById('driveinfo'), note = document.getElementById('drivenote');
+      if (info) info.addEventListener('click', () => { note.hidden = !note.hidden; info.setAttribute('aria-expanded', !note.hidden); });
     });
   </script>
   

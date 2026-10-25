@@ -503,7 +503,7 @@
     const email = lsGet(DRIVE_EMAIL);
     if (!lsGet(DRIVE_ON)) { sub.textContent = 'Off · tap to connect'; return; }
     sub.innerHTML = '<span class="on">● On</span>';
-    if (email) sub.append(' · ' + email);
+    if (email) { const m = document.createElement('span'); m.className = 'mail'; m.textContent = email; sub.append(m); }   // v0.52: own line
   }
   // v0.40: send 1 minute after the last change (a PC window side by side is never hidden)
   let driveTimer = 0;

@@ -455,3 +455,40 @@ body.editing .setmenu[hidden] { display: none; }
 .cattotal { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px 2px; border-top: 1px solid var(--border); }
 @media (prefers-reduced-motion: reduce) { .catch { transition: none; } }
 .catkid .labels, .catname .labels, .catbar .labels { display: inline; margin: 0; }
+/* v0.52 (mock https://claude.ai/artifact/1zmePagXQfUQeVn8QTFX5S) */
+/* pots in Bills count down: spent / amount, blue under, red over, a thin bar */
+tr.potbill .potbar { display: block; height: 5px; margin-top: 6px; border-radius: 5px; background: var(--row); max-width: 220px; }
+tr.potbill .potbar i { display: block; height: 5px; border-radius: 5px; background: var(--bill); }
+tr.potbill .potspent { color: var(--bill); font-weight: 800; }
+tr.potbill .potof { color: var(--muted); font-weight: 700; }
+.demo [data-card="bills"] tr.potbill td.bamt button.link { color: var(--muted); font-weight: 700; }
+tr.potbill.over .potspent, tr.potbill.over .bsub { color: var(--bad); }
+tr.potbill.over .bsub { font-weight: 700; }
+tr.potbill.over .potbar i { background: var(--bad); }
+/* Settings + bell squared up: one block, bell under Settings on the left, version on the right */
+.demohead .settings { display: grid; grid-template-columns: max-content; gap: 12px; }
+.demo #setbtn { display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 10px; font-weight: 700; }
+#setbtn svg, #bellbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.setrow { justify-content: space-between; padding: 0 6px; }
+.demo #bellbtn { display: grid; place-items: center; width: 38px; height: 30px; padding: 0; border-radius: 10px; color: var(--spend); }
+#bellcount { position: absolute; top: -6px; right: -7px; margin: 0; }
+.setrow .appver { align-self: auto; text-align: right; font-size: 12px; font-weight: 600; }
+/* the menu: a thin grey scroll bar, no arrows, no side scroll */
+.setmenu, .bellmenu { overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.setmenu::-webkit-scrollbar, .bellmenu::-webkit-scrollbar { width: 6px; height: 0; }
+.setmenu::-webkit-scrollbar-track, .bellmenu::-webkit-scrollbar-track { background: transparent; }
+.setmenu::-webkit-scrollbar-thumb, .bellmenu::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.setmenu::-webkit-scrollbar-button, .bellmenu::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+.setmenu .v3links { min-width: 0; }
+/* Google Drive: email on its own line, ⓘ = 'no Google account?' */
+.setmenu .grp { position: relative; }
+.setmenu #drivelink { padding-right: 48px; }
+.setmenu #drivelink .sub .mail { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.demo .setmenu #driveinfo { position: absolute; right: 8px; top: 30px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  background: none; border: 1px solid var(--border); color: var(--muted); min-height: 0; }
+.setmenu #driveinfo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+#drivelink[hidden] ~ #driveinfo, #drivelink[hidden] ~ .drivenote { display: none; }
+.drivenote { margin: 0; padding: 10px; border-radius: 10px; background: var(--row); font-size: 13px; line-height: 1.5; color: var(--text); }
+.drivenote[hidden] { display: none; }
+.drivenote a { display: block; margin-top: 6px; font-weight: 700; color: var(--accent); }
+.setmenu { max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); }   /* the Settings block is taller now */

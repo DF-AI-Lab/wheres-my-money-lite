@@ -220,6 +220,13 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   category: total, count, bar; tap = .catkids items) + .cattotal; card.bycat hides the table. money.js catTotals (loose like pots, biggest
   first, empty = Unsorted); compute r.spendCats (every spend = spendsAll) + r.billCats (own bills + a 'Pots' group = billsTotal + potsSet;
   paused left out). Choice per card in localStorage lite_catview. Tests 87 node + 214 browser (test_v051.py).
+- **25 Oct v0.52 MOVED TO LIVE (Darren: "happy with all, build to live and demo"; mock https://claude.ai/artifact/1zmePagXQfUQeVn8QTFX5S):**
+  pot rows in Bills count down (render potBill: .bsub 'Pots · £X left' / '£X over', .potbar i width = pct, td.bamt '.potspent / ' + the amount
+  button; tr.potbill.over = red). Header: #setbtn + #bellbtn are svg icons; .settings = grid one block (bell under Settings on the left,
+  .appver right, gap 12px). Settings + bell menus: thin grey scroll bar, overflow-x hidden. Drive menu line: Gmail in .sub .mail (own line),
+  #driveinfo ⓘ (not .small) toggles #drivenote 'No Google account? Make one →' (accounts.google.com/signup); hidden with #drivelink in the demo.
+  Test note: with lite_drive_on set and no Google (test browser) the first Settings tap can be eaten (also on v0.51); tests tap again.
+  Tests 87 node + 220 browser (test_v052.py). Later idea (not now): OneDrive (Microsoft Graph, ~same work as Google), Dropbox; Yahoo has no drive.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

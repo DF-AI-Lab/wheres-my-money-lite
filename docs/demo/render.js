@@ -248,10 +248,12 @@
   // a pot is also a row in Bills (not tr.bill: the page's bill maths ignores it); tap the amount to change the pot
   function potBill(p) {
     return `
-      <tr class="potbill" data-pot="${esc(p.key)}" data-name="${esc(p.name)}" data-amount="${p.blank ? '' : f2(p.amount)}">
-        <td><b class="bbase">${esc(p.name)}</b><span class="bsub">Pots · monthly amount</span></td>
+      <tr class="potbill${!p.blank && p.over > 0 ? ' over' : ''}" data-pot="${esc(p.key)}" data-name="${esc(p.name)}" data-amount="${p.blank ? '' : f2(p.amount)}">
+        <td><b class="bbase">${esc(p.name)}</b><span class="bsub">${p.blank ? 'Pots · monthly amount'
+          : p.over > 0 ? `Pots · ${money(p.over)} over` : `Pots · ${money(p.left)} left`}</span>${p.blank ? ''
+          : `<span class="potbar" aria-hidden="true"><i style="width:${Math.max(1, p.pct)}%"></i></span>`}</td>
         <td class="n bavg">${p.blank ? '' : money(p.amount)}</td>
-        <td class="n bamt"><button type="button" class="link ${p.blank ? 'muted' : ''}" title="Change the pot amount">${p.blank ? 'Add' : money(p.amount)}</button></td>
+        <td class="n bamt">${p.blank ? '' : `<span class="potspent">${money(p.spent)}</span><span class="potof"> / </span>`}<button type="button" class="link ${p.blank ? 'muted' : ''}" title="Change the pot amount">${p.blank ? 'Add' : money(p.amount)}</button></td>
         <td colspan="2"></td></tr>
     `;
   }
