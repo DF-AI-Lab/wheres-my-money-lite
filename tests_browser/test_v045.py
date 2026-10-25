@@ -94,7 +94,7 @@ def sync_on(pg, base):
     if pg.locator("#driveconnect").is_visible():
         pg.click("#driveconnect")
         pg.wait_for_selector("#drivesave:not([hidden])")
-    pg.check("#synctoggle")
+    pg.evaluate("void LiteSync.on()")                                      # v0.55: pairing turns it on (no tick box)
 
 
 def spends(pg):
@@ -112,13 +112,13 @@ def test_sync_is_hidden_without_the_beta_link(browser, base):
     d = Drive()
     ctx, pg = device(browser, d)
     connect(pg, base)
-    assert pg.locator("#synctoggle").is_disabled()                       # v0.54: shown greyed out, 'In development'
+    assert pg.locator("#pairgo").is_disabled()                           # v0.54+: shown greyed out, 'In development'
     pg.goto(base + TODAY + "&beta=sync&view=drive")
-    assert pg.locator("#synctoggle").is_enabled()
+    assert pg.locator("#pairgo").is_enabled()
     pg.goto(base + TODAY + "&view=drive")                                # remembered on this device
-    assert pg.locator("#synctoggle").is_enabled()
+    assert pg.locator("#pairgo").is_enabled()
     pg.goto(base + TODAY + "&beta=off&view=drive")
-    assert pg.locator("#synctoggle").is_disabled()
+    assert pg.locator("#pairgo").is_disabled()
     assert not pg.errors
     d.close()
 
@@ -267,7 +267,7 @@ def test_turning_off_stops_following(browser, base):
     phone.wait_for_function("localStorage.getItem('lite_drive_synced')")
     sync_on(pc, base)
     pc.wait_for_function("localStorage.getItem('lite_drive_synced')")
-    pc.uncheck("#synctoggle")
+    pc.evaluate("void LiteSync.off()")
     pc.goto(base + TODAY)
     phone.goto(base + TODAY)
     post(phone, 'form[action="/add"]', {"amount": "3", "name": "NotFollowed"})
