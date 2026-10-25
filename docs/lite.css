@@ -343,6 +343,8 @@ body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
 /* v0.40 the save sign after 'Lite' (mock A): saved = tick (draws in + tiny pop), saving = arrow up, wait = amber dot */
 .demo .tagline .savesign { display: inline-block; width: 20px; height: 16px; vertical-align: -3px; margin-left: 2px; }
 .demo .tagline .savesign[hidden] { display: none; }
+.savesign { cursor: pointer; -webkit-tap-highlight-color: transparent; }   /* v0.48 tap = save now */
+.savesign:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
 .savesign svg { width: 20px; height: 16px; display: block; overflow: visible; }
 .savesign .arr, .savesign .tick, .savesign .dot { opacity: 0; transition: opacity .25s; }
 :root { --saveamber: #c98a00; }

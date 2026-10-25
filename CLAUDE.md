@@ -202,7 +202,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **25 Oct v0.47 MOVED TO LIVE (Darren: "move to live"; so v0.46 is live too): editing = mock C** (https://claude.ai/artifact/Ko5j6zmSpAos6uEPBjx3wS). Move & rename closes the
   Settings menu; #editpill (fixed bottom pill: '✏️ Editing', #editreset ↺ Reset = Sheet.confirm then the /layout/reset form, #editdone ✓ Done =
   editbtn). Also: a quiet Drive reconnect that returns after Turn off no longer turns Drive back on. Tests 78 node + 197 browser.
-- **25 Oct v0.48 (demo only; live still v0.47):** tap the header cloud (.savesign, now role=button tabindex=0, Enter/Space too) = save to
+- **25 Oct v0.48 MOVED TO LIVE (Darren: "straight to live"):** tap the header cloud (.savesign, now role=button tabindex=0, Enter/Space too) = save to
   Drive now (lite.js driveTap: no token = loadGsi + quiet driveConnect first; stops the 'back to the top' link; error = Sheet.tell).
   Tests 78 node + 200 browser (test_v048.py).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

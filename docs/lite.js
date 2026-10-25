@@ -415,7 +415,8 @@
     return M.fmt.day(`${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes());
   }
   // v0.40 the save sign after 'Lite' (mock A), only when Drive is on: saved = tick, saving = arrow up, wait = amber dot
-  const SIGN = {saved: 'Saved to Google Drive', saving: 'Saving to Google Drive', wait: 'A change not sent to Google Drive yet'};
+  const SIGN = {saved: 'Saved to Google Drive · tap to save now', saving: 'Saving to Google Drive',
+                wait: 'A change not sent to Google Drive yet · tap to save now'};
   function driveSign(st) {
     const el = document.querySelector('.savesign');
     if (!el) return;
@@ -428,6 +429,21 @@
     el.title = SIGN[st.split(' ')[0]];
     el.hidden = false;
   }
+  // v0.48 tap the cloud = save to Drive now (no token = the quiet reconnect first; the tap lets Google open)
+  function driveTap(e) {
+    e.preventDefault(); e.stopPropagation();                       // not the 'back to the top' link around it
+    if (!lsGet(DRIVE_ON) || driveBusy) return;
+    driveSign('saving');
+    (getToken() ? Promise.resolve() : loadGsi().then(() => getToken() || driveConnect(true)))
+      .then(() => driveSave(false)).then(() => driveShow(!!getToken()))
+      .catch(err => { driveSign(); root.Sheet.tell('😕 Not saved', (err && err.message) || 'Something went wrong. Try again.'); });
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.querySelector('.savesign');
+    if (!el) return;
+    el.addEventListener('click', driveTap);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') driveTap(e); });
+  });
   // v0.43 👤 Account (mock B): the menu line, and ?view=account = your first name + which Google account
   const nameApi = () => root.LiteName || {get: () => '', set: n => n};
   function accMenu() {
