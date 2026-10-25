@@ -267,8 +267,11 @@
     check();
     // used = the stamp moves on; a stale tab checks first, so a tap cannot skip the lock
     const touch = () => { if (shown()) return; if (L.needs(load(), stamp(), Date.now())) check(); else setStamp(true); };
+    // v0.46 reading counts too (scroll, wheel, touch, mouse): it locks only after 5 minutes with no use
+    const soft = () => { if (Date.now() - stamp() > 5000) touch(); };
     document.addEventListener('pointerdown', touch, true);
     document.addEventListener('keydown', touch, true);
+    ['scroll', 'wheel', 'touchstart', 'mousemove'].forEach(ev => document.addEventListener(ev, soft, {capture: true, passive: true}));
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') { if (!shown() && !L.needs(load(), stamp(), Date.now())) setStamp(true); } else check();
     });

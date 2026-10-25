@@ -1,6 +1,6 @@
 /* Where's My Money? Lite - the service worker (step 8): keeps the app files on the phone so it opens with no internet.
    Bump VERSION with every app version (the tests check that the cache name = the page version). */
-const VERSION = '0.45';
+const VERSION = '0.46';
 // Live (…/) and the demo (…/demo/) share one website, so each keeps its own cache and never touches the other's.
 const DEMO = /\/demo\/$/.test(new URL('./', self.location).pathname);
 const PREFIX = DEMO ? 'wmm-lite-demo-' : 'wmm-lite-';

@@ -196,6 +196,9 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   reload, .synctoast '↩️ Undo' (DK('undo')). Newer + unsent = Sheet.choose (new) 'Changes on both devices'. driveSaveNow refuses to
   write over a newer copy. Another lock: Lock.openWith fails -> 'Link this device' asks the other passcode once, Lock.adopt +
   LockUI.adopt = same key/passcode/codes. Turn on = 'Which copy to start with?' if different. Tests 78 node + 191 browser (test_v045.py).
+- **25 Oct v0.46 (demo only; live still v0.45):** lock came up while Darren was using the app (only taps/keys counted as use). lockui.js:
+  scroll/wheel/touchstart/mousemove also move the unlock stamp (at most every 5 s) = locks only after 5 min (Lock.IDLE_MS) with NO use.
+  Settings menu too long: lite.css .setmenu max-height 100dvh − 96px + scrolls inside. Tests 78 node + 195 browser (test_v046.py).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 
