@@ -492,3 +492,9 @@ tr.potbill.over .potbar i { background: var(--bad); }
 .drivenote[hidden] { display: none; }
 .drivenote a { display: block; margin-top: 6px; font-weight: 700; color: var(--accent); }
 .setmenu { max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); }   /* the Settings block is taller now */
+
+/* v0.53: Spare cash ⓘ (floats like every ⓘ); Pots over in red with a minus, dot stays orange, one line */
+.st-head .label button.info { font-size: 14px; letter-spacing: 0; vertical-align: 0; }
+.st-rows .r.pots > span:first-child { white-space: nowrap; }
+.st-rows .r.pots .potnote { display: inline; color: var(--bad); font-weight: 700; margin-left: 2px; }
+.st-rows .r.pots.over .potword, .st-rows .r.pots.over .k-pot { color: var(--bad); font-weight: 800; }

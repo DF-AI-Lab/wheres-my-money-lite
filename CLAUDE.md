@@ -227,7 +227,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   #driveinfo ⓘ (not .small) toggles #drivenote 'No Google account? Make one →' (accounts.google.com/signup); hidden with #drivelink in the demo.
   Test note: with lite_drive_on set and no Google (test browser) the first Settings tap can be eaten (also on v0.51); tests tap again.
   Tests 87 node + 220 browser (test_v052.py). Later idea (not now): OneDrive (Microsoft Graph, ~same work as Google), Dropbox; Yahoo has no drive.
-- **25 Oct v0.53 (demo only; live still v0.52; mock https://claude.ai/artifact/WaG2BrPssY63gawGKpx83j):** Spare cash left label has a
+- **25 Oct v0.53 MOVED TO LIVE (Darren: "move to live"; live = demo = v0.53; mock https://claude.ai/artifact/WaG2BrPssY63gawGKpx83j):** Spare cash left label has a
   button.info ⓘ ('This is a guide. Check your bank app...'). Pots line (render potsLine): .potword; net < 0 = tr .r.pots.over, 'Pots over' +
   #st-potleft '−£X' in red (var(--bad)), dot stays orange, no '(£X over)' note; Pots left with a pot over = red '.potnote £X over' AFTER the ⓘ,
   all one line (nowrap). Tests 87 node + 223 browser (test_v053.py).
