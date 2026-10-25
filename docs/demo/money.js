@@ -340,6 +340,9 @@
 
     return {pay, left, startSpare: moneyForSpending, bills, billsTotal, billsAll, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
             pots, potsSet, potsOver, potsTotal, potsSpent, potsLeft, potBills, spendsAll, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
+            spendCats: catTotals(shown),
+            billCats: catTotals(own.map(b => ({name: b.name, cat: b.cat, amount: b.used, dueText: b.dueText}))
+              .concat(pots.filter(p => !p.blank).map(p => ({name: p.name, cat: 'Pots', amount: p.amount})))),
             anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
 
@@ -381,7 +384,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.50';
+  const APP = 'wheres-my-money-lite', VERSION = '0.51';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -549,6 +552,17 @@
   // ---------- pots: a category + a monthly amount ----------
   // v0.50: a pot and a spend/bill match loosely: 'takeaway' = 'Takeaways' (case, spaces, a trailing s)
   const catKey = c => String(c == null ? '' : c).trim().toLowerCase().replace(/\s+/g, ' ').replace(/s$/, '');
+  // v0.51: All | Categories in Add a spend and Bills: [{name, total, items}] biggest first, loose like the pots
+  function catTotals(list) {
+    const groups = [], by = {};
+    (list || []).forEach(x => {
+      const name = String(x.cat || '').trim() || 'Unsorted', k = catKey(name);
+      if (!by[k]) { by[k] = {name, total: 0, items: []}; groups.push(by[k]); }
+      by[k].total += x.amount || 0;
+      by[k].items.push(x);
+    });
+    return groups.sort((a, b) => (b.total - a.total) || a.name.localeCompare(b.name));
+  }
   function potCat(s, name) {                                     // an existing category, else the name becomes one
     const known = categories(s).find(c => catKey(c) === catKey(name));
     if (known) return known;
@@ -901,7 +915,7 @@
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
-    setSpendCat, setPotCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,
+    catTotals, setSpendCat, setPotCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,
     nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,
     addCreditCard, renameCreditCard, deleteCreditCard, setBillCard, cardAsk,

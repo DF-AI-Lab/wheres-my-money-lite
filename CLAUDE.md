@@ -215,6 +215,11 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   spends (exact match). money.js catKey (case, spaces, trailing s) for pot ↔ spend/bill; addPot uses an existing category spelling (else adds
   the name to s.cats); pot ⋯ → 🏷 Category it takes (/pot/cat, M.setPotCat, .pot data-cat, '· takes X' line when it differs from the name).
   Pot spends AND bills in that category come out of the pot (as since v0.16). Tests 84 node + 209 browser.
+- **25 Oct v0.51 MOVED TO LIVE (Darren: "build it and send straight to live"): All | Categories** (mock https://claude.ai/artifact/BgPMi2sR3uP4WiKXXzmnd7)
+  in Add a spend and Bills: .catbar ('N spends/bills' + .catseg All/Categories) above the table; Categories = .catview (button.catrow per
+  category: total, count, bar; tap = .catkids items) + .cattotal; card.bycat hides the table. money.js catTotals (loose like pots, biggest
+  first, empty = Unsorted); compute r.spendCats (every spend = spendsAll) + r.billCats (own bills + a 'Pots' group = billsTotal + potsSet;
+  paused left out). Choice per card in localStorage lite_catview. Tests 87 node + 214 browser (test_v051.py).
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

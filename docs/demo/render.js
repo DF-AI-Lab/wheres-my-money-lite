@@ -86,6 +86,22 @@
 
         `;
   }
+  // v0.51 (mock https://claude.ai/artifact/BgPMi2sR3uP4WiKXXzmnd7): All | Categories switch above a card's list,
+  // Categories = one line per category (total, how many, a bar), tap one to see what is in it
+  function catBar(count, word) {
+    return `<div class="catbar"><span class="labels">${count} ${word}${count === 1 ? '' : 's'}</span>
+      <div class="catseg" role="group" aria-label="Show all or by category"><button type="button" data-view="all" aria-pressed="true">All</button><button type="button" data-view="cats" aria-pressed="false">Categories</button></div></div>`;
+  }
+  function catView(groups, total, word, sub) {
+    const max = Math.max(...groups.map(g => g.total), 0.01);
+    return `<div class="catview" hidden>${groups.map(g => `
+      <div class="catgrp"><button type="button" class="catrow" aria-expanded="false">
+        <span class="catline"><span class="catname"><svg class="catch" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4 2l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><b>${esc(g.name)}</b> <span class="labels">${g.items.length} ${word(g)}${g.items.length === 1 ? '' : 's'}</span></span><span class="catamt">${money(g.total)}</span></span>
+        <span class="catbarbg" aria-hidden="true"><span style="width:${Math.max(2, Math.round(100 * Math.max(g.total, 0) / max))}%"></span></span></button>
+        <div class="catkids" hidden>${g.items.map(i => `<div class="catkid"><span>${esc(i.name)}${sub(i) ? ` <span class="labels">· ${sub(i)}</span>` : ''}</span><span class="n">${money(i.amount || 0)}</span></div>`).join('')}</div></div>`).join('')}
+      <div class="cattotal"><b>Total</b><span class="catamt">${money(total)}</span></div></div>`;
+  }
+
   function spendCard(r, err) {
     const up = r.spends.filter(s => s.upcoming), done = r.spends.filter(s => !s.upcoming);
     const head = (text, list) => `<tr class="sgrp"><td colspan="3">${text} · ${money(list.reduce((a, s) => a + s.amount, 0))}</td></tr>`;
@@ -104,9 +120,11 @@
       <label class="spenddate" hidden>📅 Expected on <input type="date" name="date" aria-label="Expected date"></label>
     </form>
     ${r.spends.length ? `
+      ${catBar(r.spends.length, 'spend')}
       <table style="margin-top:12px">
         ${rows}
       </table>
+      ${catView(r.spendCats, r.spendsAll, () => 'spend', x => esc(x.upcoming ? 'expected ' + shortDay(x.date) : shortDay(x.date)))}
     ` : ''}
 
     <div class="sum" style="margin-top:12px">
@@ -255,6 +273,7 @@
     return `<div class="card" data-id="bills" data-card="bills">
   <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot bill"></i> Bills (every month)<button type="button" class="fold" title="Fold">▾</button></h2>
   ${errorBox(err, 'bill')}
+  ${catBar(r.bills.filter(b => !b.stopped).length, 'bill')}
   <table id="bills" class="dbills">
     <thead><tr><th>Bill</th><th class="n">${r.cycles}-mth avg</th><th class="n">Last month</th><th class="n">Diff</th><th></th></tr></thead>
     <tbody data-sort="bills">
@@ -267,6 +286,7 @@
       <td class="n diff ${tone}" id="bdiff">${F.diff(bd)}</td><td></td></tr></tbody>
     ${pausedRows(r.bills.filter(b => b.stopped))}
   </table>
+  ${catView(r.billCats, r.billsTotal + r.potsSet, g => g.name === 'Pots' ? 'pot' : 'bill', x => x.dueText ? esc(x.dueText) : '')}
   <form class="inline" method="post" action="/bill/add" style="margin-top:12px">
     <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.99" aria-label="Amount">
     <input class="name" type="text" name="name" placeholder="New bill" aria-label="Bill name">

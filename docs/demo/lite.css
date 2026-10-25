@@ -426,3 +426,32 @@ body.editing .setmenu[hidden] { display: none; }
 .demo .bmenu { min-width: 240px; }
 /* v0.50: the bill's category dropdown scrolls too when the list is long */
 .bmenu.catmenu { max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+/* v0.51 (mock https://claude.ai/artifact/BgPMi2sR3uP4WiKXXzmnd7): All | Categories in Add a spend and Bills */
+.catbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 0; }
+.catbar .labels { font-weight: 700; }
+.catseg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--row); border: 1px solid var(--border); }
+.demo .catseg button { background: none; color: var(--muted); border: 0; padding: 5px 14px; border-radius: 999px; font-size: 13px; min-height: 0; }
+.demo [data-card="spend"] .catseg button[aria-pressed="true"] { background: var(--spend); color: #1d1500; }
+.demo [data-card="bills"] .catseg button[aria-pressed="true"] { background: var(--bill); color: var(--card); }
+.card.bycat .catbar ~ table { display: none; }
+.catview { margin-top: 8px; }
+.catgrp { border-top: 1px solid var(--border); }
+.demo .catview button.catrow { display: flex; flex-direction: column; gap: 6px; width: 100%; background: none; border: 0; color: var(--text);
+  padding: 10px 2px 8px; text-align: left; font: inherit; border-radius: 0; min-height: 0; cursor: pointer; }
+.catline { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
+.catname { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.catname .labels { font-size: 12px; }
+.catch { color: var(--muted); flex: none; transition: transform .2s; }
+.catrow[aria-expanded="true"] .catch { transform: rotate(90deg); }
+.catamt { font-weight: 800; white-space: nowrap; }
+[data-card="spend"] .catamt { color: var(--spend); }
+[data-card="bills"] .catamt { color: var(--bill); }
+.catbarbg { display: block; height: 4px; border-radius: 4px; background: var(--row); margin-left: 20px; }
+.catbarbg span { display: block; height: 4px; border-radius: 4px; opacity: .75; }
+[data-card="spend"] .catbarbg span { background: var(--spend); }
+[data-card="bills"] .catbarbg span { background: var(--bill); }
+.catkids { padding: 0 2px 8px 22px; }
+.catkid { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; }
+.cattotal { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px 2px; border-top: 1px solid var(--border); }
+@media (prefers-reduced-motion: reduce) { .catch { transition: none; } }
+.catkid .labels, .catname .labels, .catbar .labels { display: inline; margin: 0; }

@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.50"></script>
-<script src="money.js?v=0.50"></script>
-<script src="render.js?v=0.50"></script>
-<script src="sheet.js?v=0.50"></script>
-<script src="lite.js?v=0.50"></script>
-<script src="lock.js?v=0.50"></script>
-<script src="lockui.js?v=0.50"></script>
+<script src="config.js?v=0.51"></script>
+<script src="money.js?v=0.51"></script>
+<script src="render.js?v=0.51"></script>
+<script src="sheet.js?v=0.51"></script>
+<script src="lite.js?v=0.51"></script>
+<script src="lock.js?v=0.51"></script>
+<script src="lockui.js?v=0.51"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.50">
-<link rel="stylesheet" href="lite.css?v=0.50">
+<link rel="stylesheet" href="look.css?v=0.51">
+<link rel="stylesheet" href="lite.css?v=0.51">
 </head>
 <body class="demo">
 
@@ -278,7 +278,7 @@
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.50</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders">🔔<span id="bellcount" hidden></span></button><div class="appver">v0.51</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -642,6 +642,28 @@
         if (up) form.elements.date.focus();
       }));
     });
+    // v0.51: All | Categories in Add a spend and Bills (remembered on this phone); tap a category to see what is in it
+    const catViews = (() => { try { return JSON.parse(localStorage.getItem('lite_catview') || '{}') || {}; } catch (e) { return {}; } })();
+    document.querySelectorAll('.card .catseg').forEach(seg => {
+      const card = seg.closest('.card'), view = card.querySelector('.catview'), name = card.dataset.card;
+      const show = cats => {
+        card.classList.toggle('bycat', cats);
+        if (view) view.hidden = !cats;
+        seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', (b.dataset.view === 'cats') === cats ? 'true' : 'false'));
+      };
+      show(!!catViews[name]);
+      seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        const cats = b.dataset.view === 'cats';
+        show(cats);
+        catViews[name] = cats ? 1 : 0;
+        try { localStorage.setItem('lite_catview', JSON.stringify(catViews)); } catch (e) { /* no storage */ }
+      }));
+    });
+    document.querySelectorAll('.catview button.catrow').forEach(btn => btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open);
+      btn.nextElementSibling.hidden = !open;
+    }));
     // v0.39: a spend's category, the same pick list as bills ('+ category' on an Unsorted one, or ⋯ → 🏷 Category)
     const spendCat = row => Sheet.pick('🏷 ' + row.dataset.name + ': category', Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), row.dataset.cat)
       .then(cat => { if (cat !== null) send('/spend/cat', {id: row.dataset.id, cat}); });
