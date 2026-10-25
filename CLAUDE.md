@@ -199,7 +199,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
 - **25 Oct v0.46 (demo only; live still v0.45):** lock came up while Darren was using the app (only taps/keys counted as use). lockui.js:
   scroll/wheel/touchstart/mousemove also move the unlock stamp (at most every 5 s) = locks only after 5 min (Lock.IDLE_MS) with NO use.
   Settings menu too long: lite.css .setmenu max-height 100dvh − 96px + scrolls inside. Tests 78 node + 195 browser (test_v046.py).
-- **25 Oct v0.47 (demo only; live still v0.45): editing = mock C** (https://claude.ai/artifact/Ko5j6zmSpAos6uEPBjx3wS). Move & rename closes the
+- **25 Oct v0.47 MOVED TO LIVE (Darren: "move to live"; so v0.46 is live too): editing = mock C** (https://claude.ai/artifact/Ko5j6zmSpAos6uEPBjx3wS). Move & rename closes the
   Settings menu; #editpill (fixed bottom pill: '✏️ Editing', #editreset ↺ Reset = Sheet.confirm then the /layout/reset form, #editdone ✓ Done =
   editbtn). Also: a quiet Drive reconnect that returns after Turn off no longer turns Drive back on. Tests 78 node + 197 browser.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

@@ -293,7 +293,8 @@
     return new Promise((resolve, reject) => {
       const client = root.google.accounts.oauth2.initTokenClient(Object.assign({
         client_id: clientId(), scope: 'https://www.googleapis.com/auth/drive.file',
-        callback: t => { if (t && t.access_token) { setToken(t.access_token, Number(t.expires_in) || 3600); lsSet(DRIVE_ON, '1'); resolve(); }
+        callback: t => { if (quiet && !lsGet(DRIVE_ON)) return reject(new Error('Turned off'));   // v0.47: Turn off tapped meanwhile
+                         if (t && t.access_token) { setToken(t.access_token, Number(t.expires_in) || 3600); lsSet(DRIVE_ON, '1'); resolve(); }
                          else reject(new Error('Google did not let you in. Try again.')); },
         error_callback: () => reject(new Error('Google sign-in was closed or blocked. Try again.')),
       }, hint ? {login_hint: hint} : {}));
