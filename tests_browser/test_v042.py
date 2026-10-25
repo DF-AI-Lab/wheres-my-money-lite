@@ -21,7 +21,7 @@ def visible_heads(m):
 
 def test_headings_and_grey_lines(page, base):
     m = menu(page, base)
-    assert visible_heads(m) == ["On this phone", "Cloud", "Lock"]
+    assert visible_heads(m) == ["Account", "On this phone", "Cloud", "Lock"]   # v0.43: Account first
     assert "this phone" in m.locator("#savebackup .sub").inner_text()
     assert "this phone" in m.locator("#loadbackup .sub").inner_text()
     assert m.locator("#newcodes .sub").inner_text().strip()

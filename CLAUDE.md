@@ -179,6 +179,13 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   lockui.js fpMenu(): 'Set up fingerprint' / 'Fingerprint · ● On for this phone'. CSS hides a .grp with no visible .small (:has).
   Tests 78 node + 172 browser (test_v042.py). NEXT: Darren picks a lock-screen name mock (Lock 1 'Hi Darren 👋' big / Lock 2
   letter badge + 'Welcome back'); name typed with the first passcode, kept on the phone only, Settings → ✏️ Your name.
+- **25 Oct v0.43 (demo only; live still v0.41): Lock 1 + 👤 Account (mock B).** Lock: #lockhi 'Hi <name> 👋' + #locktag "Where's My Money? · Lite"
+  (no name = old title); #namebox/#myname 'Your first name' in the first-passcode step (hidden on forgot-reset). Name = localStorage lite_name
+  (demo: lite_demo_name), this phone only; lockui.js root.LiteName {get,set}. Settings: 'Account' group first, #acclink sub = 'name · Gmail' /
+  'Add your name'. ?view=account (#account.box): name form (#accname, Save name) + Google Drive card (#accstate ● On · Gmail / Off,
+  #accswitch 'Use another Google account' = driveConnect(false, pick) prompt 'select_account', a NEW Gmail clears lite_drive_file/_folder and
+  marks dirty; #accoff Turn off; #accconnect → ?view=drive when off). Demo has no lock, so the greeting shows on live only.
+  Tests 78 node + 180 browser (test_v043.py). NEXT: Darren tries the Account page on the demo; 'move to live' when he says.
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
 - Everything below is the main app's history, kept for now.
 

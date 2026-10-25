@@ -432,8 +432,8 @@
   function showView(state, today) {
     const view = new URLSearchParams(location.search).get('view'), body = document.body;
     document.querySelectorAll('a[data-view]').forEach(a => { a.href = viewUrl(a.dataset.view); });
-    document.querySelectorAll('#invite a.back, #drive a.back').forEach(a => { a.href = viewUrl(''); });
-    if (view !== 'ideas' && view !== 'invite' && view !== 'drive') return;
+    document.querySelectorAll('#invite a.back, #drive a.back, #account a.back').forEach(a => { a.href = viewUrl(''); });
+    if (!['ideas', 'invite', 'drive', 'account'].includes(view)) return;
     body.dataset.view = view;                                    // lite.css hides the home page parts
     const box = document.getElementById(view);
     if (!box) return;

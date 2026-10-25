@@ -125,7 +125,7 @@ html.lockon .wrap { display: none; }
 
 /* views (Go B step 7): ?view=ideas / ?view=invite replace the home page parts; the header stays */
 body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[data-view] .footer, body[data-view] #quicktab { display: none; }
-#ideas[hidden], #invite[hidden], #drive[hidden], #drive [hidden], #installbtn[hidden] { display: none; }
+#ideas[hidden], #invite[hidden], #drive[hidden], #drive [hidden], #account[hidden], #account [hidden], #installbtn[hidden] { display: none; }
 
 /* 💡 Ideas & feedback: live's ideas.html styles, all under #ideas so the home page is not touched */
 #ideas { margin-bottom: 18px; }
@@ -364,3 +364,22 @@ body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
 .setmenu .small .sub { display: block; margin: 2px 0 0; font-size: 12px; font-weight: 500; color: var(--muted); white-space: normal; }
 .setmenu .grp:not(:has(> .small:not([hidden]))) { display: none; }
 .setmenu .sub .on { color: var(--good); font-weight: 700; }
+/* v0.43 lock: your first name (Lock 1 mock) */
+.box label[hidden] { display: none; }
+.box label .hint { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+#namebox { margin-bottom: 6px; }
+/* v0.43 👤 Account page (mock B): your first name + which Google account */
+#account { margin: 8px auto 18px; text-align: left; }
+#account h1 { text-align: center; }
+#account .back { display: block; color: var(--accent); font-weight: 700; text-decoration: none; }
+#account .acccard { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin: 0 0 14px; border: 1px solid var(--border); border-radius: 14px; }
+#account .hint { font-size: 12.5px; font-weight: 500; color: var(--muted); margin: 0; }
+#account .acchead { font-weight: 700; margin: 0; }
+#account #accstate { margin: 0; font-size: 15px; word-break: break-word; }
+#account .on { color: var(--good); font-weight: 700; }
+#account .accbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+#account .accbtns button { flex: 1 1 auto; font-size: 14px; padding: 10px 12px; background: transparent; color: var(--text); border: 1px solid var(--border); }
+#account .accconnect { display: block; text-align: center; padding: 11px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; }
+#account .driveok { color: var(--good); font-weight: 700; margin: 0; }
+#account .err { margin: 0; }
+#account .accconnect[hidden], #account .accbtns[hidden] { display: none; }

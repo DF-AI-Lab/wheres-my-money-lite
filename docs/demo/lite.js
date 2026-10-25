@@ -288,7 +288,7 @@
     });
   }
   // quiet = no account picker (the person said yes before); the first time is the full Google sign-in
-  function driveConnect(quiet) {
+  function driveConnect(quiet, pick) {                         // pick = 'which Google account?' (v0.43 Account page)
     const hint = quiet ? lsGet(DRIVE_EMAIL) : '';
     return new Promise((resolve, reject) => {
       const client = root.google.accounts.oauth2.initTokenClient(Object.assign({
@@ -297,7 +297,8 @@
                          else reject(new Error('Google did not let you in. Try again.')); },
         error_callback: () => reject(new Error('Google sign-in was closed or blocked. Try again.')),
       }, hint ? {login_hint: hint} : {}));
-      if (quiet) client.requestAccessToken(Object.assign({prompt: ''}, hint ? {login_hint: hint} : {})); else client.requestAccessToken();
+      if (quiet) client.requestAccessToken(Object.assign({prompt: ''}, hint ? {login_hint: hint} : {}));
+      else if (pick) client.requestAccessToken({prompt: 'select_account'}); else client.requestAccessToken();
     }).then(driveEmail);
   }
   async function driveEmail() {                                    // which Google account: asked once, kept
@@ -305,7 +306,7 @@
     try {
       const r = await driveFetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)');
       const e = r.ok && ((await r.json()).user || {}).emailAddress;
-      if (e) { lsSet(DRIVE_EMAIL, e); driveMenu(); }
+      if (e) { lsSet(DRIVE_EMAIL, e); driveMenu(); accMenu(); }
     } catch (e) { /* ask next time */ }
   }
   async function driveFetch(url, opts) {
@@ -417,6 +418,55 @@
     el.title = SIGN[st.split(' ')[0]];
     el.hidden = false;
   }
+  // v0.43 👤 Account (mock B): the menu line, and ?view=account = your first name + which Google account
+  const nameApi = () => root.LiteName || {get: () => '', set: n => n};
+  function accMenu() {
+    const sub = document.querySelector('#acclink .sub');
+    if (!sub) return;
+    const parts = [nameApi().get(), lsGet(DRIVE_ON) && lsGet(DRIVE_EMAIL)].filter(Boolean);
+    sub.textContent = parts.length ? parts.join(' · ') : 'Add your name';
+  }
+  function accShow() {
+    const st = document.getElementById('accstate');
+    if (!st) return;
+    const on = !!lsGet(DRIVE_ON), email = lsGet(DRIVE_EMAIL);
+    st.innerHTML = on ? '<span class="on">● On</span>' : 'Off';
+    if (on && email) st.append(' · ' + email);
+    document.getElementById('acchint').hidden = !on;
+    document.getElementById('accon').hidden = !on || !clientId();
+    document.getElementById('accconnect').hidden = on || !clientId();
+    accMenu(); driveMenu();
+  }
+  function accStart() {
+    const box = document.getElementById('account');
+    if (!box || new URLSearchParams(location.search).get('view') !== 'account') return;
+    const input = document.getElementById('accname'), ok = document.getElementById('nameok'), err = document.getElementById('accerr');
+    input.value = nameApi().get();
+    document.getElementById('nameform').addEventListener('submit', e => {
+      e.preventDefault();
+      input.value = nameApi().set(input.value);
+      ok.hidden = false; accMenu();
+    });
+    input.addEventListener('input', () => { ok.hidden = true; });
+    accShow();
+    document.getElementById('accoff').addEventListener('click', () => {
+      lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); accShow(); driveSign();
+    });
+    document.getElementById('accswitch').addEventListener('click', async () => {
+      err.hidden = true;
+      try {
+        await loadGsi();
+        const was = lsGet(DRIVE_EMAIL);
+        lsSet(DRIVE_EMAIL, null);
+        try { await driveConnect(false, true); } catch (e) { if (was && !lsGet(DRIVE_EMAIL)) lsSet(DRIVE_EMAIL, was); throw e; }
+        if (lsGet(DRIVE_EMAIL) !== was) {                        // a new account: its own folder and files, sent soon
+          lsSet(DRIVE_ID, null); lsSet(DRIVE_DIR, null);
+          lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon();
+        }
+        accShow();
+      } catch (e) { err.textContent = (e && e.message) || 'Something went wrong. Try again.'; err.hidden = false; }
+    });
+  }
   // v0.42 the Settings line under Google Drive: On + the Gmail, or Off
   function driveMenu() {
     const sub = document.querySelector('#drivelink .sub');
@@ -456,7 +506,7 @@
     }));
     document.getElementById('drivesave').addEventListener('click', run(async () => { await driveSave(false); ok.hidden = false; driveShow(true); }));
     document.getElementById('driveload').addEventListener('click', run(driveLoad));
-    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); driveMenu(); });
+    document.getElementById('driveoff').addEventListener('click', () => { lsSet(DRIVE_ON, null); lsSet(DRIVE_EMAIL, null); setToken(''); driveShow(false); driveMenu(); accMenu(); });
   }
   // the quiet reconnect: the first tap of a visit (a popup needs a tap), when Drive was connected before
   function driveWake() {
@@ -475,7 +525,8 @@
     if (document.visibilityState !== 'hidden' || leaving) return;
     driveAuto(true);
   });
-  document.addEventListener('DOMContentLoaded', () => { driveSign(); driveSoon(); driveMenu(); });
+  document.addEventListener('DOMContentLoaded', () => { driveSign(); driveSoon(); driveMenu(); accMenu(); });
+  document.addEventListener('DOMContentLoaded', accStart);
   document.addEventListener('DOMContentLoaded', driveWake);
   document.addEventListener('DOMContentLoaded', driveStart);
 

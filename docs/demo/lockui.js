@@ -5,7 +5,7 @@
    The demo (?demo=1) never has a lock. */
 (function (root) {
   'use strict';
-  const L = root.Lock, REC_KEY = 'lite_lock_v1', STAMP_KEY = 'lite_unlock';
+  const L = root.Lock, REC_KEY = 'lite_lock_v1', STAMP_KEY = 'lite_unlock', NAME_KEY = (root.Lite && root.Lite.Store.demo) ? 'lite_demo_name' : 'lite_name';
   const demo = !!(root.Lite && root.Lite.Store.demo);
   const html = document.documentElement;
   let rec = null, from = '', busy = false;
@@ -18,6 +18,20 @@
   function stamp() { try { return Number(root.sessionStorage.getItem(STAMP_KEY)) || 0; } catch (e) { return 0; } }
   function setStamp(on) {
     try { if (on) root.sessionStorage.setItem(STAMP_KEY, String(Date.now())); else root.sessionStorage.removeItem(STAMP_KEY); } catch (e) { /* ignore */ }
+  }
+
+  // v0.43 your first name (this phone only): the lock says 'Hi <name> 👋'
+  function myName() { try { return (root.localStorage.getItem(NAME_KEY) || '').trim(); } catch (e) { return ''; } }
+  function setName(n) {
+    n = String(n || '').trim().slice(0, 20);
+    try { if (n) root.localStorage.setItem(NAME_KEY, n); else root.localStorage.removeItem(NAME_KEY); } catch (e) { /* private window */ }
+    return n;
+  }
+  root.LiteName = {get: myName, set: setName};
+  function greet() {
+    const h = $('lockhi'), t = $('locktag'), n = myName();
+    if (h) h.textContent = n ? 'Hi ' + n + ' 👋' : "Where's My Money?";
+    if (t) t.textContent = n ? "Where's My Money? · Lite" : 'Payday to payday · Lite';
   }
 
   // the app stays hidden from the very first script until the check says it is fine (no flash of the money)
@@ -49,6 +63,8 @@
     b.dataset.step = name;
     b.querySelectorAll('[data-for]').forEach(p => { p.hidden = p.dataset.for !== name; });
     say('');
+    greet();
+    if ($('namebox')) $('namebox').hidden = from === 'forgot';
     ['pin', 'again', 'bcode'].forEach(id => b.querySelectorAll('#' + id).forEach(i => { i.value = ''; }));
     if (name === 'unlock') {
       const fp = $('fp'), withFinger = !!(rec && rec.passkeys && rec.passkeys.length && canFinger());
@@ -98,6 +114,7 @@
         await L.setPin(rec, pin); L.ok(rec); save(); enter();
       } else {
         const codes = L.makeCodes();
+        if ($('myname')) setName($('myname').value);
         rec = await L.create(pin, codes); save();
         showCodes(codes);
       }
@@ -138,8 +155,8 @@
         return;
       }
       rec.codes[i].used = true; save();                      // that code is used up now
-      step('newpin');
       from = 'forgot';
+      step('newpin');
     } finally { busy = false; }
   }
 
