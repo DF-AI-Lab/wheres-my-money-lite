@@ -36,6 +36,8 @@ def unlock(page, pin=PIN):
 def test_a_new_person_chooses_a_passcode_and_gets_10_backup_codes(fresh, base):
     pg = fresh
     pg.goto(base + TODAY)
+    assert step(pg) == "welcome"                                    # v0.57: a wiped device asks who you are first
+    pg.click("#imnew")
     assert step(pg) == "newpin"
     assert pg.locator(".wrap").is_hidden()                         # nothing of the money shows behind it
     for pin, again, words in (("111111", "111111", "too easy"), ("135790", "135791", "not the same"),

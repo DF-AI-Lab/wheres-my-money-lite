@@ -9,6 +9,7 @@ TODAY = "?today=2024-11-08"
 def test_name_typed_with_the_first_passcode_then_hi_on_the_lock(fresh, base):
     pg = fresh
     pg.goto(base + TODAY)
+    pg.click("#imnew")                                              # v0.57: Welcome first
     assert step(pg) == "newpin"
     assert pg.locator("#myname").is_visible()
     pg.fill("#myname", "  Sam ")
