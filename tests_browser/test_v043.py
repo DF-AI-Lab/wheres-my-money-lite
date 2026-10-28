@@ -17,6 +17,7 @@ def test_name_typed_with_the_first_passcode_then_hi_on_the_lock(fresh, base):
     pg.click("#pinform button[type=submit]")
     pg.wait_for_selector('#lock[data-step="codes"]')
     pg.click("#codesdone")
+    pg.click("#driveskip")                                         # v0.58: the Drive step comes next
     assert pg.evaluate("localStorage.getItem('lite_name')") == "Sam"
     pg.click("#setbtn"); pg.click("#locknow")
     assert step(pg) == "unlock"

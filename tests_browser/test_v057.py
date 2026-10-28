@@ -165,6 +165,7 @@ def test_start_new_instead_turns_drive_off_so_the_copy_is_safe(browser, base):
     pg.click("#pinform button[type=submit]")
     pg.wait_for_selector('#lock[data-step="codes"]')
     pg.click("#codesdone")
+    pg.click("#driveskip")                                         # v0.58: the Drive step comes next
     post(pg, 'form[action="/add"]', {"amount": "1", "name": "NewThing"})
     pg.wait_for_timeout(800)                                             # longer than the Drive wait
     assert d.newest()["text"] == before                                  # the phone's copy is untouched
@@ -202,7 +203,7 @@ def test_an_unscrambled_copy_loads_then_asks_for_a_new_passcode(browser, base):
     pg.click("#pinform button[type=submit]")
     pg.wait_for_selector('#lock[data-step="codes"]')
     with pg.expect_navigation():
-        pg.click("#codesdone")
+        pg.click("#codesdone")                                           # Drive is on already (the copy came from it)
     pg.wait_for_load_state()
     assert app_shown(pg) and spends(pg) == ["PlainSpend"]
     assert lock_rec(pg)
@@ -226,6 +227,7 @@ def test_demo_lock_1_shows_welcome_with_its_own_keys(browser, site):  # noqa: F8
     pg.click("#pinform button[type=submit]")
     pg.wait_for_selector('#lock[data-step="codes"]')
     pg.click("#codesdone")
+    pg.click("#driveskip")                                         # v0.58: the Drive step comes next
     assert app_shown(pg)
     assert pg.evaluate("localStorage.getItem('lite_demo_lock_v1')")
     assert pg.evaluate("localStorage.getItem('lite_lock_v1')") == live_lock   # live's lock untouched

@@ -54,6 +54,7 @@ def test_a_new_person_chooses_a_passcode_and_gets_10_backup_codes(fresh, base):
     rec = lock_rec(pg)
     assert rec and len(rec["codes"]) == 10 and PIN not in json.dumps(rec)
     pg.click("#codesdone")
+    pg.click("#driveskip")                                         # v0.58: the Drive step comes next
     pg.wait_for_selector("#lock", state="hidden")
     assert app_shown(pg)
     pg.reload()                                                     # a reload in the same tab stays unlocked

@@ -183,13 +183,13 @@ def test_tick_a_bill_reminder_once_checked(page, base):
     page.goto(base + TODAY)
     post(page, 'form[action="/bill/add"]', {"amount": "500", "name": "Rent"})
     bill_menu(page, "Rent", "Due day", "1")
-    assert page.locator("#bellcount").inner_text() == "1"
+    assert page.locator("#bellcount").inner_text() == "2"                 # v0.58: + 'Not backed up' (Drive off)
     page.click("#bellbtn")
     with page.expect_navigation():
         page.click('#bellmenu .remind[data-key="Rent"] .remdone')
     page.wait_for_load_state()
     assert [b for b in stored(page)["bills"] if b["key"] == "Rent"][0]["paid"] is True
-    assert page.locator("#bellcount").is_hidden() or page.locator("#bellcount").inner_text() in ("", "0")
+    assert page.locator("#bellcount").inner_text() == "1"                 # only the Drive line is left
 
 
 def test_payday_reminder_opens_the_panel(page, base):
@@ -215,6 +215,8 @@ def test_card_and_backup_reminders(page, base):
 
 
 def test_nothing_waiting(page, base):
+    page.goto(base + TODAY)
+    page.evaluate("localStorage.setItem('lite_drive_on', '1')")         # v0.58: Drive off = a 'Not backed up' line
     page.goto(base + TODAY)
     page.click("#bellbtn")
     assert page.locator("#bellmenu .remind").count() == 0

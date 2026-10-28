@@ -1088,7 +1088,21 @@
     lsSet(DRIVE_DIRTY, null);
     return true;
   }
-  root.LiteRestore = {find: restoreFind, open: restoreOpen, finish: restoreFinish, off: restoreOff, ready: () => !!clientId()};
+  // v0.58 a new person is asked to turn Drive on straight after the passcode. A Google account that already holds a copy
+  // is NOT used (it would be written over): they get it back with Sign in with Google on a fresh start instead.
+  async function setupConnect() {
+    await loadGsi();
+    lsSet(DRIVE_EMAIL, null);
+    await driveConnect(false);
+    let had = [];
+    try { had = await driveList(); } catch (e) { restoreOff(); throw e; }
+    if (had.length) { const email = lsGet(DRIVE_EMAIL) || 'that Google account'; restoreOff(); return {email, had: true}; }
+    lsSet(DRIVE_DIRTY, String(Date.now()));                         // the first copy goes up soon
+    driveSoon(); driveMenu(); accMenu();
+    return {email: lsGet(DRIVE_EMAIL) || '', had: false};
+  }
+  root.LiteRestore = {find: restoreFind, open: restoreOpen, finish: restoreFinish, off: restoreOff, ready: () => !!clientId(),
+                      connect: setupConnect, isOn: () => !!lsGet(DRIVE_ON)};
 
   root.Lite = {start, Store, today, state: () => state, run, leave, saveBackup};
 })(window);
