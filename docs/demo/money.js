@@ -248,13 +248,14 @@
         .filter(x => x && !x.stopped && typeof x.amount === 'number' && x.amount > 0).map(x => x.amount);
       const avg = past.length ? sum(past) / past.length : (amount || 0);
       const was = saved(s, b.key);
-      const due = b.due || null, dueAt = due && start ? dueDate(start, due) : null;
+      const varies = b.due === 'varies';                         // v0.59: no set date, a different day each month
+      const due = varies ? null : (b.due || null), dueAt = due && start ? dueDate(start, due) : null;
       const name = b.name === undefined ? b.key : b.name;
       const inPot = !stopped && potOf[catKey(b.cat)] ? potOf[catKey(b.cat)].name : null;   // a bill in a pot's category is paid from that pot
       return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, pot: inPot, last: amount || 0, used, blank, stopped,
               saved: was && typeof was.amount === 'number' ? was.amount : null,
               changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
-              due, dueAt, dueText: due ? ordinal(due) : '', duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
+              due, varies, dueAt, dueText: varies ? 'varies' : (due ? ordinal(due) : ''), duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
               card: billCardKey(cardList, b), asked: b.asked === start,
               diff: (blank || stopped) ? null : used - avg};
     });
@@ -282,7 +283,8 @@
     const potsSpent = sum(pots.filter(p => !p.blank).map(p => p.spent)), potsLeft = sum(pots.map(p => p.left));
     const potBills = billsAll - billsTotal;
     const shown = spends.map(x => Object.assign({}, x, {pot: potOf[catKey(x.cat)] ? potOf[catKey(x.cat)].name : null,
-      upcoming: !!x.upcoming && !!today && today < x.date, autoPaid: !!x.upcoming && !!today && today >= x.date}));
+      upcoming: !!x.upcoming && (!!x.nodate || (!!today && today < x.date)),   // v0.59: no date yet = upcoming until Paid
+      autoPaid: !!x.upcoming && !x.nodate && !!today && today >= x.date}));
     const spendsTotal = sum(shown.filter(x => !x.pot).map(x => x.amount));
     const moneyForSpending = pay + left - billsTotal - potsSet;
     const startSpare = moneyForSpending;
@@ -384,7 +386,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.58';
+  const APP = 'wheres-my-money-lite', VERSION = '0.59';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -398,13 +400,15 @@
   // a real calendar date 'YYYY-MM-DD' (not 2024-13-40)
   const isDate = t => { const d = new Date(t + 'T00:00:00Z'); return /^\d{4}-\d{2}-\d{2}$/.test(t) && !isNaN(d) && d.toISOString().slice(0, 10) === t; };
   // POST /add. expectText = Upcoming (v0.36, mock H2): the date it should go out; from that day it counts as paid by itself
-  function addSpend(s, iso, amountText, nameText, expectText) {
+  // nodate (v0.59) = Upcoming with no date yet: it stays upcoming until ⋯ / Paid? marks it paid (or a date is set)
+  function addSpend(s, iso, amountText, nameText, expectText, nodate) {
     const amount = parseMoney(amountText), name = String(nameText == null ? '' : nameText).trim();
     const expect = String(expectText == null ? '' : expectText).trim();
     if (amount === null || !name || (expect && !isDate(expect))) return 'spend';
     s.spends = s.spends || [];
     const x = {id: Math.max(0, ...s.spends.map(x => x.id)) + 1, date: expect || iso, amount, name, cat: guessCategory(name)};
     if (expect) x.upcoming = true;
+    else if (nodate) { x.upcoming = true; x.nodate = true; }
     s.spends.push(x);
     return null;
   }
@@ -412,14 +416,14 @@
   function paySpend(s, idText, iso) {                            // POST /spend/paid: an upcoming spend went out today
     const x = findSpend(s, idText);
     if (!x) return null;
-    x.date = iso; delete x.upcoming;
+    x.date = iso; delete x.upcoming; delete x.nodate;
     return null;
   }
   function setSpendDate(s, idText, text) {                       // POST /spend/date (⋯ → Change date)
     const x = findSpend(s, idText), d = String(text == null ? '' : text).trim();
     if (!x) return null;
     if (!isDate(d)) return 'spend';
-    x.date = d; x.dated = true;
+    x.date = d; x.dated = true; delete x.nodate;
     return null;
   }
   // v0.49: ⋯ → ✏️ Change amount / ✏️ Change name on a spend
@@ -503,11 +507,12 @@
     b.name = name;
     return null;
   }
-  function setDue(s, key, text) {                                // POST /bill/due ('' = none, else a whole day 1-31)
+  function setDue(s, key, text) {                                // POST /bill/due ('' = none, 'varies' (v0.59), else a whole day 1-31)
     const b = findBill(s, key);
     if (!b) return 'unknown';
     text = String(text == null ? '' : text).trim();
     if (text === '') { b.due = null; return null; }
+    if (text.toLowerCase() === 'varies') { b.due = 'varies'; return null; }
     if (!/^\d{1,2}$/.test(text) || Number(text) < 1 || Number(text) > 31) return 'bill';
     b.due = Number(text);
     return null;
@@ -618,7 +623,7 @@
     const left = leftText === '' || isZeroText(leftText) ? 0 : parseMoney(leftText);
     if (pay === null || left === null) return 'pay';
     const all = s.spends || [], pots = s.pots || [];
-    const next = x => x.upcoming && x.date >= day;               // an upcoming spend dated from the new payday on = next month's
+    const next = x => x.upcoming && (x.nodate || x.date >= day); // an upcoming spend dated from the new payday on (or no date yet) = next month's
     const spends = all.filter(x => !next(x));
     const first = spends.length ? spends.map(x => x.date).sort()[0] : day;
     s.history = s.history || [];

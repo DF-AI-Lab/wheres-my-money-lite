@@ -69,6 +69,7 @@
   // themselves (green ✓). Every row: date · category ⓘ, and ⋯ = Change date / ✅ Paid (upcoming only) / Remove.
   const SPEND_TIP = {
     upcoming: 'Expected date. When this date comes it moves to Paid by itself. Tap ⋯ to change the date, or to mark it paid early.',
+    nodate: 'No date yet. It counts against your spare now. Tap Paid? when it has gone out.',
     gone: 'The expected date has gone, so it should be paid. Please check your bank app it came out.',
     added: 'This is the date you added it. If it went out on another day, tap ⋯ to change the date.',
     dated: 'You changed this date. Tap ⋯ to change it again.',
@@ -77,12 +78,12 @@
   function spendRow(s) {
     const unsorted = !s.cat || s.cat === 'Unsorted';                  // v0.37: like bills, '+ category' until one is set
     const where = s.pot ? `<i class="dot pot"></i>${esc(s.pot)}` : (unsorted ? addLink('cat', '+ category') : esc(s.cat));
-    const when = s.upcoming ? `expected ${shortDay(s.date)}` : F.day(s.date);
-    const tip = s.upcoming ? SPEND_TIP.upcoming : (s.autoPaid ? SPEND_TIP.gone : (s.dated ? SPEND_TIP.dated : SPEND_TIP.added));
+    const when = s.upcoming ? (s.nodate ? 'no date yet' : `expected ${shortDay(s.date)}`) : F.day(s.date);
+    const tip = s.upcoming ? (s.nodate ? SPEND_TIP.nodate : SPEND_TIP.upcoming) : (s.autoPaid ? SPEND_TIP.gone : (s.dated ? SPEND_TIP.dated : SPEND_TIP.added));
     const cls = s.upcoming ? ' upcoming' : (s.autoPaid ? ' paid' : '');
     return `
 
-          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-cat="${esc(s.cat || 'Unsorted')}" data-amount="${s.amount.toFixed(2)}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}</td>
+          <tr class="drow${cls}" data-id="${s.id}" data-name="${esc(s.name)}" data-date="${esc(s.date)}" data-cat="${esc(s.cat || 'Unsorted')}" data-amount="${s.amount.toFixed(2)}" data-up="${s.upcoming ? 1 : 0}"><td><b>${esc(s.name)}</b><span class="labels">${when} · ${where} ${infoBtn(tip)}</span></td><td class="n">${money(s.amount)}${s.upcoming ? `<button type="button" class="paidq" aria-label="Paid? ${esc(s.name)} has gone out">Paid?</button>` : ''}</td>
               <td class="n smore"><button type="button" class="more" aria-haspopup="true" aria-label="Change or remove ${esc(s.name)}">⋯</button><form method="post" action="/remove" hidden><input type="hidden" name="id" value="${s.id}"></form></td></tr>
 
         `;
@@ -105,19 +106,22 @@
 
   function spendCard(r, err) {
     const up = r.spends.filter(s => s.upcoming), done = r.spends.filter(s => !s.upcoming);
+    const upTotal = up.reduce((a, s) => a + s.amount, 0);          // v0.59: the bottom box splits Paid so far / Still to come
     const head = (text, list) => `<tr class="sgrp"><td colspan="3">${text} · ${money(list.reduce((a, s) => a + s.amount, 0))}</td></tr>`;
-    const rows = up.length ? head('Coming up', up) + up.map(spendRow).join('') + head('Paid', done) + done.map(spendRow).join('')
+    const rows = up.length ? head('Still to come', up) + up.map(spendRow).join('') + head('Paid', done) + done.map(spendRow).join('')
                            : done.map(spendRow).join('');
     return `<div class="card" data-id="spend" data-card="spend">
     <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot spend"></i> Add a spend<button type="button" class="fold" title="Fold">▾</button></h2>
     ${errorBox(err, 'spend')}
 
-    <div class="spendseg" role="group" aria-label="Paid or upcoming"><button type="button" data-up="0" aria-pressed="true">Paid</button><button type="button" data-up="1" aria-pressed="false">Upcoming</button></div>
+    <div class="spendtop"><div class="spendseg" role="group" aria-label="Paid or upcoming"><button type="button" data-up="0" aria-pressed="true">Paid</button><button type="button" data-up="1" aria-pressed="false">Upcoming</button></div>
+      <div class="spendseg whenseg" role="group" aria-label="When will it go out?" hidden><button type="button" data-when="none" aria-pressed="true">No date yet</button><button type="button" data-when="date" aria-pressed="false">Pick date</button></div></div>
     <form class="inline" method="post" action="/add">
       <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.50" aria-label="Amount">
       <input class="name" type="text" name="name" placeholder="Coffee" aria-label="What">
       <button type="submit">Add</button>
       <input type="hidden" name="upcoming" value="0">
+      <input type="hidden" name="nodate" value="1">
       <label class="spenddate" hidden>📅 Expected on <input type="date" name="date" aria-label="Expected date"></label>
     </form>
     ${r.spends.length ? `
@@ -125,12 +129,13 @@
       <table style="margin-top:12px">
         ${rows}
       </table>
-      ${catView(r.spendCats, r.spendsAll, () => 'spend', x => esc(x.upcoming ? 'expected ' + shortDay(x.date) : shortDay(x.date)))}
+      ${catView(r.spendCats, r.spendsAll, () => 'spend', x => esc(x.upcoming ? (x.nodate ? 'no date yet' : 'expected ' + shortDay(x.date)) : shortDay(x.date)))}
     ` : ''}
 
     <div class="sum" style="margin-top:12px">
       <span>Money for spending</span><span class="n" id="mfs">${money(r.pay + r.left - r.billsAll)}</span>
-      <span>Typed so far</span><span class="n" id="typed">${money(r.spendsAll)}</span>
+      <span>Paid so far</span><span class="n" id="typed">${money(r.spendsAll - upTotal)}</span>
+      <span class="tocome">Still to come</span><span class="n tocome" id="tocome">${money(upTotal)}</span>
       <span class="eq">Left now</span><span class="n eq" id="leftnow">${money(r.leftNow)}</span>
     </div>
   </div>`;
@@ -231,7 +236,7 @@
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.due || ''}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}" data-paid="${b.paid ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.varies ? 'varies' : (b.due || '')}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}" data-paid="${b.paid ? 1 : 0}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span>${billLine(b, nm)}
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>

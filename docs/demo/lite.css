@@ -299,7 +299,6 @@ body.demo [data-card="bills"] table.dbills tr.bill.newglow { animation: newglow 
 .spenddate input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--row); color: var(--text); font: inherit; }
 body.demo [data-card] table tr.sgrp td { padding: 12px 0 2px; border: 0; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 body.demo [data-card="spend"] table tr.drow.upcoming td.n { color: var(--muted); }
-body.demo [data-card="spend"] table tr.drow.upcoming td b::before { content: "⏳ "; }
 body.demo [data-card="spend"] table tr.drow.paid td b { color: var(--good); }
 body.demo [data-card="spend"] table tr.drow.paid td b::before { content: "✓ "; font-weight: 800; }
 body.demo [data-card="spend"] table tr.drow td.smore { position: relative; }
@@ -537,3 +536,27 @@ tr.potbill.over .potbar i { background: var(--bad); }
 #lock .skipwarn { color: var(--muted); font-weight: 500; font-size: 13px; margin: 16px 0 0; }
 #lock .drivenew { margin: 12px 0 0; }
 #lock .drivenew a { color: var(--accent); font-weight: 600; }
+
+/* v0.59 (mock https://claude.ai/artifact/XbW57xUDPGfMqHwbKiLnSa): Upcoming = No date yet | Pick a date to the right; still to come = slanted;
+   Paid? button; bottom box Paid so far / Still to come; bill due day Set day | Varies on one line */
+.spendtop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 6px; margin: 0 0 10px; }
+.demo .spendtop .spendseg button { padding: 5px 8px; }
+.spendtop .spendseg { margin: 0; }
+.spendseg[hidden], .dueday[hidden], .duevar[hidden] { display: none; }
+@keyframes litefadein { from { opacity: 0; } to { opacity: 1; } }
+.whenseg, .dueday, .duevar, .spenddate { animation: litefadein .35s ease-out both; }
+body.demo [data-card="spend"] table tr.drow.upcoming td b, body.demo [data-card="spend"] table tr.drow.upcoming .labels,
+body.demo [data-card="spend"] table tr.drow.upcoming td.n:not(.smore) { font-style: italic; }
+body.demo [data-card="spend"] table tr.drow.upcoming td b { color: var(--muted); }
+body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: var(--spend); border: 1.5px solid var(--spend); border-radius: 999px;
+  padding: 3px 10px; margin: 4px 0 0; display: block; margin-left: auto; font-size: 12.5px; font-weight: 700; font-style: normal; }
+[data-card="spend"] .sum .tocome { font-style: italic; }
+.duesheet .dueline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.duesheet .dueseg { margin: 0; }
+.duesheet .dueday { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.duesheet .dueday .sheetin { width: 64px; text-align: center; margin: 0; }
+.duesheet .duevar { font-size: 14px; color: var(--text); }
+.duesheet .dueday[hidden], .duesheet .duevar[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .whenseg, .dueday, .duevar, .spenddate { animation: none; } }
+.demo .sheetback .dueseg button { width: auto; margin: 0; padding: 6px 14px; font-size: 13px; }
+.demo .sheetback .dueseg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }

@@ -77,8 +77,11 @@
   // Each takes (state, get) where get(name) reads a posted field; returns null (worked) or an error code.
   const quiet = r => r === 'unknown' ? null : r;                 // a bill or pot that is gone: nothing happens
   const ROUTES = {
-    '/add': (s, get) => get('upcoming') === '1' && !get('date').trim() ? 'spend'
-      : M.addSpend(s, today(), get('amount'), get('name'), get('upcoming') === '1' ? get('date') : ''),
+    '/add': (s, get) => {                                        // v0.59: Upcoming = No date yet, or a picked date
+      const up = get('upcoming') === '1', nodate = up && !get('date').trim() && get('nodate') === '1';
+      if (up && !nodate && !get('date').trim()) return 'spend';
+      return M.addSpend(s, today(), get('amount'), get('name'), up && !nodate ? get('date') : '', nodate);
+    },
     '/spend/paid': (s, get) => M.paySpend(s, get('id'), today()),
     '/spend/date': (s, get) => M.setSpendDate(s, get('id'), get('date')),
     '/spend/cat': (s, get) => M.setSpendCat(s, get('id'), get('cat')),

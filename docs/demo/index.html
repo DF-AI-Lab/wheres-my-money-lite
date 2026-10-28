@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.58"></script>
-<script src="money.js?v=0.58"></script>
-<script src="render.js?v=0.58"></script>
-<script src="sheet.js?v=0.58"></script>
-<script src="lite.js?v=0.58"></script>
-<script src="lock.js?v=0.58"></script>
-<script src="lockui.js?v=0.58"></script>
+<script src="config.js?v=0.59"></script>
+<script src="money.js?v=0.59"></script>
+<script src="render.js?v=0.59"></script>
+<script src="sheet.js?v=0.59"></script>
+<script src="lite.js?v=0.59"></script>
+<script src="lock.js?v=0.59"></script>
+<script src="lockui.js?v=0.59"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.58">
-<link rel="stylesheet" href="lite.css?v=0.58">
+<link rel="stylesheet" href="look.css?v=0.59">
+<link rel="stylesheet" href="lite.css?v=0.59">
 </head>
 <body class="demo">
 
@@ -317,7 +317,7 @@
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.58</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.59</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -676,7 +676,7 @@
       items.push(['Change name', '', () => {
         Sheet.ask('✏️ Name of the bill', 'Name', row.dataset.name).then(name => { if (name !== null) send('/bill/name', {key, name}); }); }]);
       items.push(['Due day', '', () => {
-        Sheet.ask('📅 ' + row.dataset.name + ': due day', 'Day of the month (1-31), empty = none', row.dataset.due, 'numeric').then(day => { if (day !== null) send('/bill/due', {key, day}); }); }]);
+        Sheet.due('📅 ' + row.dataset.name + ': due day', row.dataset.due).then(day => { if (day !== null) send('/bill/due', {key, day}); }); }]);
       items.push(['Category', '', () => {                   // a pick list of the categories, then ＋ New category
         const pick = Money.categories(Lite.state()).map(c => [(c === row.dataset.cat ? '✓ ' : '') + c, '', () => send('/bill/cat', {key, cat: c})]);
         pick.push(['＋ New category', '', () => Sheet.ask('🏷 New category', 'Name of the new category', '').then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); })]);
@@ -706,16 +706,32 @@
     } catch (e) { /* no storage */ }
 
     // v0.36 (mock H2): spends. Paid / Upcoming switch (Upcoming shows the expected date box); ⋯ = Change date / Paid / Remove
-    document.querySelectorAll('[data-card="spend"] .spendseg').forEach(seg => {
-      const form = seg.parentElement.querySelector('form[action="/add"]'), box = form.querySelector('.spenddate');
+    // v0.59: Upcoming shows 'No date yet | Pick a date' to the right (fades in); the date box only for Pick a date
+    document.querySelectorAll('[data-card="spend"] .spendtop').forEach(top => {
+      const seg = top.querySelector('.spendseg:not(.whenseg)'), when = top.querySelector('.whenseg');
+      const form = top.parentElement.querySelector('form[action="/add"]'), box = form.querySelector('.spenddate');
+      const press = (group, b) => group.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      const show = () => {
+        const up = form.elements.upcoming.value === '1', pick = form.elements.nodate.value === '0';
+        when.hidden = !up;
+        box.hidden = !(up && pick);
+      };
       seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
-        const up = b.dataset.up === '1';
-        seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
-        form.elements.upcoming.value = up ? '1' : '0';
-        box.hidden = !up;
-        if (up) form.elements.date.focus();
+        press(seg, b);
+        form.elements.upcoming.value = b.dataset.up === '1' ? '1' : '0';
+        show();
+      }));
+      when.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        press(when, b);
+        form.elements.nodate.value = b.dataset.when === 'none' ? '1' : '0';
+        if (b.dataset.when === 'none') form.elements.date.value = '';
+        show();
+        if (!box.hidden) form.elements.date.focus();
       }));
     });
+    // v0.59: Paid? on a spend still to come = it went out today
+    document.querySelectorAll('[data-card="spend"] tr.drow .paidq').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation(); send('/spend/paid', {id: btn.closest('tr').dataset.id}); }));
     // v0.51: All | Categories in Add a spend and Bills (remembered on this phone); tap a category to see what is in it
     const catViews = (() => { try { return JSON.parse(localStorage.getItem('lite_catview') || '{}') || {}; } catch (e) { return {}; } })();
     document.querySelectorAll('.card .catseg').forEach(seg => {

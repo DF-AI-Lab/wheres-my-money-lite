@@ -2,7 +2,8 @@
    Sheet.confirm(title, text, ok, danger) -> Promise<true|false>
    Sheet.ask(title, label, value, mode)    -> Promise<text|null>   (mode 'decimal' / 'numeric' = the number keyboard)
    Sheet.tell(title, text)                 -> Promise<undefined>
-   Sheet.day(title)                        -> Promise<'1'..'31'|null>   (a grid of days, v0.36)
+   Sheet.day(title)                        -> Promise<'1'..'31'|'varies'|null>   (a grid of days, v0.36; + Varies, v0.59)
+   Sheet.due(title, current)               -> Promise<'1'..'31'|''|'varies'|null> (Set day | Varies on one line, v0.59)
    Sheet.pick(title, names, current)       -> Promise<name|null>        (a list to tap; ＋ New category asks for the name)
    Sheet.choose(title, text, a, b)         -> Promise<'a'|'b'|null>      (two ways; Not now = null, v0.45)
    Sheet.ask(..., 'date')                  -> a date box (YYYY-MM-DD)
@@ -67,9 +68,33 @@
   function day(title) {
     const days = Array.from({length: 31}, (_, i) => `<button type="button" data-v="${i + 1}">${i + 1}</button>`).join('');
     return open(`<h3>${esc(title)}</h3><div class="daygrid">${days}</div>
+      <button type="button" class="sec dayvaries">Varies (no set date)</button>
       <button type="button" class="ter cancel">Cancel</button>`, null, (back, close) => {
       back.querySelectorAll('.daygrid button').forEach(b => b.addEventListener('click', () => close(b.dataset.v)));
+      back.querySelector('.dayvaries').addEventListener('click', () => close('varies'));
       back.querySelector('.daygrid button').focus();
+    });
+  }
+
+  // v0.59 (mock https://claude.ai/artifact/XbW57xUDPGfMqHwbKiLnSa): Set day | Varies, then the day box or a short note, one line
+  function due(title, current) {
+    const varies = current === 'varies';
+    return open(`<h3>${esc(title)}</h3><form class="sheetform duesheet">
+      <div class="dueline"><div class="spendseg dueseg" role="group" aria-label="Set day or varies"><button type="button" data-m="day" aria-pressed="${!varies}">Set day</button><button type="button" data-m="varies" aria-pressed="${varies}">Varies</button></div>
+      <label class="dueday"${varies ? ' hidden' : ''}>Day of the month <input class="sheetin" type="text" inputmode="numeric" maxlength="2" autocomplete="off" value="${varies ? '' : esc(current)}" aria-label="Day of the month, 1 to 31"></label>
+      <span class="duevar"${varies ? '' : ' hidden'}>Different day each month.</span></div>
+      <button type="submit" class="ok pri">Save</button></form>
+      <button type="button" class="ter cancel">Cancel</button>`, null, (back, close) => {
+      const input = back.querySelector('.sheetin'), day = back.querySelector('.dueday'), note = back.querySelector('.duevar');
+      let mode = varies ? 'varies' : 'day';
+      back.querySelectorAll('.dueseg button').forEach(b => b.addEventListener('click', () => {
+        mode = b.dataset.m;
+        back.querySelectorAll('.dueseg button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+        day.hidden = mode !== 'day'; note.hidden = mode === 'day';
+        if (mode === 'day') input.focus();
+      }));
+      back.querySelector('form').addEventListener('submit', e => { e.preventDefault(); close(mode === 'varies' ? 'varies' : input.value); });
+      if (!varies) { input.focus(); input.select(); }
     });
   }
 
@@ -85,5 +110,5 @@
   }
   const NEW = {};
 
-  root.Sheet = {confirm, ask, tell, day, pick, choose};
+  root.Sheet = {confirm, ask, tell, day, due, pick, choose};
 })(typeof window !== 'undefined' ? window : globalThis);

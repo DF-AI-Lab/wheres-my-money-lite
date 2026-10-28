@@ -70,6 +70,7 @@ def test_a_new_bill_glows_once(page, base):
 def add_mot(page, base):
     page.goto(base + DEMO)
     page.click('[data-card="spend"] .spendseg button[data-up="1"]')
+    page.click('[data-card="spend"] .whenseg button[data-when="date"]')       # v0.59: Upcoming starts on 'No date yet'
     assert page.locator('[data-card="spend"] .spenddate').is_visible()
     post(page, 'form[action="/add"]', {"amount": "54.85", "name": "Car MOT", "date": "2024-11-20"})
 
@@ -81,6 +82,7 @@ def test_the_switch_shows_the_date_box_only_for_upcoming(page, base):
     assert not page.locator('[data-card="spend"] .spenddate').is_visible()
     seg.locator('button[data-up="1"]').click()
     assert seg.locator('button[data-up="1"]').get_attribute("aria-pressed") == "true"
+    page.click('[data-card="spend"] .whenseg button[data-when="date"]')       # v0.59: the date box = Pick date
     assert page.locator('[data-card="spend"] .spenddate').is_visible()
     assert page.locator('form[action="/add"] input[name="upcoming"]').input_value() == "1"
     seg.locator('button[data-up="0"]').click()
@@ -92,7 +94,7 @@ def test_upcoming_spend_sits_in_coming_up_with_its_message(page, base):
     add_mot(page, base)
     card = page.locator('[data-card="spend"]')
     heads = card.locator("tr.sgrp").all_text_contents()
-    assert heads[0].startswith("Coming up") and "£54.85" in heads[0]
+    assert heads[0].startswith("Still to come") and "£54.85" in heads[0]
     assert heads[1].startswith("Paid")
     mot = card.locator('tr.drow:has-text("Car MOT")')
     assert "upcoming" in mot.get_attribute("class")
@@ -159,7 +161,7 @@ def test_dots_paid_and_remove(page, base):
 
 def test_upcoming_with_no_date_is_an_error(page, base):
     page.goto(base + DEMO)
-    post(page, 'form[action="/add"]', {"amount": "5", "name": "X", "upcoming": "1", "date": ""})
+    post(page, 'form[action="/add"]', {"amount": "5", "name": "X", "upcoming": "1", "nodate": "0", "date": ""})
     assert page.locator('[data-card="spend"] .error').count() == 1
     assert page.locator('[data-card="spend"] tr.drow:has-text("X")').count() == 0
 

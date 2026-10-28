@@ -263,6 +263,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   Google account with their own email), #driveskip + ⚠️ warning. Bell line kind 'drive' '☁️ Not backed up' (Connect → ?view=drive) while
   Drive is off (not in the demo without a lock). Old tests tap #driveskip / count the Drive line on purpose. Tests 87 node + 250 browser.
   Parked: Cloudflare Pages (own origin, at production), OneDrive.
+- **28 Oct v0.59 MOVED TO LIVE (Darren: "do these direct to live"; mock https://claude.ai/artifact/XbW57xUDPGfMqHwbKiLnSa):** Spends: Upcoming
+  shows .whenseg 'No date yet | Pick date' to the right (.spendtop row, fades in; hidden input nodate; date box only for Pick date). spend.nodate =
+  upcoming until Paid (never autoPaid; carried to the next month at payday; a date set clears it). Upcoming rows slanted + .paidq 'Paid?' under the
+  amount (/spend/paid). Group 'Still to come'; bottom box Money for spending / Paid so far / #tocome Still to come / Left now. Bills: bill.due can be
+  'varies' (setDue; compute varies, dueText 'varies', never past due); ⋯ Due day = Sheet.due (Set day | Varies on one line); '+ date' grid has
+  .dayvaries. test_v036 changed on purpose. Tests 93 node + 255 browser (test_v059.py; LITE_CHROME=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome).
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
