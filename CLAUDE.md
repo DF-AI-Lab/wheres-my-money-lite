@@ -249,6 +249,14 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   #safebox list (.saferow Load = loadBackup / ⬇️), #safeall 'Download all' (one JSON {copies:[{day,file}]}); Save/Load/Turn off now inside
   details#drivemore 'More options'. Any Load (file or Drive) keeps the old money in DK('undo') + toast '📂 Backup loaded ↩️ Undo'. Old Drive
   tests click the tucked buttons with dispatch_event and ignore safety files on purpose. Tests 87 node + 234 browser (test_v056.py).
+- **28 Oct v0.57 (demo only; live still v0.56): SIGN IN ON A WIPED DEVICE.** Darren's PC browser storage was wiped and Lite said
+  "Choose a passcode" like a new person. Now no lock record = lock step 'welcome': #signin 'Sign in with Google' (Gmail = username) ->
+  lite.js root.LiteRestore.find (driveConnect, newest driveList file, alt=media) -> step 'restore' (#restoreinfo date + Gmail, #rname,
+  #rpin passcode OR backup code) -> Lock.adopt -> same lock record (mb/pin/codes), money saved, lite_drive_file = that file, reload, in.
+  Plain (pre-lock) copy = loaded, then newpin with #restorednote. No copy / error / #restorenew 'Start new instead' = LiteRestore.off
+  (Drive keys cleared, so a new start never writes over the copy). #imnew = old newpin step. DEMO: ?lock=1 = try as a wiped device
+  (lite.js clears ONLY lite_demo_* keys, sessionStorage lite_demo_lock; lockui keys lite_demo_lock_v1 / lite_demo_unlock), ?lock=0 off.
+  test_gob6/test_v043 tap #imnew first (on purpose). Tests 87 node + 244 browser (test_v057.py).
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

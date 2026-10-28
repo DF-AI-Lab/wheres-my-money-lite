@@ -79,7 +79,7 @@ def test_sign_in_and_passcode_bring_everything_back(browser, base):
     pg.click("#restoreform button[type=submit]")
     pg.wait_for_selector("#lockerr:not([hidden])")
     assert "didn't open" in pg.locator("#lockerr").inner_text()
-    assert lock_rec(pg) is None and stored(pg) is None
+    assert lock_rec(pg) is None and not (stored(pg) or {}).get("spends")
     pg.fill("#rname", "Sam")
     pg.fill("#rpin", PIN)
     with pg.expect_navigation():

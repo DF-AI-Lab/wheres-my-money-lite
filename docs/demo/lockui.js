@@ -2,11 +2,15 @@
    Like live v3.62's sign-in: a 6-number passcode, a fingerprint (passkey) instead of typing it, 10 backup codes.
    NOTE: this is a screen lock. The data itself sits in localStorage, so the lock keeps out a person holding the phone,
    not someone with developer tools. (The backup FILE is really scrambled; see lock.js.)
-   The demo (?demo=1) never has a lock. */
+   The demo (?demo=1) never has a lock; the demo copy can try one as a wiped device with ?lock=1 (its own keys).
+   v0.57 a device with nothing saved shows Welcome: Sign in with Google -> the newest Drive copy -> passcode -> back in. */
 (function (root) {
   'use strict';
-  const L = root.Lock, REC_KEY = 'lite_lock_v1', STAMP_KEY = 'lite_unlock', NAME_KEY = (root.Lite && root.Lite.Store.demo) ? 'lite_demo_name' : 'lite_name';
-  const demo = !!(root.Lite && root.Lite.Store.demo);
+  const isDemo = !!(root.Lite && root.Lite.Store.demo);
+  const tryLock = isDemo && (() => { try { return root.sessionStorage.getItem('lite_demo_lock') === '1'; } catch (e) { return false; } })();
+  const demo = isDemo && !tryLock;                           // demo = no lock at all
+  const L = root.Lock, REC_KEY = tryLock ? 'lite_demo_lock_v1' : 'lite_lock_v1', STAMP_KEY = tryLock ? 'lite_demo_unlock' : 'lite_unlock';
+  const NAME_KEY = isDemo ? 'lite_demo_name' : 'lite_name';
   const html = document.documentElement;
   let rec = null, from = '', busy = false;
 
@@ -65,7 +69,8 @@
     say('');
     greet();
     if ($('namebox')) $('namebox').hidden = from === 'forgot';
-    ['pin', 'again', 'bcode'].forEach(id => b.querySelectorAll('#' + id).forEach(i => { i.value = ''; }));
+    if ($('restorednote')) $('restorednote').hidden = from !== 'restored';
+    ['pin', 'again', 'bcode', 'rpin'].forEach(id => b.querySelectorAll('#' + id).forEach(i => { i.value = ''; }));
     if (name === 'unlock') {
       const fp = $('fp'), withFinger = !!(rec && rec.passkeys && rec.passkeys.length && canFinger());
       if (fp) fp.hidden = !withFinger;
@@ -73,6 +78,7 @@
       if (withFinger) askFinger(); else focus('unlockform');
     } else if (name === 'newpin') focus('pinform');
     else if (name === 'forgot') focus('codeform');
+    else if (name === 'restore') focus('restoreform');
     else if (name === 'passkey') fingerPage();
   }
   function focus(formId) { const i = document.querySelector('#' + formId + ' input'); if (i) i.focus(); }
@@ -88,7 +94,7 @@
     rec = load();
     if (shown()) return;
     const n = L.needs(rec, stamp(), Date.now());
-    if (n === 'setup') step('newpin'); else if (n === 'unlock') step('unlock');
+    if (n === 'setup') step(root.LiteRestore && root.LiteRestore.ready() ? 'welcome' : 'newpin'); else if (n === 'unlock') step('unlock');
     else html.classList.remove('lockon');
   }
 
@@ -161,6 +167,50 @@
     } finally { busy = false; }
   }
 
+  // ---------- v0.57 sign in on a wiped device: Google finds the copy, the passcode (or a backup code) opens it ----------
+  let tried = false;
+  async function findCopy(pick) {
+    if (busy) return;
+    busy = true;
+    const btn = $('signin'), was = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Looking in your Google Drive…'; say('');
+    try {
+      const r = await root.LiteRestore.find(pick || tried);
+      tried = true;
+      if (!r.file) {
+        step('welcome');
+        say('No copy found in ' + (r.email || 'that Google account') + '. Sign in with another account, or tap I\'m new.');
+      } else if (r.scrambled) {
+        $('restoreinfo').textContent = 'Found your copy from ' + r.day + (r.email ? ' in ' + r.email : '') + '.';
+        if ($('rname') && !$('rname').value) $('rname').value = myName();
+        step('restore');
+      } else {                                               // saved before the lock: no passcode opens it, so pick one now
+        root.LiteRestore.finish(null);
+        from = 'restored';
+        step('newpin');
+      }
+    } catch (e) {
+      say(e && e.message ? e.message : 'Something went wrong. Try again.');
+    } finally { btn.disabled = false; btn.textContent = was; busy = false; }
+  }
+  async function onRestore(e) {
+    e.preventDefault();
+    if (busy) return;
+    busy = true;
+    const btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try {
+      const got = await root.LiteRestore.open($('rpin').value);
+      if (!got) { $('rpin').value = ''; say("😕 That didn't open. Check your passcode, or type a backup code."); return; }
+      rec = {v: 1, iter: got.iter, mb: got.mb, pin: got.pin, codes: got.codes, passkeys: [], fails: {count: 0, until: 0}};
+      save();
+      if ($('rname').value.trim()) setName($('rname').value);
+      root.LiteRestore.finish(got.state);
+      setStamp(true);
+      root.location.reload();                                // the page draws the money that came back
+    } finally { btn.disabled = false; busy = false; }
+  }
+
   // ---------- fingerprint: a passkey on this phone (no server, so nothing is checked by one) ----------
   async function askFinger() {
     try {
@@ -224,7 +274,12 @@
     on('pinform', 'submit', onNewPin);
     on('unlockform', 'submit', onUnlock);
     on('codeform', 'submit', onCode);
-    on('codesdone', 'click', enter);
+    on('codesdone', 'click', () => { const back = from === 'restored'; enter(); if (back) root.location.reload(); });
+    on('signin', 'click', () => findCopy(false));
+    on('imnew', 'click', () => { from = ''; step('newpin'); });
+    on('restoreform', 'submit', onRestore);
+    on('restoreother', 'click', () => findCopy(true));
+    on('restorenew', 'click', () => { root.LiteRestore.off(); from = ''; step('newpin'); });
     on('copycodes', 'click', async () => {                   // all 10 in one paste for the phone's notes
       const codes = [...document.querySelectorAll('#lock ul.codes li')].map(li => li.textContent);
       const text = "Where's My Money? Lite backup codes (each works once)\n" + codes.join('\n');

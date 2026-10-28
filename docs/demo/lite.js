@@ -43,6 +43,20 @@
     },
     save(s) { try { Store.area().setItem(Store.key, JSON.stringify(s)); } catch (e) { /* private window: not saved */ } },
   };
+  // v0.57 the demo copy can try the lock as a WIPED device: ?lock=1 clears the demo's own lock, name, money and Drive
+  // keys and turns its lock on for this tab; ?lock=0 = no lock again. Live's keys are never touched.
+  if (demoCopy) {
+    try {
+      const u = new URL(location.href), q = u.searchParams.get('lock');
+      if (q === '1') {
+        ['lite_demo_lock_v1', 'lite_demo_name'].concat(Object.keys(root.localStorage).filter(k => k.indexOf('lite_demo_drive_') === 0))
+          .forEach(k => root.localStorage.removeItem(k));
+        [DEMO_KEY, 'lite_demo_unlock', 'lite_demo_drive_token'].forEach(k => root.sessionStorage.removeItem(k));
+        root.sessionStorage.setItem('lite_demo_lock', '1');
+      } else if (q === '0') root.sessionStorage.removeItem('lite_demo_lock');
+      if (q !== null) { u.searchParams.delete('lock'); history.replaceState(null, '', u.pathname + u.search + u.hash); }   // a reload must not wipe again
+    } catch (e) { /* no storage */ }
+  }
   let state = Store.load() || (demo ? M.FAKE() : M.TEMPLATE());
   // ask the browser not to clear the saved data (it may say no; that is fine)
   if (!demo) { try { const p = root.navigator.storage && root.navigator.storage.persist && root.navigator.storage.persist(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
@@ -1037,6 +1051,44 @@
     placeNow();
     return out;
   }
+
+  // ---------- v0.57 a wiped device: sign in with Google, find the newest Drive copy (lockui.js asks the passcode) ----------
+  // Drive stays off until the money is back, so a device that starts new instead can never write over the copy.
+  let found = null;
+  function restoreOff() {
+    [DRIVE_ON, DRIVE_EMAIL, DRIVE_ID, DRIVE_DIR, DRIVE_DIRTY].forEach(k => lsSet(k, null));
+    setToken(''); found = null;
+  }
+  async function restoreFind(pick) {                               // {email, file: null} or {email, file, day, scrambled}
+    if (!clientId()) throw new Error('Google sign-in is not set up yet.');
+    found = null;
+    try {
+      await loadGsi();
+      lsSet(DRIVE_EMAIL, null);
+      await driveConnect(false, pick);
+      const email = lsGet(DRIVE_EMAIL) || '', f = (await driveList())[0];
+      if (!f) { restoreOff(); return {email, file: null}; }
+      const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+      if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
+      let obj = null;
+      try { obj = JSON.parse(await r.text()); } catch (e) { /* not JSON */ }
+      if (!obj || obj.app !== 'wheres-my-money-lite' || !(obj.scrambled || M.importBackup(obj))) {
+        throw new Error("The copy in your Google Drive is not a Where's My Money backup.");
+      }
+      found = {file: f, obj};
+      return {email, file: f, day: M.fmt.day(obj.saved || String(f.modifiedTime || '').slice(0, 10)), scrambled: !!obj.scrambled};
+    } catch (e) { restoreOff(); throw e; }
+  }
+  const restoreOpen = secret => (found && found.obj.scrambled ? root.Lock.adopt(found.obj.scrambled, secret) : Promise.resolve(null));
+  function restoreFinish(st) {                                     // the money is back: keep it, and Drive carries on with that file
+    const s = M.importBackup({app: found.obj.app, saved: found.obj.saved, state: st || found.obj.state});
+    if (!s) return false;
+    state = s; Store.save(s);
+    lsSet(DRIVE_ID, JSON.stringify({name: found.file.name, id: found.file.id}));
+    lsSet(DRIVE_DIRTY, null);
+    return true;
+  }
+  root.LiteRestore = {find: restoreFind, open: restoreOpen, finish: restoreFinish, off: restoreOff, ready: () => !!clientId()};
 
   root.Lite = {start, Store, today, state: () => state, run, leave, saveBackup};
 })(window);
