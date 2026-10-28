@@ -533,3 +533,7 @@ tr.potbill.over .potbar i { background: var(--bad); }
 #drive .drivemore summary::-webkit-details-marker { display: none; }
 #drive .drivemore summary::before { content: '▸'; transition: transform .15s; }
 #drive .drivemore[open] summary::before { transform: rotate(90deg); }
+/* v0.58 the Drive step after the first passcode */
+#lock .skipwarn { color: var(--muted); font-weight: 500; font-size: 13px; margin: 16px 0 0; }
+#lock .drivenew { margin: 12px 0 0; }
+#lock .drivenew a { color: var(--accent); font-weight: 600; }

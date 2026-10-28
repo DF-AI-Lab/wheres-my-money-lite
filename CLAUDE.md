@@ -257,6 +257,12 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   (Drive keys cleared, so a new start never writes over the copy). #imnew = old newpin step. DEMO: ?lock=1 = try as a wiped device
   (lite.js clears ONLY lite_demo_* keys, sessionStorage lite_demo_lock; lockui keys lite_demo_lock_v1 / lite_demo_unlock), ?lock=0 off.
   test_gob6/test_v043 tap #imnew first (on purpose). Tests 87 node + 244 browser (test_v057.py).
+- **28 Oct v0.58 MOVED TO LIVE (Darren: "send it to live"): DRIVE PUSHED AT SETUP.** After the first passcode + codes (lockui `fresh`), step
+  'drive': '☁️ Keep your money safe', #drivego = LiteRestore.connect (driveConnect; a Google account that ALREADY has a copy is not used:
+  restoreOff + #lockerr 'already a copy'), link 'Make one with your own email →' (accounts.google.com/signup; Yahoo/Hotmail people make a
+  Google account with their own email), #driveskip + ⚠️ warning. Bell line kind 'drive' '☁️ Not backed up' (Connect → ?view=drive) while
+  Drive is off (not in the demo without a lock). Old tests tap #driveskip / count the Drive line on purpose. Tests 87 node + 250 browser.
+  Parked: Cloudflare Pages (own origin, at production), OneDrive.
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

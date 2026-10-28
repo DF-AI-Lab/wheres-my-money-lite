@@ -15,13 +15,13 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.57"></script>
-<script src="money.js?v=0.57"></script>
-<script src="render.js?v=0.57"></script>
-<script src="sheet.js?v=0.57"></script>
-<script src="lite.js?v=0.57"></script>
-<script src="lock.js?v=0.57"></script>
-<script src="lockui.js?v=0.57"></script>
+<script src="config.js?v=0.58"></script>
+<script src="money.js?v=0.58"></script>
+<script src="render.js?v=0.58"></script>
+<script src="sheet.js?v=0.58"></script>
+<script src="lite.js?v=0.58"></script>
+<script src="lock.js?v=0.58"></script>
+<script src="lockui.js?v=0.58"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -178,8 +178,8 @@
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.57">
-<link rel="stylesheet" href="lite.css?v=0.57">
+<link rel="stylesheet" href="look.css?v=0.58">
+<link rel="stylesheet" href="lite.css?v=0.58">
 </head>
 <body class="demo">
 
@@ -254,6 +254,16 @@
     <button type="button" id="codesdone">I've saved them</button>
   </section>
 
+  <!-- v0.58 straight after the first passcode: keep the money safe in Google Drive -->
+  <section data-for="drive" hidden>
+    <p><b>☁️ Keep your money safe</b></p>
+    <p class="tag">If this phone is reset or the browser is cleared, Google Drive brings it all back.</p>
+    <button type="button" id="drivego">Connect Google Drive</button>
+    <p class="tag drivenew">No Google account? <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">Make one with your own email →</a></p>
+    <p class="note skipwarn">⚠️ Skip it and your money lives only in this browser. Clearing it loses everything.</p>
+    <div class="links"><button type="button" class="linkbtn" id="driveskip">Skip for now</button></div>
+  </section>
+
   <section data-for="forgot" hidden>
     <form id="codeform" novalidate>
       <label>Type a backup code
@@ -307,7 +317,7 @@
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.57</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.58</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -1263,6 +1273,10 @@
     window.refreshBell = function () {
       // v0.39 (mock B): bills due the same day = one line; ▸ opens one short line per bill (tap = jump + flash)
       const list = Money.remindLines(Lite.state(), Lite.today());
+      // v0.58 no Drive = one clearing away from losing it all: the bell says so until it is on
+      if (window.LockUI && !LockUI.demo && window.LiteRestore && LiteRestore.ready() && !LiteRestore.isOn()) {
+        list.push({kind: 'drive', text: '☁️ Not backed up', sub: 'Clearing this browser loses your money. Connect Google Drive.', go: '?view=drive'});
+      }
       count.textContent = list.length || ''; count.hidden = !list.length;
       menu.innerHTML = '';
       if (!list.length) { menu.innerHTML = '<div class="remempty">Nothing to check 👍</div>'; return; }
@@ -1296,8 +1310,8 @@
         if (r.sub) text.appendChild(el('small', '', r.sub));
         row.appendChild(text);
         if (!group) {
-          const go = el('button', 'small remgo', 'Show'); go.type = 'button';
-          go.addEventListener('click', () => jump(r.go)); row.appendChild(go);
+          const go = el('button', 'small remgo', r.kind === 'drive' ? 'Connect' : 'Show'); go.type = 'button';
+          go.addEventListener('click', () => r.kind === 'drive' ? location.assign(r.go) : jump(r.go)); row.appendChild(go);
         }
         if (r.kind === 'bill' || group) {
           const done = el('button', 'small remdone', '✓'); done.type = 'button';

@@ -12,7 +12,7 @@
   const L = root.Lock, REC_KEY = tryLock ? 'lite_demo_lock_v1' : 'lite_lock_v1', STAMP_KEY = tryLock ? 'lite_demo_unlock' : 'lite_unlock';
   const NAME_KEY = isDemo ? 'lite_demo_name' : 'lite_name';
   const html = document.documentElement;
-  let rec = null, from = '', busy = false;
+  let rec = null, from = '', busy = false, fresh = false;
 
   // ---------- the record and the "unlocked at" stamp ----------
   function load() {
@@ -122,6 +122,7 @@
         const codes = L.makeCodes();
         if ($('myname')) setName($('myname').value);
         rec = await L.create(pin, codes); save();
+        fresh = true;
         showCodes(codes);
       }
     } finally { busy = false; }
@@ -274,7 +275,25 @@
     on('pinform', 'submit', onNewPin);
     on('unlockform', 'submit', onUnlock);
     on('codeform', 'submit', onCode);
-    on('codesdone', 'click', () => { const back = from === 'restored'; enter(); if (back) root.location.reload(); });
+    on('codesdone', 'click', () => {
+      const back = from === 'restored', ask = fresh && !back && root.LiteRestore && root.LiteRestore.ready() && !root.LiteRestore.isOn();
+      fresh = false;
+      if (ask) { step('drive'); return; }                    // v0.58 keep it safe: Drive next
+      enter(); if (back) root.location.reload();
+    });
+    on('drivego', 'click', async () => {
+      if (busy) return;
+      busy = true;
+      const btn = $('drivego'), was = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Connecting…'; say('');
+      try {
+        const r = await root.LiteRestore.connect();
+        if (r.had) say('There is already a copy in ' + r.email + '. To get it back: clear this app and tap Sign in with Google. Or connect another account.');
+        else { enter(); root.location.reload(); }
+      } catch (e) { say(e && e.message ? e.message : 'Something went wrong. Try again.'); }
+      finally { btn.disabled = false; btn.textContent = was; busy = false; }
+    });
+    on('driveskip', 'click', enter);
     on('signin', 'click', () => findCopy(false));
     on('imnew', 'click', () => { from = ''; step('newpin'); });
     on('restoreform', 'submit', onRestore);
