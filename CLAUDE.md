@@ -249,7 +249,7 @@ app in. The main app lives in DF-AI-Lab/financial-tracker: never change that rep
   #safebox list (.saferow Load = loadBackup / ⬇️), #safeall 'Download all' (one JSON {copies:[{day,file}]}); Save/Load/Turn off now inside
   details#drivemore 'More options'. Any Load (file or Drive) keeps the old money in DK('undo') + toast '📂 Backup loaded ↩️ Undo'. Old Drive
   tests click the tucked buttons with dispatch_event and ignore safety files on purpose. Tests 87 node + 234 browser (test_v056.py).
-- **28 Oct v0.57 (demo only; live still v0.56): SIGN IN ON A WIPED DEVICE.** Darren's PC browser storage was wiped and Lite said
+- **28 Oct v0.57 MOVED TO LIVE (Darren: "go"; live = demo = v0.57): SIGN IN ON A WIPED DEVICE.** Darren's PC browser storage was wiped and Lite said
   "Choose a passcode" like a new person. Now no lock record = lock step 'welcome': #signin 'Sign in with Google' (Gmail = username) ->
   lite.js root.LiteRestore.find (driveConnect, newest driveList file, alt=media) -> step 'restore' (#restoreinfo date + Gmail, #rname,
   #rpin passcode OR backup code) -> Lock.adopt -> same lock record (mb/pin/codes), money saved, lite_drive_file = that file, reload, in.
