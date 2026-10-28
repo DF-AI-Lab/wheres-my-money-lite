@@ -11,7 +11,9 @@ The list for the Lite website (a page that shows off the app). Darren adds to it
 ## Mocks so far (28 Oct 2026)
 - Website v2 (real app in a phone, month drag, lock / Drive / bell demos): https://claude.ai/artifact/YEgqmn5sUnojt4Nv2P5KBv
 - Iron Man HUD tour (asks your name, 9 stops, lines lock on, typed text, voice, autoplay): https://claude.ai/artifact/3A31ctr6QEYrZdQ6twascm
-- Wake to unlock hero, and the Playground (scenarios + tips): links on the ideas board.
+- Wake to unlock hero (4 wake styles, timed motion notes): https://claude.ai/artifact/SCWVcMichEckuWFEGjxG8t
+- Playground (all cards, scenarios, tips mode): https://claude.ai/artifact/9qq9KqDURAToZFefZYTBVE
+- Scroll the month + try your own numbers + privacy x-ray: https://claude.ai/artifact/1jjHN9wVnVZgHagRHiLLw3
 
 ## More ideas (Claude, 28 Oct)
 - Payday countdown in the hero: "27 days to payday", ticking live.
