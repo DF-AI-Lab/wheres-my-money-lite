@@ -3,7 +3,7 @@
 ## Where we are
 - Current step: Brain Dump done → Step 1 (Idea), first draft below, not grilled yet
 - Last session: 30 Oct 2026, idea talked through in chat
-- Next action: Darren checks the Idea draft ("Have I got that right?"), then grill Step 1
+- Next action: Darren picks: plain doors first or MCP from day one; then grill Step 1
 
 ## Principles / constraints
 - Cheap: the Claude API is the fallback, not the main path
@@ -23,6 +23,16 @@
 - Missing info: where the hub lives (new app or inside WMM first?); are the apps all on PythonAnywhere?
 - In scope: understand → pick app → pull out details → do it → log it → retrain
 - Out of scope: a general chatbot; running a big AI locally
+
+## Shape (Darren, 30 Oct): assistant → kitchen → ingredients
+- **Assistant** = the front: one box, it understands
+- **Kitchen** = the hub behind it: passes jobs to plug-ins, logs, retrains
+- **Ingredients** = one plug-in per app (WMM, Fridge, Calendar, To-do). Add, remove or upgrade one without touching
+  the rest
+
+## Stages (Darren, 30 Oct): simple first
+- **Stage 1:** router weights: which app is this for? (spend / fridge / calendar / to-do)
+- **Stage 2:** one small model per app for its details (spend: amount + shop; calendar: day + time; ...)
 
 ## 2. Steps (rough, from the brain dump, not grilled yet)
 1. **Doors:** each app gets a small "do this" door (API endpoints, later MCP)
@@ -47,6 +57,8 @@ Ideas so far (not decisions):
 |---|----------|-----|------|
 | 1 | Mix of rules + tiny model + Claude API fallback | free and fast for everyday, smart when unsure | 30 Oct 2026 |
 | 2 | Log everything and retrain (teacher → student) | gets cheaper and smarter over time | 30 Oct 2026 |
+| 3 | Assistant → kitchen → ingredients (plug-in per app) | add / remove / upgrade apps easily | 30 Oct 2026 |
+| 4 | Stage 1 = router only; Stage 2 = per-app detail models | simple first | 30 Oct 2026 |
 
 ## Parked (this version, not now)
 - MCP doors (start with simple web endpoints; MCP can sit on top later)
@@ -74,3 +86,4 @@ Ideas so far (not decisions):
 
 ## Change log
 - 30 Oct 2026: Project file created from the chat brain dump
+- 30 Oct 2026: shape (assistant/kitchen/ingredients) + 2 stages agreed
