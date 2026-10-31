@@ -137,7 +137,7 @@ def create_app(db_path, wage_payer=WAGE_PAYER, today=None, updater=None, restart
         Flask app with all routes configured
     """
     # The Update button: updater() gets the new code (fintrack/update.py), restart() starts the page again with it
-    # (exit code 3 tells start.bat to run web.py again). Tests pass their own.
+    # (exit code 3 = restart). Tests pass their own.
     if updater is None:
         from fintrack.update import update_code as updater
     if restart is None:

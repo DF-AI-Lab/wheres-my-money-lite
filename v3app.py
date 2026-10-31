@@ -5,9 +5,8 @@ On PythonAnywhere the WSGI file says:
     from v3app import make_app
     application = make_app("/home/<you>/wmm-data")
 
-On the PC (testing, next to v2):  C:\\ftvenv\\Scripts\\python.exe v3app.py   (or double-click v3.bat)
-It runs at http://127.0.0.1:5001 on its own copy of the database (the folder v3data next to the statements folder),
-so v2 at :5000 and its data are never touched.
+Locally it runs at http://127.0.0.1:5001 on its own copy of the database
+(the live data is never touched).
 
 The data folder holds tracker.db, v3_settings.json (never in GitHub) and backups/. The settings file is made on the
 first start with a random secret key; Darren fills in his email (and the Gmail app password) by hand.

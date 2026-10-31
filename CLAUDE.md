@@ -11,7 +11,7 @@ Darren does NOT run Python, .bat files or any command on a PC. Never ask him abo
 - `/` = templates/ + static/ (the v3 page + a 'Lite' badge). `/demo` = demo/templates + demo/static (a copy to try
   changes on first; web.home(folder=...)). Changes made on /demo go back to /demo.
 - Version: fintrack/appversion.py, starts at 0.01, +0.01 per push.
-- Plan: map = financial-tracker issue #22. Next: trim what Lite doesn't need (PC .bat files, v2 phone parts,
+- Plan: map = financial-tracker issue #22. Next: trim what Lite doesn't need (.bat files DONE v0.02; still: v2 phone parts,
   prototypes), then ticket #25 Bill details. Not online yet (later: same PythonAnywhere site at /lite).
 - Tests (for Claude only): `.venv/bin/pytest -q`.
 

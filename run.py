@@ -359,7 +359,7 @@ def _push(db_path, wage_payer, out):
     try:
         import web
     except ImportError:
-        out("Phone copy not sent: flask is missing (C:\\ftvenv\\Scripts\\python.exe -m pip install flask).")
+        out("Phone copy not sent: flask is missing.")
         return
     if web.push(db_path, wage_payer):
         out("Sent a fresh copy to your phone.")

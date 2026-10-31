@@ -1,7 +1,7 @@
 """v3 move-in check (14 Oct 2026): does the database hold anything that looks like an account number, sort code,
 card number, IBAN or postcode? Run on the PC before the database goes online:
 
-    C:\\ftvenv\\Scripts\\python.exe tools\\privacy_check.py "C:\\path\\to\\tracker.db"
+    python tools/privacy_check.py path/to/tracker.db
 
 It only READS the database and prints counts plus a few examples with the digits hidden, so the output is safe to
 copy and paste to Claude.

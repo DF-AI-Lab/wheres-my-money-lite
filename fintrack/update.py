@@ -2,8 +2,8 @@
 
 Downloads main.zip, checks it is this project, then copies new and changed files over the code folder.
 Never touched: statements folders, PDFs (except the fake test ones), databases, .env, .venv and anything of the
-user's that is not in the zip (nothing is deleted). Uses the standard library only, so `update.bat` still works
-when the rest of the code is broken:  C:\\ftvenv\\Scripts\\python.exe -m fintrack.update
+user's that is not in the zip (nothing is deleted). Uses the standard library only.
+(old PC tool, kept for history).
 """
 import io
 import sys
@@ -60,7 +60,7 @@ def update_code(code_dir: Path = CODE_DIR, fetch=download) -> dict:
         new = z.read(info)
         target = code_dir.joinpath(*rel.parts)
         if target.exists() and target.read_bytes() == new:
-            continue                                               # same as now: not rewritten (start.bat may be running)
+            continue                                               # same as now: not rewritten
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(new)
         changed.append(str(rel))
@@ -81,7 +81,7 @@ def main():
         return 1
     if r["changed"]:
         print(f"Updated {len(r['changed'])} file(s). Version {r['version']}.")
-        print("Close the black Financial Tracker window (if open) and double-click start.bat.")
+        print("Close the black Financial Tracker window (if open) and start the app again.")
     else:
         print(f"Already up to date (version {r['version']}).")
     return 0
