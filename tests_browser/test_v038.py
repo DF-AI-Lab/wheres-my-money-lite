@@ -60,7 +60,8 @@ def connect(page, base):
 
 def backups(d):
     return [f for f in d["files"].values() if f["mimeType"] != FOLDER
-            and not f["name"].startswith("wmm-lite-safety")]          # v0.56: the daily safety copy is its own thing
+            and not f["name"].startswith("wmm-lite-safety")          # v0.56: the daily safety copy is its own thing
+            and "summary.json" not in f["name"]]                       # v0.60: the plain totals file for Claude too
 
 
 def test_backups_go_in_one_folder(page, base):

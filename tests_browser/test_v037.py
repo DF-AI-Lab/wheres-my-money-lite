@@ -130,6 +130,8 @@ def fake_drive(page, listed=None):
 
     def api(route):
         req = route.request
+        if "upload/drive/v3/files" in req.url and "summary.json" in (req.post_data or ""):   # v0.60: the totals file
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": "summary1"}))
         if "upload/drive/v3/files" in req.url:
             log["uploads"].append({"method": req.method, "url": req.url, "body": req.post_data or ""})
             return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": "new%d" % len(log["uploads"])}))

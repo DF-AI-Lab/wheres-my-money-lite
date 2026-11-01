@@ -269,6 +269,16 @@
   amount (/spend/paid). Group 'Still to come'; bottom box Money for spending / Paid so far / #tocome Still to come / Left now. Bills: bill.due can be
   'varies' (setDue; compute varies, dueText 'varies', never past due); ⋯ Due day = Sheet.due (Set day | Varies on one line); '+ date' grid has
   .dayvaries. test_v036 changed on purpose. Tests 93 node + 255 browser (test_v059.py; LITE_CHROME=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome).
+- **1 Nov v0.60 (demo only; live still v0.59; Opus tests, Sonnet built, Opus checked): ORBIT INBOX.** Orbit Agent (its own Worker = the MCP;
+  NO server/MCP in Lite) drops job files wmm-job-YYYYMMDD-HHMMSS-xxxx.json (demo: wmm-demo-job-) in Drive. lite.js jobsRun (Drive on + token
+  + unlocked: on load, after the quiet reconnect, when shown again; waits for 'lockon' to go; syncBlocked = retry 5 s): list, M.jobOrder
+  (by name), M.applyJob, delete each file, save, reload, toast .synctoast.jobtoast 'Added by Orbit: £5.10 Tesco'. Kinds add_spend
+  (date/upcoming/no date = maybe), add_bill (day), card_spend, card_paid_off (first card), remove_spend (target = job id: spend, bill or
+  card line with that `job` field; spends keep their own number id). state.jobsDone (newest 300) = no doubles; unknown kind/v = file
+  left alone. Every Drive save also writes wmm-summary.json (demo: wmm-demo-summary.json, DK('summary')), NOT scrambled, totals only:
+  M.summary {updated, spare, spent, to_come_out, pots:[{name,budget,used}], card:{used,free}}. Privacy page says so. Old Drive tests
+  skip the summary file on purpose. CATCH: drive.file = Lite only sees Orbit's files if Orbit uses the SAME Google Cloud project (client).
+  Tests 117 node + 262 browser (test_v060.py; pytest-xdist -n 4 works).
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.

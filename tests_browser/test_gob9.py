@@ -33,6 +33,8 @@ def fake_google(page, files):
     def api(route):
         req = route.request
         assert req.headers.get("authorization") == "Bearer tok123"
+        if "upload/drive/v3/files" in req.url and "summary.json" in (req.post_data or ""):   # v0.60: the totals file
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": "summary1"}))
         if "upload/drive/v3/files" in req.url:
             uploads.append({"method": req.method, "url": req.url, "body": req.post_data or ""})
             fid = "file1"

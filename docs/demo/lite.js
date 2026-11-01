@@ -416,6 +416,33 @@
     if (lsGet(DRIVE_DIRTY) === was) lsSet(DRIVE_DIRTY, null);
     lsSet(DRIVE_LAST, new Date().toISOString());
     M.setBackupDay(state, today()); Store.save(state);             // counts as a backup (no bell reminder)
+    try { await summaryWrite(hidden, folder); } catch (e) { /* the summary never fails the save */ }
+  }
+  // v0.60 Orbit inbox: wmm-summary.json = totals only, NOT scrambled, next to the backups (for Claude to read)
+  async function summaryWrite(hidden, folder) {
+    const name = demo ? 'wmm-demo-summary.json' : 'wmm-summary.json', key = DK('summary');
+    folder = folder || await driveFolder();
+    const text = JSON.stringify(M.summary(state, today(), new Date().toISOString()));
+    const send = async id => {
+      const meta = id ? {name} : Object.assign({name, mimeType: 'application/json'}, folder ? {parents: [folder]} : {});
+      const b = 'wmm' + Date.now();
+      const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+                   `--${b}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${b}--`;
+      const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id,trashed`,
+        {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body,
+         keepalive: !!hidden && body.length < 60000});
+      const j = r.ok ? await r.json().catch(() => ({})) : {};
+      return {ok: r.ok, status: r.status, id: j.id || id, trashed: !!j.trashed};
+    };
+    let id = lsGet(key), r = id ? await send(id) : null;
+    if (!r || r.status === 404 || r.trashed) {                     // gone: look for it by name, else make it
+      const q = encodeURIComponent(`name='${name}' and trashed=false`);
+      const l = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+      const f = l.ok ? ((await l.json()).files || []).find(x => x.name === name) : null;
+      r = f ? await send(f.id) : null;
+      if (!r || !r.ok || r.trashed) r = await send(null);
+    }
+    if (r.ok && r.id) lsSet(key, r.id);
   }
   async function driveLoad() {
     const list = await driveList();
@@ -676,7 +703,8 @@
       if (!syncOn()) document.removeEventListener('pointerdown', once, true);   // in step: a long-open PC asks again
       if (getToken() || Date.now() - tried < 60000 || !(root.google && root.google.accounts && root.google.accounts.oauth2)) return;
       tried = Date.now();
-      driveConnect(true).then(() => syncOn() ? syncCheck() : driveAuto(false))   // v0.40: a change not sent last time goes now
+      driveConnect(true).then(() => (syncOn() ? syncCheck() : driveAuto(false)))   // v0.40: a change not sent last time goes now
+        .then(() => jobsRun())                                     // v0.60: then Orbit's jobs
         .catch(() => { /* blocked or closed: try again next visit */ });
     };
     document.addEventListener('pointerdown', once, true);
@@ -986,6 +1014,64 @@
   document.addEventListener('DOMContentLoaded', accStart);
   document.addEventListener('DOMContentLoaded', driveWake);
   document.addEventListener('DOMContentLoaded', driveStart);
+
+  // ---------- v0.60 Orbit inbox ----------
+  // Orbit Agent drops wmm-job-*.json files in the Drive folder. Open app + Drive token + unlocked: read them oldest first,
+  // apply, delete, save, reload once. A job we do not know stays in Drive (a newer app may). Offline = next time.
+  let jobsBusy = false;
+  function jobsRun() {
+    if (jobsBusy || leaving || !lsGet(DRIVE_ON) || !getToken()) return;
+    const html = document.documentElement;
+    if (html.classList.contains('lockon')) {                       // wait for the unlock
+      const mo = new MutationObserver(() => { if (!html.classList.contains('lockon')) { mo.disconnect(); jobsRun(); } });
+      mo.observe(html, {attributes: true, attributeFilter: ['class']});
+      return;
+    }
+    if (syncBlocked()) { setTimeout(jobsRun, 5000); return; }      // typing or a menu open: not under the person
+    jobsBusy = true;
+    jobsGo().catch(() => { /* offline or odd: next time */ }).finally(() => { jobsBusy = false; });
+  }
+  async function jobsGo() {
+    const prefix = demo ? 'wmm-demo-job-' : 'wmm-job-';
+    const q = encodeURIComponent(`name contains '${prefix}' and trashed=false`);
+    const l = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+    if (!l.ok) return;
+    const files = M.jobOrder((await l.json()).files || [], demo);
+    if (!files.length) return;
+    const gone = [], notes = [];
+    let changed = false;
+    for (const f of files) {
+      const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+      if (!r.ok) continue;
+      let job;
+      try { job = JSON.parse(await r.text()); } catch (e) { gone.push(f.id); continue; }   // not JSON: nobody can use it
+      const res = M.applyJob(state, job, today());
+      if (res.skip === 'unknown') continue;
+      gone.push(f.id);
+      if (res.done || res.skip === 'bad') changed = true;
+      if (res.note) notes.push(res.note);
+    }
+    if (changed) { Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); }
+    for (const id of gone) await driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}`, {method: 'DELETE'}).catch(() => {});
+    if (!changed) return;
+    try { root.sessionStorage.setItem('lite_jobs', JSON.stringify(notes)); } catch (e) { /* no note */ }
+    const reload = () => { if (syncBlocked()) setTimeout(reload, 5000); else leave(); };
+    reload();
+  }
+  function jobsToast() {                                           // after the reload: what Orbit did
+    let notes = [];
+    try { notes = JSON.parse(root.sessionStorage.getItem('lite_jobs') || '[]'); root.sessionStorage.removeItem('lite_jobs'); } catch (e) { notes = []; }
+    if (!Array.isArray(notes) || !notes.length) return;
+    const lines = notes.slice(0, 4).map(n => String(n));
+    if (notes.length > 4) lines.push('+' + (notes.length - 4) + ' more');
+    const t = document.createElement('div');
+    t.className = 'synctoast jobtoast'; t.setAttribute('role', 'status');
+    lines.forEach(n => { const d = document.createElement('div'); d.textContent = n; t.appendChild(d); });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 10000);
+  }
+  document.addEventListener('DOMContentLoaded', () => { jobsToast(); setTimeout(jobsRun); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') jobsRun(); });
 
   function handleForm(form, submitter) {
     const path = pathOf(form.action);

@@ -6,6 +6,7 @@ from test_v038 import drive, connect, FOLDER
 def visible(d):
     return [f for i, f in d["files"].items() if f["mimeType"] != FOLDER and not f.get("trashed")
             and not f["name"].startswith("wmm-lite-safety")                    # v0.56: the daily safety copy is its own thing
+            and "summary.json" not in f["name"]                                 # v0.60: the plain totals file for Claude
             and not any(d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))]
 
 
