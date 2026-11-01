@@ -972,13 +972,16 @@
     remember(id);
     return {done: true, note: paid ? `Added by ${from}: ${money(amount)} paid off ${c.name}` : `Added by ${from}: ${money(amount)} ${nameText} on ${c.name}`};
   }
-  function summary(s, todayIso, nowIso) {                        // totals only (no names of spends or bills): for Claude to read
+  function summary(s, todayIso, nowIso) {                        // totals + the bills (no spends): for Claude to read
     const r = compute(s, todayIso), q = r2;
     const comeOut = r.bills.filter(b => !b.stopped && typeof b.amount === 'number' && !(b.paid || b.duePassed)).map(b => b.amount)
       .concat(r.spends.filter(x => x.upcoming).map(x => x.amount));
     return {updated: nowIso, spare: q(r.leftNow), spent: q(sum(r.spends.filter(x => !x.upcoming).map(x => x.amount))), to_come_out: q(sum(comeOut)),
             pots: r.pots.map(p => ({name: p.name, budget: p.blank ? null : q(p.amount), used: q(p.spent)})),
-            card: {used: q(sum(r.cards.map(c => c.used))), free: q(sum(r.cards.map(c => c.free)))}};
+            card: {used: q(sum(r.cards.map(c => c.used))), free: q(sum(r.cards.map(c => c.free)))},
+            // v0.60b: the bills too (paused ones left out), so Claude can answer 'has my phone been paid?'
+            bills: r.bills.filter(b => !b.stopped).map(b => ({name: b.name, amount: b.blank ? null : q(b.amount),
+              day: b.varies ? 'varies' : b.due, paid: !!(b.paid || b.duePassed)}))};
   }
 
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,

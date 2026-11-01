@@ -234,7 +234,7 @@ test('a job survives a backup and a new month (jobsDone + job ids are kept)', ()
 test('summary = totals only: spare, spent, to come out, pots, card', () => {
   const s = M.FAKE(), r = M.compute(s, TODAY);
   const sum = M.summary(s, TODAY, '2024-11-08T10:00:00.000Z');
-  assert.deepStrictEqual(Object.keys(sum).sort(), ['card', 'pots', 'spare', 'spent', 'to_come_out', 'updated']);
+  assert.deepStrictEqual(Object.keys(sum).sort(), ['bills', 'card', 'pots', 'spare', 'spent', 'to_come_out', 'updated']);
   assert.strictEqual(sum.updated, '2024-11-08T10:00:00.000Z');
   near(sum.spare, r.leftNow, 'spare = Actual spare');
   near(sum.spent, 106.7, 'spent = spends paid so far');
@@ -242,7 +242,7 @@ test('summary = totals only: spare, spent, to come out, pots, card', () => {
   assert.deepStrictEqual(sum.pots, [{name: 'Shopping', budget: 400, used: 0}, {name: 'Fuel', budget: 150, used: 60},
                                     {name: 'Going out', budget: null, used: 0}]);
   assert.deepStrictEqual(sum.card, {used: 45, free: 455});
-  assert.ok(!('spends' in sum) && !('bills' in sum));
+  assert.ok(!('spends' in sum));
   assert.ok(!JSON.stringify(sum).includes('Tesco'));                 // no spend names in it
 });
 
@@ -265,4 +265,22 @@ test('summary: a stopped (paused) bill is not still to come; card totals add up 
   const sum = M.summary(s, TODAY, 'now');
   near(sum.to_come_out, 152.36 - 46.5, 'to come out');
   assert.deepStrictEqual(sum.card, {used: 145, free: 1355});
+});
+
+// v0.60b (Darren, 1 Nov): bills in the summary too, so Claude can answer 'has my phone been paid?'
+test('summary bills: name, amount, day, paid (paid = ticked or the due day has gone); paused bills left out', () => {
+  const s = M.FAKE();
+  M.setPaid(s, 'Gym Club', true);
+  M.setStopped(s, 'Sky Digital', true);
+  M.addBill(s, '', 'Netflix');
+  M.setDue(s, 'Water Board', 'varies');
+  const b = M.summary(s, TODAY, 'now').bills;
+  const by = n => b.find(x => x.name === n);
+  assert.deepStrictEqual(Object.keys(by('Rent')).sort(), ['amount', 'day', 'name', 'paid']);
+  assert.deepStrictEqual(by('Rent'), {name: 'Rent', amount: 550, day: 1, paid: true});          // due 1 Nov: gone
+  assert.deepStrictEqual(by('Phone Co'), {name: 'Phone Co', amount: 40.11, day: 18, paid: false});
+  assert.deepStrictEqual(by('Gym Club'), {name: 'Gym Club', amount: 50, day: 10, paid: true});   // ticked by hand
+  assert.deepStrictEqual(by('Netflix'), {name: 'Netflix', amount: null, day: null, paid: false});
+  assert.deepStrictEqual(by('Water Board'), {name: 'Water Board', amount: 15.75, day: 'varies', paid: false});
+  assert.strictEqual(by('Sky Digital'), undefined);
 });

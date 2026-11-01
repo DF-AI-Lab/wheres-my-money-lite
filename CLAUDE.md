@@ -276,9 +276,9 @@
   (date/upcoming/no date = maybe), add_bill (day), card_spend, card_paid_off (first card), remove_spend (target = job id: spend, bill or
   card line with that `job` field; spends keep their own number id). state.jobsDone (newest 300) = no doubles; unknown kind/v = file
   left alone. Every Drive save also writes wmm-summary.json (demo: wmm-demo-summary.json, DK('summary')), NOT scrambled, totals only:
-  M.summary {updated, spare, spent, to_come_out, pots:[{name,budget,used}], card:{used,free}}. Privacy page says so. Old Drive tests
+  M.summary {updated, spare, spent, to_come_out, pots:[{name,budget,used}], card:{used,free}, bills:[{name,amount,day,paid}] (not paused; paid = ticked or due day gone)}. Privacy page says so. Old Drive tests
   skip the summary file on purpose. CATCH: drive.file = Lite only sees Orbit's files if Orbit uses the SAME Google Cloud project (client).
-  Tests 117 node + 262 browser (test_v060.py; pytest-xdist -n 4 works).
+  Tests 118 node + 262 browser (test_v060.py; pytest-xdist -n 4 works). Pushed to jolly-bardeen (Pages) = demo site.
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
