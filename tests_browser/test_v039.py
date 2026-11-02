@@ -37,7 +37,8 @@ def test_a_binned_folder_gets_a_new_one(page, base):
     assert len(visible(d)) == 1
     live = [f for f in d["files"].values() if f["mimeType"] == FOLDER and not f.get("trashed")
             and f["name"] != "Safety copies"]                                 # v0.56: made again inside the new folder
-    assert len(live) == 1 and visible(d)[0]["parents"] != []
+    # v0.61 (on purpose): the whole 🛂 Passport path is made again: App data - DON'T DELETE / DF123456 / WMM
+    assert sorted(f["name"] for f in live) == ["App data - DON'T DELETE", "DF123456", "WMM"] and visible(d)[0]["parents"] != []
     safe = [i for i, f in d["files"].items() if f["name"] == "Safety copies" and not f.get("trashed") and not any(
             d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))]
     assert len(safe) == 1                                              # v0.56: not left inside the binned folder

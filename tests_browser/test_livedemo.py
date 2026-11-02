@@ -50,7 +50,7 @@ def test_live_is_a_full_copy_at_the_root():
 def test_demo_always_shows_fake_data_and_never_touches_the_real_data(phone, site):
     phone.goto(site + "demo/" + TODAY)                                # no ?demo=1 needed
     assert phone.locator("#cards").is_visible()
-    assert phone.locator("#lock").is_hidden()                         # no lock in the demo
+    assert phone.locator("#wmmlock").is_hidden()                         # no lock in the demo
     assert phone.locator(".appver").inner_text().startswith("demo.v")  # you can see it is the demo
     assert phone.evaluate("Lite.Store.demo") is True
     phone.evaluate("""() => { const f = document.querySelector('form[action="/add"]');

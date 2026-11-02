@@ -4,7 +4,9 @@ into view) and loads a newer copy by itself (↩️ Undo). Changes on both = it 
 A device with another lock links once with the other device's passcode. Two browsers + one fake Drive. Fake data only."""
 import json
 
-from conftest import _context, _page, post, sheet, make_lock, LOCK, PIN
+import base64
+
+from conftest import _context, _page, post, sheet, make_lock, make_keyrec, wk, LOCK, PIN
 from test_gob9 import GSI
 from test_v040 import HINT_GSI, EMAIL
 
@@ -79,12 +81,18 @@ class Drive:
         return route.fulfill(status=404, body="")
 
 
-def device(browser, drive, lock=None, wait=300, every=400):
-    """A phone or a PC: its own browser storage, the same Drive. lock = another lock record (another passcode)."""
-    ctx = _context(browser, seed_lock=lock is None)
+def device(browser, drive, lock=None, wait=300, every=400, tab=True):
+    """A phone or a PC: its own browser storage, the same Drive.
+    v0.61 🛂 one passport on both: tab = the passport passcode was typed this visit (WMM's tab key is there);
+    lock = this device's own key record (another key pair), with no passcode typed yet."""
+    ctx = _context(browser)
     if lock is not None:
-        ctx.add_init_script("if (!localStorage.getItem('lite_lock_v1')) localStorage.setItem('lite_lock_v1', %s);"
+        tab = False
+        ctx.add_init_script("if (!sessionStorage.getItem('__own')) { localStorage.setItem('lite_key_v1', %s); sessionStorage.setItem('__own', '1'); }"
                             % json.dumps(json.dumps(lock)))
+    if tab:
+        ctx.add_init_script("if (!sessionStorage.getItem('__tab')) { sessionStorage.setItem('lite_tab_key', %s); sessionStorage.setItem('__tab', '1'); }"
+                            % json.dumps(base64.b64encode(wk()).decode()))
     ctx.add_init_script(CONFIG + "window.LITE_DRIVE_WAIT = %d; window.LITE_SYNC_EVERY = %d;" % (wait, every))
     pg = _page(ctx)
     drive.attach(pg)
@@ -244,26 +252,25 @@ def test_not_now_leaves_both_alone(browser, base):
     d.close()
 
 
-# ---------- a PC with another passcode links once ----------
+# ---------- a PC that has not had the passcode this visit asks it once (v0.61: one passport, so no linking) ----------
 
 def test_a_device_with_another_passcode_links_once(browser, base):
     d = Drive()
     pctx, phone = device(browser, d)
-    other = make_lock(pin="246802", codes=["zzzz-2222"] * 10)
-    cctx, pc = device(browser, d, lock=other)
+    cctx, pc = device(browser, d, lock=make_keyrec())                    # its own key pair, opened by fingerprint
     phone.goto(base + TODAY)
     post(phone, 'form[action="/add"]', {"amount": "3", "name": "PhoneOnly"})
     sync_on(phone, base)
     phone.wait_for_function("localStorage.getItem('lite_drive_synced')")
     sync_on(pc, base)
-    sheet(pc, PIN)                                                       # 🔗 the phone's passcode, once
-    sheet(pc)                                                            # Linked: same passcode + codes now
+    assert "passport passcode" in pc.locator(".litesheet").last.inner_text()
+    sheet(pc, PIN)                                                       # 🛂 the passport passcode, once
+    sheet(pc)                                                            # Linked
     with pc.expect_navigation():
         sheet(pc)                                                        # start with the copy in Drive
     pc.wait_for_load_state()
     assert "PhoneOnly" in spends(pc)
-    rec = json.loads(pc.evaluate("localStorage.getItem('lite_lock_v1')"))
-    assert rec["mb"] == LOCK["mb"]                                       # the same key as the phone
+    assert pc.evaluate("sessionStorage.getItem('lite_tab_key')")         # this tab opens the phone's copies now
     d.close()
 
 

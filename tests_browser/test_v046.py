@@ -27,7 +27,7 @@ def test_still_locks_after_no_use(page, base):
     page.goto(base + TODAY)
     page.evaluate("sessionStorage.setItem('lite_unlock', String(Date.now() - 6 * 60 * 1000))")
     page.mouse.wheel(0, 300)        # use after 5 minutes away = lock first, never a quiet skip
-    page.wait_for_selector('#lock[data-step="unlock"]')
+    page.wait_for_selector('#wmmlock:not([hidden]) #passport #pc')   # v0.61: 🛂 Passport's lock
 
 
 def test_settings_menu_scrolls_on_a_small_phone(page, base):

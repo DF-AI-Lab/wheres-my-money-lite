@@ -1,0 +1,26 @@
+{
+  "name": "Where's My Money?",
+  "tagline": "Payday to payday · Lite",
+  "button": "Open my money",
+  "drive": "WMM",
+  "font": "Manrope",
+  "fontUrl": "https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap",
+  "align": "center",
+  "logo": {
+    "type": "svg",
+    "value": "<img src=\"lite-192.png\" alt=\"\" class=\"ps-logoimg\">"
+  },
+  "colors": {
+    "bg": "#0f1513",
+    "text": "#e9f0ed",
+    "muted": "#93a39d",
+    "accent": "#3fd0a4",
+    "accentText": "#06221b",
+    "field": "#171f1c",
+    "fieldBorder": "#26332f",
+    "link": "#c9d6d1",
+    "error": "#f07a6a",
+    "tile": "transparent",
+    "tileText": "#ffffff"
+  }
+}

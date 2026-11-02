@@ -227,7 +227,7 @@ def test_no_browser_boxes_left_in_the_app():
     import re
     from pathlib import Path
     docs = Path(__file__).resolve().parent.parent / "docs" / "demo"
-    for f in ["index.html", "lite.js", "lockui.js", "render.js", "lock.js", "money.js"]:
+    for f in ["index.html", "lite.js", "passport-lock.js", "wmmkey.js", "render.js", "lock.js", "money.js"]:
         text = (docs / f).read_text()
         hits = re.findall(r"(?<![.\w])(confirm|prompt|alert)\(", text)
         assert hits == [], (f, hits)

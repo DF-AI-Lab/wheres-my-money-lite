@@ -6,7 +6,7 @@
 <title>Privacy · Where's My Money? Lite</title>
 <link rel="icon" href="lite-192.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.60">
+<link rel="stylesheet" href="look.css?v=0.61">
 <style>
   /* the privacy page: plain words, same colours and font as the app */
   body { margin: 0; background: var(--bg); color: var(--text); font-family: Manrope, system-ui, sans-serif; }
@@ -43,9 +43,11 @@
   <ul>
     <li>If you tap <b>Connect Google Drive</b>, Google asks you to sign in. The app then asks for <code>drive.file</code>
       only: it can see <b>just the backup files it made</b>, never the rest of your Drive.</li>
-    <li>The backup is <b>scrambled with your passcode</b> before it leaves your device, so only you can open it.</li>
+    <li>The backup is <b>scrambled</b> before it leaves your device: only your 🛂 Passport passcode opens it.</li>
+    <li>🛂 <b>Passport ID</b> = one sign-in for the DF apps: your Google account, a 6-number passcode and 10 backup codes.
+      Your passport (ID, name, email and the scrambled key) is saved as <code>passport.json</code> in your own Drive.</li>
     <li>It goes into <b>your own</b> Google Drive. We never get a copy.</li>
-    <li>Once connected, the app saves a copy by itself a minute after a change, and when you close it: one file per pay month in a folder called <b>Where's My Money Lite</b>, the last 3 kept. Turn it off any time in ☁️ Google Drive.</li>
+    <li>Once connected, the app saves a copy by itself a minute after a change, and when you close it: one file per pay month in the folder <b>App data - DON'T DELETE / DF…… / WMM</b> (your 🛂 Passport's folder), the last 3 kept. Turn it off any time in ☁️ Google Drive.</li>
     <li>Next to the backups the app also keeps <code>wmm-summary.json</code>: <b>totals and your bills</b> (spare, spent, still to come
       out, pots, credit card, each bill's name, amount, day and paid or not), <b>not scrambled</b>, so an assistant you
       connect to your Drive can answer questions. No shop names or spends are in it.</li>
@@ -64,7 +66,8 @@
   <h2>Remove your data</h2>
   <ul>
     <li><b>On this device:</b> clear this website's data in your browser settings.</li>
-    <li><b>In Google Drive:</b> delete the folder <b>Where's My Money Lite</b> (or the files named <code>wheres-my-money-backup …</code>) from your Drive.</li>
+    <li><b>In Google Drive:</b> delete the folder <b>WMM</b> inside <b>App data - DON'T DELETE / DF……</b> (older copies: the folder <b>Where's My Money Lite</b>, or the files named <code>wheres-my-money-backup …</code>).</li>
+    <li><b>Sign out</b> (Settings → 🛂 Passport) saves what is not in Drive yet, then clears the app on this device.</li>
     <li><b>Stop Google access:</b> remove the app at
       <a href="https://myaccount.google.com/permissions">myaccount.google.com/permissions</a>.</li>
   </ul>

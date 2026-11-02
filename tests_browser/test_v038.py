@@ -70,16 +70,18 @@ def test_backups_go_in_one_folder(page, base):
     page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
     folders = [(i, f) for i, f in d["files"].items() if f["mimeType"] == FOLDER]
-    assert [f["name"] for _, f in folders] == ["Where's My Money Lite"]
-    assert [f["parents"] for f in backups(d)] == [[folders[0][0]]]
+    # v0.61 (on purpose): 🛂 Passport's folder App data - DON'T DELETE / DF123456 / WMM, not "Where's My Money Lite"
+    assert [f["name"] for _, f in folders] == ["App data - DON'T DELETE", "DF123456", "WMM", "Safety copies"]
+    wmm = [i for i, f in folders if f["name"] == "WMM"][0]
+    assert [f["parents"] for f in backups(d)] == [[wmm]]
     page.evaluate("localStorage.removeItem('lite_drive_file')")     # a new month later: the folder is found again
-    page.evaluate("localStorage.removeItem('lite_drive_folder')")
+    page.evaluate("localStorage.removeItem('lite_drive_ppdir')")
     page.evaluate("s => { const x = JSON.parse(localStorage.getItem('lite_state_v1')); x.payday = '2024-12-25';"
                   " localStorage.setItem('lite_state_v1', JSON.stringify(x)); }", None)
     page.reload()
     page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
-    assert len([f for f in d["files"].values() if f["mimeType"] == FOLDER]) == 1
+    assert len([f for f in d["files"].values() if f["mimeType"] == FOLDER]) == 4     # v0.61: the same 4 folders, none new
 
 
 def test_save_then_hide_at_once_makes_one_file(page, base):

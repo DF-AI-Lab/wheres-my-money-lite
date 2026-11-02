@@ -282,3 +282,27 @@
 - **RULE (Darren, 25 Oct): every ⓘ note FLOATS over the page (the .infotip bubble), never pushes into the space or changes a card's
   size. ⓘ buttons stay on the same line as their label, never wrap onto a new line.**
 - Darren: copy-paste things always in a code block. Short replies, spacing, one next step.
+- **2 Nov v0.61 (demo only; live still v0.59): 🛂 PASSPORT ID = THE LOCK (Opus wrote tests, built, checked).** docs/demo/passport/ = a COPY of
+  DF-AI-Lab/Passport-ID v0.3.3 (config/google/passport/ui.js + passport.css, never edit here; update from Passport-ID) + theme.json (WMM dark
+  mint, Manrope, lite-192.png logo, drive "WMM"). lockui.js GONE. passport-lock.js = adapter keeping the old names (Lock.seal/open/openWith/adopt,
+  LockUI.record/adopt/demo + passportId/email/cloud/driveName/lockNow/settings, LiteName). Lock cover = #wmmlock > #passport (NOT #lock: Passport's
+  own 'Lock now' button is id="lock"). Settings 'Lock' group = #passportbtn ('Your passport: DF…' → PassportUI.settings: passcode, codes,
+  fingerprint, Lock now, Sign out) + #locknow. 5-min idle lock kept (sessionStorage lite_unlock).
+  KEYS (wmmkey.js, node + browser): localStorage lite_key_v1 = {v:2, pub (RSA-OAEP public, clear), priv + mb (locked by HKDF(Passport.key,
+  'wmm-lite'/'backups'))}. Backup v2 = data under random K, K under pub, priv + mb ride along. Saving needs NO hidden key (fingerprint unlock still
+  saves); opening needs the passport passcode (any device, same passport). After a passcode: sessionStorage lite_tab_key = WMM's derived key for
+  this tab (not the hidden key; cleared on lock/sign out) so 🔁 sync/pair open copies quietly. OLD LOCK: first passcode on a device with
+  lite_lock_v1 moves its mb in (it was stored in the clear, so no old passcode needed), then lite_lock_v1 is deleted. Old v1 backups open with the
+  OLD passcode/old codes (their own wrapped copies) or with the passport via mb.
+  DRIVE: token = WMM's own or Passport's (sessionStorage passport-google-token, same client). With a passport every file goes in App data - DON'T
+  DELETE / DF…… / WMM (lite_drive_ppdir, Safety copies = lite_drive_ppsafe); moveIn() moves old files (backups, safety copies, summary, pair note,
+  Orbit jobs) there ONCE (PATCH addParents/removeParents, lite_drive_moved = passport id). All lookups stay by NAME, so Orbit jobs/summary are found
+  anywhere. First unlock of a passport here (lite_drive_ppseen) = Drive on with the passport's Gmail; another Gmail than before = fresh file ids.
+  WIPED DEVICE: Passport Google sign-in + passcode, then (no money here: lite_state_v1 missing or lite_drive_blank) lite_drive_restore='need' →
+  restore screen in #passport (#wmmrestore; newest copy; v2 opens with the key; old v1 asks the OLD passcode #wmmold/#wmmoldgo; 'Start new' = Drive
+  off). Saves wait while 'need'. SIGN OUT (Passport settings) = save to Drive if dirty (else download a backup file), then every lite_* key
+  (not lite_demo_*) leaves this device; next sign-in reloads clean. DEMO: no lock; ?lock=1 = pretend Passport (PASSPORT_CONFIG.googleClientId ''
+  set inline; passport-demo-v2, app 'wmm-demo', lite_demo_* keys); ?lock=google = the REAL passport with demo money + Drive folder 'WMM demo';
+  ?lock=0 off. tools/move_to_live.py now copies sub-folders (passport/). Tests: conftest seeds a passport (PIN, PP_CODES, MK, DF123456,
+  fake.person@example.com) + KEYREC + ppseen; test_v061.py (PDrive = fake Drive with q filters + parents); gob6/v042/v043/v044 rewritten for
+  Passport, v057/v058 removed (replaced by v061). Tests 124 node + 262 browser (-n 4 --timeout; -n 8 makes timing tests flaky). NEXT: Darren tries /demo/?lock=1 then ?lock=google; Orbit should write jobs into the WMM folder.

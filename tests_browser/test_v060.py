@@ -148,7 +148,7 @@ def test_jobs_wait_for_the_unlock(browser, base):
     d.attach(pg)
     put_job(d, "wmm-job-20241108-090000-aa11.json", spend("j1", 5.1, "Tesco"))
     pg.goto(base + TODAY)
-    pg.wait_for_selector("#lock", state="visible")
+    pg.wait_for_selector("#wmmlock", state="visible")
     pg.wait_for_timeout(1200)
     assert jobs_left(d) == ["wmm-job-20241108-090000-aa11.json"]       # locked: nothing read, nothing changed
     unlock(pg)

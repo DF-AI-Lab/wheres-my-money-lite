@@ -95,10 +95,19 @@ body.demo [data-card="lastmonth"] td.diff:empty { display: none; }
 
 /* the lock screen (Go B step 6): live's sign-in box, as a full-screen cover; the app is hidden while it shows */
 html.lockon .wrap { display: none; }
-#lock { position: fixed; inset: 0; z-index: 1000; background: var(--bg); color: var(--text); overflow-y: auto;
-        display: flex; align-items: center; justify-content: center; padding: 24px 16px; box-sizing: border-box; }
-#lock[hidden] { display: none; }
-#lock section[hidden] { display: none; }
+#wmmlock { position: fixed; inset: 0; z-index: 1000; background: var(--ps-bg, var(--bg)); color: var(--ps-text, var(--text)); overflow-y: auto;
+        display: flex; box-sizing: border-box; }
+#wmmlock[hidden] { display: none; }
+/* v0.61 🛂 Passport draws the lock (passport/passport.css + theme.json); WMM's own button look must not leak in */
+#wmmlock .passport { width: 100%; display: flex; }
+#wmmlock .ps-screen { margin: auto; }
+#wmmlock .ps-screen button { font-family: inherit; border-radius: 14px; }
+#wmmlock .ps-screen .ps-btn { background: var(--ps-accent); color: var(--ps-accentText); }
+#wmmlock .ps-screen .ps-ghost { background: transparent; color: var(--ps-text); border: 1px solid var(--ps-fieldBorder); }
+#wmmlock .ps-screen .ps-google { background: #FFFFFF; color: #1F1F1F; border: 1px solid #DADCE0; }
+#wmmlock .ps-screen .ps-link { background: none; color: var(--ps-link); border: none; font-weight: 400; border-radius: 0; }
+#wmmlock .ps-screen .ps-tile { background: transparent; }
+#wmmlock .ps-logoimg { width: 100%; height: 100%; border-radius: inherit; display: block; }
 .box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
        width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; margin: auto; }
 .box img { width: 64px; height: 64px; border-radius: 16px; }
@@ -117,13 +126,6 @@ html.lockon .wrap { display: none; }
 .box .links { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
 .box .linkbtn { color: var(--muted); }
 .box button.linkbtn { background: none; border: 0; padding: 0; font-weight: 500; font-size: inherit; text-decoration: underline; }
-.box ul.codes { list-style: none; padding: 0; margin: 16px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
-                font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 18px; }
-.box button.copycodes { width: 100%; margin: 0 0 12px; background: var(--bg); color: var(--text); border: 1px solid var(--border); }
-#lock .note[hidden] { display: none; }
-.box .fpbtn { width: 100%; font-size: 19px; padding: 16px; }
-.box .or { color: var(--muted); margin: 14px 0 10px; }
-.box ul.codes li { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; }
 
 /* views (Go B step 7): ?view=ideas / ?view=invite replace the home page parts; the header stays */
 body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[data-view] .footer, body[data-view] #quicktab { display: none; }
@@ -535,9 +537,6 @@ tr.potbill.over .potbar i { background: var(--bad); }
 #drive .drivemore summary::before { content: '▸'; transition: transform .15s; }
 #drive .drivemore[open] summary::before { transform: rotate(90deg); }
 /* v0.58 the Drive step after the first passcode */
-#lock .skipwarn { color: var(--muted); font-weight: 500; font-size: 13px; margin: 16px 0 0; }
-#lock .drivenew { margin: 12px 0 0; }
-#lock .drivenew a { color: var(--accent); font-weight: 600; }
 
 /* v0.59 (mock https://claude.ai/artifact/XbW57xUDPGfMqHwbKiLnSa): Upcoming = No date yet | Pick a date to the right; still to come = slanted;
    Paid? button; bottom box Paid so far / Still to come; bill due day Set day | Varies on one line */

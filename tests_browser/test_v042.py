@@ -24,8 +24,8 @@ def test_headings_and_grey_lines(page, base):
     assert visible_heads(m) == ["Account", "On this phone", "Cloud", "Lock"]   # v0.43: Account first
     assert "this phone" in m.locator("#savebackup .sub").inner_text()
     assert "this phone" in m.locator("#loadbackup .sub").inner_text()
-    assert m.locator("#newcodes .sub").inner_text().strip()
-    order = page.evaluate("""() => ['savebackup', 'loadbackup', 'drivelink', 'fingerprint', 'newcodes', 'locknow', 'installbtn']
+    assert "DF123456" in m.locator("#passportbtn .sub").inner_text()   # v0.61: 🛂 Passport (fingerprint + codes live there)
+    order = page.evaluate("""() => ['savebackup', 'loadbackup', 'drivelink', 'passportbtn', 'locknow', 'installbtn']
         .map(id => document.getElementById(id)).map((el, i, all) => i === 0 ||
         !!(all[i - 1].compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))""")
     assert all(order), order
@@ -45,16 +45,14 @@ def test_drive_line_off_then_on_with_the_gmail(browser, base):
     ctx.close()
 
 
-def test_fingerprint_says_set_up_then_on(browser, base):
+def test_passport_line_says_your_passport_id(browser, base):
+    """v0.61 (on purpose): 'Set up fingerprint' and 'New backup codes' moved into 🛂 Passport's own settings."""
     ctx = _context(browser)
     pg = _page(ctx)
     m = menu(pg, base)
-    assert "Set up fingerprint" in m.locator("#fingerprint").inner_text()
-    ctx.add_init_script("""try { const r = JSON.parse(localStorage.getItem('lite_lock_v1'));
-        r.passkeys = [{id: 'AAAA', at: '2024-11-01T00:00:00Z'}]; localStorage.setItem('lite_lock_v1', JSON.stringify(r)); } catch (e) {}""")
-    m = menu(pg, base)
-    text = m.locator("#fingerprint").inner_text()
-    assert "Set up" not in text and "Fingerprint" in text and "On" in text, text
+    assert "Passport" in m.locator("#passportbtn").inner_text()
+    assert m.locator("#passportbtn .sub").inner_text() == "Your passport: DF123456"
+    assert not pg.locator("#fingerprint").count() and not pg.locator("#newcodes").count()
     ctx.close()
 
 
