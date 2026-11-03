@@ -386,7 +386,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.59';
+  const APP = 'wheres-my-money-lite', VERSION = '0.63';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -917,7 +917,75 @@
     return lines.join('\n').replace(/\n+$/, '');
   }
 
+  // ---------- v0.60 Orbit inbox: job files from Orbit Agent, and the plain summary for Claude ----------
+  const JOB_NAME = /^wmm-job-\d{8}-\d{6}-[A-Za-z0-9]+\.json$/, DEMO_JOB_NAME = /^wmm-demo-job-\d{8}-\d{6}-[A-Za-z0-9]+\.json$/;
+  function jobOrder(files, demo) {                               // only job files, oldest first (the name has the time)
+    const re = demo ? DEMO_JOB_NAME : JOB_NAME;
+    return (Array.isArray(files) ? files : []).filter(f => f && re.test(String(f.name))).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  }
+  const JOB_KINDS = ['add_spend', 'add_bill', 'card_spend', 'card_paid_off', 'remove_spend'];
+  function applyJob(s, job, todayIso) {                          // {done, skip?, note?}; unknown jobs change nothing
+    if (!job || typeof job !== 'object' || job.v !== 1 || !job.id || !JOB_KINDS.includes(job.kind)) return {done: false, skip: 'unknown'};
+    const id = String(job.id);
+    s.jobsDone = Array.isArray(s.jobsDone) ? s.jobsDone : [];
+    if (s.jobsDone.includes(id)) return {done: false, skip: 'done'};
+    const remember = (...ids) => { s.jobsDone.push(...ids); s.jobsDone = s.jobsDone.slice(-300); };
+    const from = String(job.from == null ? '' : job.from).trim() || 'Orbit';
+    const nameText = String(job.name == null ? '' : job.name).trim();
+    const bad = () => { remember(id); return {done: false, skip: 'bad', note: `⚠️ Could not add ${job.name == null ? 'a job' : nameText || 'a job'} from ${from}`}; };
+    const date = job.date == null || job.date === '' ? '' : String(job.date);
+    if (job.kind === 'remove_spend') {
+      const target = String(job.target == null ? '' : job.target);
+      remember(id, target);
+      let what = null;
+      const x = (s.spends || []).find(y => y.job === target), b = (s.bills || []).find(y => y.job === target);
+      if (x) { s.spends = s.spends.filter(y => y !== x); what = x; }
+      else if (b) { deleteBill(s, b.key); what = b; }
+      else for (const c of cardsOf(s)) {
+        const i = c.items.find(y => y.job === target);
+        if (i) { c.items = c.items.filter(y => y !== i); tidy(c); what = {amount: Math.abs(i.amount), name: i.name}; break; }
+      }
+      return {done: true, note: what ? `Removed by ${from}: ${money(what.amount)} ${what.name}` : `${from} asked to remove something, but there was nothing to remove`};
+    }
+    const amount = parseMoney(job.amount);
+    if (amount === null || !nameText && job.kind !== 'card_paid_off' || (date && !isDate(date))) return bad();
+    if (job.kind === 'add_spend') {
+      if (addSpend(s, todayIso, job.amount, nameText, job.upcoming && date ? date : '', !!job.upcoming && !date)) return bad();
+      const x = s.spends[s.spends.length - 1];
+      if (!job.upcoming && date) x.date = date;
+      x.job = id; remember(id);
+      return {done: true, note: `Added by ${from}: ${money(amount)} ${nameText}`};
+    }
+    if (job.kind === 'add_bill') {
+      if (addBill(s, job.amount, nameText)) return bad();
+      const b = s.bills[s.bills.length - 1];
+      setDue(s, b.key, job.day == null ? '' : job.day);
+      b.job = id; remember(id);
+      return {done: true, note: `Added by ${from}: ${money(amount)} ${nameText} (monthly)`};
+    }
+    const c = cardsOf(s)[0];
+    if (!c) { remember(id); return {done: false, skip: 'bad', note: '⚠️ Could not add to the card: no credit card set up'}; }
+    const paid = job.kind === 'card_paid_off', n = c.next;
+    if (cardAdd(s, date || todayIso, job.amount, paid ? '' : nameText, paid, c.key)) return bad();
+    const i = c.items.find(y => y.id === n);
+    if (i) i.job = id;
+    remember(id);
+    return {done: true, note: paid ? `Added by ${from}: ${money(amount)} paid off ${c.name}` : `Added by ${from}: ${money(amount)} ${nameText} on ${c.name}`};
+  }
+  function summary(s, todayIso, nowIso) {                        // totals + the bills (no spends): for Claude to read
+    const r = compute(s, todayIso), q = r2;
+    const comeOut = r.bills.filter(b => !b.stopped && typeof b.amount === 'number' && !(b.paid || b.duePassed)).map(b => b.amount)
+      .concat(r.spends.filter(x => x.upcoming).map(x => x.amount));
+    return {updated: nowIso, spare: q(r.leftNow), spent: q(sum(r.spends.filter(x => !x.upcoming).map(x => x.amount))), to_come_out: q(sum(comeOut)),
+            pots: r.pots.map(p => ({name: p.name, budget: p.blank ? null : q(p.amount), used: q(p.spent)})),
+            card: {used: q(sum(r.cards.map(c => c.used))), free: q(sum(r.cards.map(c => c.free)))},
+            // v0.60b: the bills too (paused ones left out), so Claude can answer 'has my phone been paid?'
+            bills: r.bills.filter(b => !b.stopped).map(b => ({name: b.name, amount: b.blank ? null : q(b.amount),
+              day: b.varies ? 'varies' : b.due, paid: !!(b.paid || b.duePassed)}))};
+  }
+
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
+    jobOrder, applyJob, summary,
     exportBackup, importBackup, backupName,
     addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
     catTotals, setSpendCat, setPotCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,

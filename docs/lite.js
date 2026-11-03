@@ -41,23 +41,40 @@
       } catch (e) { /* no storage: start from the template / fake data */ }
       return null;
     },
-    save(s) { try { Store.area().setItem(Store.key, JSON.stringify(s)); } catch (e) { /* private window: not saved */ } },
+    save(s) {
+      if (signedOut) return;
+      if (s !== firstState) blankSet(false);                      // loaded or brought back = real money
+      try { Store.area().setItem(Store.key, JSON.stringify(s)); } catch (e) { /* private window: not saved */ }
+    },
   };
+  let signedOut = false;                                          // v0.61: 🚪 signed out of Passport: nothing more is saved
   // v0.57 the demo copy can try the lock as a WIPED device: ?lock=1 clears the demo's own lock, name, money and Drive
   // keys and turns its lock on for this tab; ?lock=0 = no lock again. Live's keys are never touched.
   if (demoCopy) {
     try {
       const u = new URL(location.href), q = u.searchParams.get('lock');
-      if (q === '1') {
-        ['lite_demo_lock_v1', 'lite_demo_name'].concat(Object.keys(root.localStorage).filter(k => k.indexOf('lite_demo_drive_') === 0))
+      if (q === '1' || q === 'google') {                         // v0.61: 1 = pretend Passport (no Google), google = the real one
+        ['lite_demo_lock_v1', 'lite_demo_key_v1', 'lite_demo_name'].concat(Object.keys(root.localStorage).filter(k => k.indexOf('lite_demo_drive_') === 0))
           .forEach(k => root.localStorage.removeItem(k));
-        [DEMO_KEY, 'lite_demo_unlock', 'lite_demo_drive_token'].forEach(k => root.sessionStorage.removeItem(k));
-        root.sessionStorage.setItem('lite_demo_lock', '1');
+        [DEMO_KEY, 'lite_demo_unlock', 'lite_demo_drive_token', 'passport-unlocked-wmm-demo'].forEach(k => root.sessionStorage.removeItem(k));
+        ['passport-demo-v2', 'passport-v2'].forEach(k => {      // the demo app forgets its Google account (passports stay)
+          const db = JSON.parse(root.localStorage.getItem(k) || 'null');
+          if (db && db.apps && db.apps['wmm-demo']) { delete db.apps['wmm-demo']; root.localStorage.setItem(k, JSON.stringify(db)); }
+        });
+        root.sessionStorage.setItem('lite_demo_lock', q);
       } else if (q === '0') root.sessionStorage.removeItem('lite_demo_lock');
       if (q !== null) { u.searchParams.delete('lock'); history.replaceState(null, '', u.pathname + u.search + u.hash); }   // a reload must not wipe again
     } catch (e) { /* no storage */ }
   }
+  // v0.61: no money here yet = a wiped device may get it back. The starter money saved on the first open is not money:
+  // 'blank' stays until something is typed or loaded, so it can never go over a Drive copy.
+  const BLANK = demo ? 'lite_demo_drive_blank' : 'lite_drive_blank';
+  const blankGet = () => { try { return root.localStorage.getItem(BLANK); } catch (e) { return null; } };
+  const blankSet = on => { try { if (on) root.localStorage.setItem(BLANK, '1'); else root.localStorage.removeItem(BLANK); } catch (e) { /* ignore */ } };
+  if (!Store.load()) blankSet(true);
+  let hadState = !!Store.load() && !blankGet();
   let state = Store.load() || (demo ? M.FAKE() : M.TEMPLATE());
+  const firstState = state;
   // ask the browser not to clear the saved data (it may say no; that is fine)
   if (!demo) { try { const p = root.navigator.storage && root.navigator.storage.persist && root.navigator.storage.persist(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } }
 
@@ -143,7 +160,7 @@
     }
     const before = path === '/bill/add' ? state.bills.length : 0;
     const error = fn(state, getter(data));
-    if (!error) { Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon(); }   // Drive: 1 minute on, or when hidden
+    if (!error) { blankSet(false); hadState = true; Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon(); }   // Drive: 1 minute on, or when hidden
     // a new bill glows once on the next page (v0.36, mock D)
     if (path === '/bill/add' && !error && state.bills.length > before) {
       try { root.sessionStorage.setItem('lite_glow', state.bills[state.bills.length - 1].key); } catch (e) { /* ignore */ }
@@ -284,14 +301,22 @@
   const DK = n => (demo ? 'lite_demo_drive_' : 'lite_drive_') + n;           // localStorage keys: file, folder, on, dirty, last
   const DRIVE_ID = DK('file'), DRIVE_DIR = DK('folder'), DRIVE_ON = DK('on'), DRIVE_DIRTY = DK('dirty'), DRIVE_LAST = DK('last');
   const DRIVE_EMAIL = DK('email');                                           // v0.40: the Gmail, so Google skips 'which account?'
+  const RESTORE = DK('restore'), PPSEEN = DK('ppseen');                      // v0.61: 'need' = get the money back first; the passport seen
+  const SUMMARY_NAME = demo ? 'wmm-demo-summary.json' : 'wmm-summary.json', PAIR_FILE = demo ? 'wmm-lite-demo-pair.json' : 'wmm-lite-pair.json';
+  const JOB_PREFIX = demo ? 'wmm-demo-job-' : 'wmm-job-';
   const TOKEN_KEY = demo ? 'lite_demo_drive_token' : 'lite_drive_token';     // sessionStorage: survives the reload after a save
   const GSI = 'https://accounts.google.com/gsi/client';
   const FOLDER_TYPE = 'application/vnd.google-apps.folder';
   const DRIVE_API = 'https://www.googleapis.com/drive/v3/files', DRIVE_UP = 'https://www.googleapis.com/upload/drive/v3/files';
   const lsGet = k => { try { return root.localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { if (v === null) root.localStorage.removeItem(k); else root.localStorage.setItem(k, v); } catch (e) { /* ignore */ } };
+  const PP_TOKEN = 'passport-google-token';                       // v0.61 🛂 Passport's Google sign-in (same Google key)
   function getToken() {
     try { const t = JSON.parse(root.sessionStorage.getItem(TOKEN_KEY)); if (t && t.t && t.exp > Date.now() + 60000) return t.t; } catch (e) { /* none */ }
+    try {
+      const p = JSON.parse(root.sessionStorage.getItem(PP_TOKEN)), mail = lsGet(DRIVE_EMAIL);
+      if (p && p.token && p.exp > Date.now() + 60000 && (!mail || !p.email || p.email.toLowerCase() === mail.toLowerCase())) return p.token;
+    } catch (e) { /* none */ }
     return '';
   }
   function setToken(t, secs) {
@@ -337,7 +362,7 @@
     opts.headers = Object.assign({Authorization: 'Bearer ' + getToken()}, opts.headers || {});
     let r;
     try { r = await root.fetch(url, opts); } catch (e) { throw new Error('Could not reach Google Drive. Check your internet and try again.'); }
-    if (r.status === 401) { setToken(''); driveShow(false); throw new Error('Google Drive signed you out. Tap Connect Google Drive again.'); }
+    if (r.status === 401) { setToken(''); try { root.sessionStorage.removeItem(PP_TOKEN); } catch (e) { /* ignore */ } driveShow(false); throw new Error('Google Drive signed you out. Tap Connect Google Drive again.'); }
     return r;
   }
   async function driveList() {                                     // this app's backup files, the newest first
@@ -346,20 +371,59 @@
     if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
     return ((await r.json()).files || []).filter(f => f.name && f.name.indexOf(DRIVE_BASE) === 0);
   }
+  // v0.61 🛂 with a passport every file lives in App data - DON'T DELETE / DF123456 / WMM (Passport's own folders)
+  const PP_ROOT = "App data - DON'T DELETE";
+  const ppId = () => (root.LockUI && root.LockUI.passportId && root.LockUI.passportId()) || '';
+  const dirKey = () => (ppId() ? DK('ppdir') : DRIVE_DIR);            // (the old folder's id is never used for the new one)
+  const qEsc = t => String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  async function folderIn(name, parent) {                          // a folder's id inside parent (found or made); null = binned
+    const q = encodeURIComponent(`name='${qEsc(name)}' and mimeType='${FOLDER_TYPE}' and trashed=false` + (parent ? ` and '${parent}' in parents` : ''));
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name,mimeType,parents)`);
+    let f = r.ok ? ((await r.json()).files || []).find(x => x.name === name && x.mimeType === FOLDER_TYPE &&
+                                                            (!parent || !x.parents || x.parents.indexOf(parent) >= 0)) : null;
+    if (!f) {
+      const m = await driveFetch(`${DRIVE_API}?fields=id,trashed`, {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(Object.assign({name, mimeType: FOLDER_TYPE}, parent ? {parents: [parent]} : {}))});
+      f = m.ok ? await m.json() : null;
+    }
+    return f && f.id && !f.trashed ? f.id : null;
+  }
   async function driveFolder() {                                   // the folder's id (found or made once); null = save loose
-    if (lsGet(DRIVE_DIR)) return lsGet(DRIVE_DIR);
+    if (lsGet(dirKey())) return lsGet(dirKey());
     try {
-      const q = encodeURIComponent(`name='${DRIVE_FOLDER.replace(/'/g, "\\'")}' and mimeType='${FOLDER_TYPE}' and trashed=false`);
-      const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name,mimeType)`);
-      let f = r.ok ? ((await r.json()).files || []).find(x => x.name === DRIVE_FOLDER && x.mimeType === FOLDER_TYPE) : null;
-      if (!f) {
-        const m = await driveFetch(DRIVE_API, {method: 'POST', headers: {'Content-Type': 'application/json'},
-                                               body: JSON.stringify({name: DRIVE_FOLDER, mimeType: FOLDER_TYPE})});
-        f = m.ok ? await m.json() : null;
-      }
-      if (f && f.id) { lsSet(DRIVE_DIR, f.id); return f.id; }
+      let id = null;
+      if (ppId()) {
+        const top = await folderIn(PP_ROOT, null), df = top && await folderIn(ppId(), top);
+        id = df && await folderIn(root.LockUI.driveName(), df);
+      } else id = await folderIn(DRIVE_FOLDER, null);
+      if (id) { lsSet(dirKey(), id); return id; }
     } catch (e) { /* no folder this time */ }
     return null;
+  }
+  // v0.61 move the files from before Passport into the WMM folder ONCE (backups, safety copies, summary, pair note, Orbit jobs).
+  // Every lookup is by name, never by folder, so Load, Orbit's jobs and the summary are found wherever they are.
+  async function moveIn() {
+    const pid = ppId();
+    if (!pid || lsGet(DK('moved')) === pid) return;
+    try {
+      const top = await driveFolder(), safe = top && await safeFolder();
+      if (!top) return;
+      let all = true;
+      for (const [base, to] of [[DRIVE_BASE, top], [SAFE_BASE + ' ', safe], [SUMMARY_NAME, top], [PAIR_FILE, top], [JOB_PREFIX, top]]) {
+        if (!to) { all = false; continue; }
+        const q = encodeURIComponent(`name contains '${qEsc(base.trim())}' and trashed=false`);
+        const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name,mimeType,parents)`);
+        if (!r.ok) { all = false; continue; }
+        for (const f of (await r.json()).files || []) {
+          if (!f.name || f.name.indexOf(base) !== 0 || f.mimeType === FOLDER_TYPE || !Array.isArray(f.parents) || f.parents.indexOf(to) >= 0) continue;
+          const out = f.parents.length ? '&removeParents=' + encodeURIComponent(f.parents.join(',')) : '';
+          const m = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?addParents=${encodeURIComponent(to)}${out}&fields=id,parents`,
+            {method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: '{}'});
+          if (!m.ok) all = false;
+        }
+      }
+      if (all) lsSet(DK('moved'), pid);
+    } catch (e) { /* next time */ }
   }
   // one save at a time: Save tapped and the app hidden straight after = one file, not two (v0.38)
   let driveBusy = null;
@@ -372,6 +436,8 @@
     return driveBusy;
   }
   async function driveSaveNow(hidden) {
+    if (lsGet(RESTORE) === 'need') throw new Error('Getting your money back from Google Drive first.');   // v0.61: never over the copy
+    await moveIn();                                                // v0.61: once, into the passport's WMM folder
     const was = lsGet(DRIVE_DIRTY);                                // a change made while this one is going stays to send
     if (syncOn()) {                                                // v0.45: never write over a newer copy from the other device
       const f = (await driveList())[0];
@@ -405,7 +471,7 @@
     let r = id ? await send(id) : await fresh();
     // v0.39: Drive lets you save into a binned file (or a binned folder): that counts as gone too
     if (id && (r.status === 404 || r.trashed)) { id = null; r = await fresh(); }   // deleted in Drive: make a new one
-    if (!id && (r.status === 404 || r.trashed) && folder) { lsSet(DRIVE_DIR, null); r = await fresh(); }   // folder gone: a new one
+    if (!id && (r.status === 404 || r.trashed) && folder) { lsSet(dirKey(), null); r = await fresh(); }   // folder gone: a new one
     if (!r.ok) throw new Error('Google Drive would not take the copy (error ' + r.status + ').');
     if (r.id) lsSet(DRIVE_ID, JSON.stringify({name, id: r.id}));
     lsSet(DRIVE_SYNCED, r.id && r.mt ? r.id + '@' + r.mt : null);    // v0.45: the copy in Drive is this device's now
@@ -416,6 +482,33 @@
     if (lsGet(DRIVE_DIRTY) === was) lsSet(DRIVE_DIRTY, null);
     lsSet(DRIVE_LAST, new Date().toISOString());
     M.setBackupDay(state, today()); Store.save(state);             // counts as a backup (no bell reminder)
+    try { await summaryWrite(hidden, folder); } catch (e) { /* the summary never fails the save */ }
+  }
+  // v0.60 Orbit inbox: wmm-summary.json = totals only, NOT scrambled, next to the backups (for Claude to read)
+  async function summaryWrite(hidden, folder) {
+    const name = SUMMARY_NAME, key = DK('summary');
+    folder = folder || await driveFolder();
+    const text = JSON.stringify(M.summary(state, today(), new Date().toISOString()));
+    const send = async id => {
+      const meta = id ? {name} : Object.assign({name, mimeType: 'application/json'}, folder ? {parents: [folder]} : {});
+      const b = 'wmm' + Date.now();
+      const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+                   `--${b}\r\nContent-Type: application/json\r\n\r\n${text}\r\n--${b}--`;
+      const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id,trashed`,
+        {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body,
+         keepalive: !!hidden && body.length < 60000});
+      const j = r.ok ? await r.json().catch(() => ({})) : {};
+      return {ok: r.ok, status: r.status, id: j.id || id, trashed: !!j.trashed};
+    };
+    let id = lsGet(key), r = id ? await send(id) : null;
+    if (!r || r.status === 404 || r.trashed) {                     // gone: look for it by name, else make it
+      const q = encodeURIComponent(`name='${name}' and trashed=false`);
+      const l = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+      const f = l.ok ? ((await l.json()).files || []).find(x => x.name === name) : null;
+      r = f ? await send(f.id) : null;
+      if (!r || !r.ok || r.trashed) r = await send(null);
+    }
+    if (r.ok && r.id) lsSet(key, r.id);
   }
   async function driveLoad() {
     const list = await driveList();
@@ -438,7 +531,8 @@
   // ---------- v0.56 daily safety copies: Drive is the only copy, so a save may never lose an older day ----------
   // Before the first save of a day writes over the Drive copy, that copy is copied into 'Safety copies' as the day's file.
   // A day's file is made once and never written again; the newest 30 days are kept.
-  const SAFE_BASE = demo ? 'wmm-lite-demo-safety' : 'wmm-lite-safety', SAFE_DIR = DK('safedir'), SAFE_DAY = DK('safeday');
+  const SAFE_BASE = demo ? 'wmm-lite-demo-safety' : 'wmm-lite-safety', SAFE_DAY = DK('safeday');
+  const safeKey = () => (ppId() ? DK('ppsafe') : DK('safedir'));
   const SAFE_KEEP = 30;
   async function safeList() {                                      // the safety copies, the newest day first
     const q = encodeURIComponent(`name contains '${SAFE_BASE}' and trashed=false`);
@@ -448,7 +542,13 @@
       .filter(f => f.name.indexOf(SAFE_BASE + ' ') === 0 && f.day).sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : 0));
   }
   async function safeFolder() {                                    // 'Safety copies' inside the app's folder (found or made once)
-    if (lsGet(SAFE_DIR)) return lsGet(SAFE_DIR);
+    if (lsGet(safeKey())) return lsGet(safeKey());
+    if (ppId()) {                                                  // v0.61: inside App data - DON'T DELETE / DF… / WMM
+      let id = null;
+      for (let n = 0; !id && n < 2; n++) { const top = await driveFolder(); id = top && await folderIn('Safety copies', top); if (!id) lsSet(dirKey(), null); }
+      if (id) lsSet(safeKey(), id);
+      return id;
+    }
     const q = encodeURIComponent(`name='Safety copies' and mimeType='${FOLDER_TYPE}' and trashed=false`);
     const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name,mimeType)`);
     let f = r.ok ? ((await r.json()).files || []).find(x => x.name === 'Safety copies' && x.mimeType === FOLDER_TYPE) : null;
@@ -457,9 +557,9 @@
       const m = await driveFetch(`${DRIVE_API}?fields=id,trashed`, {method: 'POST', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(Object.assign({name: 'Safety copies', mimeType: FOLDER_TYPE}, top ? {parents: [top]} : {}))});
       f = m.ok ? await m.json() : null;
-      if (f && f.trashed) { f = null; lsSet(DRIVE_DIR, null); }
+      if (f && f.trashed) { f = null; lsSet(dirKey(), null); }
     }
-    if (f && f.id) lsSet(SAFE_DIR, f.id);
+    if (f && f.id) lsSet(safeKey(), f.id);
     return f && f.id;
   }
   async function safeDaily(mainId) {                               // never stops the save itself
@@ -476,7 +576,7 @@
           return r.ok && !(await r.json().catch(() => ({}))).trashed;
         };
         // a binned folder (v0.39) = the copy lands in the bin: find or make the folders again
-        if (!await copy()) { lsSet(SAFE_DIR, null); lsSet(DRIVE_DIR, null); if (!await copy()) return; }
+        if (!await copy()) { lsSet(safeKey(), null); lsSet(dirKey(), null); if (!await copy()) return; }
         list = await safeList();
       }
       for (const old of list.slice(SAFE_KEEP)) await driveFetch(`${DRIVE_API}/${encodeURIComponent(old.id)}`, {method: 'DELETE'});
@@ -591,6 +691,11 @@
     document.getElementById('acchint').hidden = !on;
     document.getElementById('accon').hidden = !on || !clientId();
     document.getElementById('accconnect').hidden = on || !clientId();
+    // v0.61 🛂 the Google account is the passport's: another one = Sign out in Passport
+    const pp = !!(root.LockUI && root.LockUI.cloud && root.LockUI.cloud());
+    document.getElementById('accswitch').hidden = pp;
+    document.getElementById('acchint').textContent = pp ? "Backups go to your passport's Google account. Another account: Settings → 🛂 Passport → Sign out."
+      : 'Backups go to this Google account.';
     accMenu(); driveMenu();
   }
   function accStart() {
@@ -616,7 +721,7 @@
         lsSet(DRIVE_EMAIL, null);
         try { await driveConnect(false, true); } catch (e) { if (was && !lsGet(DRIVE_EMAIL)) lsSet(DRIVE_EMAIL, was); throw e; }
         if (lsGet(DRIVE_EMAIL) !== was) {                        // a new account: its own folder and files, sent soon
-          lsSet(DRIVE_ID, null); lsSet(DRIVE_DIR, null);
+          lsSet(DRIVE_ID, null); lsSet(dirKey(), null);
           lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon();
         }
         accShow();
@@ -642,7 +747,7 @@
     driveTimer = setTimeout(() => driveAuto(false), Math.max(0, at + wait - Date.now()));
   }
   function driveAuto(hidden) {
-    if (!lsGet(DRIVE_ON) || !lsGet(DRIVE_DIRTY) || !getToken()) return;
+    if (!lsGet(DRIVE_ON) || !lsGet(DRIVE_DIRTY) || !getToken() || lsGet(RESTORE) === 'need') return;
     driveSave(hidden).catch(() => { /* offline: it stays changed, the next visit sends it */ });
   }
   function driveStart() {
@@ -676,7 +781,8 @@
       if (!syncOn()) document.removeEventListener('pointerdown', once, true);   // in step: a long-open PC asks again
       if (getToken() || Date.now() - tried < 60000 || !(root.google && root.google.accounts && root.google.accounts.oauth2)) return;
       tried = Date.now();
-      driveConnect(true).then(() => syncOn() ? syncCheck() : driveAuto(false))   // v0.40: a change not sent last time goes now
+      driveConnect(true).then(() => (syncOn() ? syncCheck() : driveAuto(false)))   // v0.40: a change not sent last time goes now
+        .then(() => jobsRun())                                     // v0.60: then Orbit's jobs
         .catch(() => { /* blocked or closed: try again next visit */ });
     };
     document.addEventListener('pointerdown', once, true);
@@ -709,12 +815,12 @@
   async function syncLink(sealed) {                                // another device's key: its passcode, asked once
     if (linkAsked || !root.LockUI || !root.LockUI.adopt) return null;
     linkAsked = true;
-    const secret = await root.Sheet.ask('🔗 Link this device', 'The passcode you use on your other device', '', 'numeric');
+    const secret = await root.Sheet.ask('🔗 Open your other device\'s copy', 'Your passport passcode', '', 'numeric');
     if (secret === null) { syncLater = true; return null; }
     const o = await root.Lock.adopt(sealed, secret);
     if (!o) { await root.Sheet.tell("😕 That didn't open", 'Check the passcode and try again later.'); syncLater = true; return null; }
     root.LockUI.adopt(o);
-    await root.Sheet.tell('🔗 Linked', 'This device now uses the same passcode and backup codes as your other device.');
+    await root.Sheet.tell('🔗 Linked', 'This device can open your other device\'s copies now.');
     return o.state;
   }
   function syncBlocked() {                                         // like v3: never reload while typing, opened or moved
@@ -794,7 +900,7 @@
   // written over the month file meanwhile). The other device (camera link ?pair=CODE, or the code typed) checks it, picks
   // which money to keep (the sharing device's first), sends that to Drive, marks the note joined, and both stay in step.
   // TEST: ?beta=sync only.
-  const PAIR_FILE = demo ? 'wmm-lite-demo-pair.json' : 'wmm-lite-pair.json', DRIVE_PAIRED = DK('paired');
+  const DRIVE_PAIRED = DK('paired');
   const PAIR_MINS = 10;
   try {                                                            // the camera link opens the Drive tab
     const u = new URL(location.href);
@@ -820,7 +926,8 @@
     try { return t.ok ? Object.assign(JSON.parse(await t.text()), {id: f.id}) : null; } catch (e) { return null; }
   }
   async function pairWrite(note, id) {
-    const b = 'wmm' + Date.now(), meta = id ? {name: PAIR_FILE} : {name: PAIR_FILE, mimeType: 'application/json'};
+    const folder = id ? null : await driveFolder();                // v0.61: in the app's folder
+    const b = 'wmm' + Date.now(), meta = id ? {name: PAIR_FILE} : Object.assign({name: PAIR_FILE, mimeType: 'application/json'}, folder ? {parents: [folder]} : {});
     const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
                  `--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(note)}\r\n--${b}--`;
     const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id`,
@@ -987,6 +1094,64 @@
   document.addEventListener('DOMContentLoaded', driveWake);
   document.addEventListener('DOMContentLoaded', driveStart);
 
+  // ---------- v0.60 Orbit inbox ----------
+  // Orbit Agent drops wmm-job-*.json files in the Drive folder. Open app + Drive token + unlocked: read them oldest first,
+  // apply, delete, save, reload once. A job we do not know stays in Drive (a newer app may). Offline = next time.
+  let jobsBusy = false;
+  function jobsRun() {
+    if (jobsBusy || leaving || !lsGet(DRIVE_ON) || !getToken()) return;
+    const html = document.documentElement;
+    if (html.classList.contains('lockon')) {                       // wait for the unlock
+      const mo = new MutationObserver(() => { if (!html.classList.contains('lockon')) { mo.disconnect(); jobsRun(); } });
+      mo.observe(html, {attributes: true, attributeFilter: ['class']});
+      return;
+    }
+    if (syncBlocked()) { setTimeout(jobsRun, 5000); return; }      // typing or a menu open: not under the person
+    jobsBusy = true;
+    jobsGo().catch(() => { /* offline or odd: next time */ }).finally(() => { jobsBusy = false; });
+  }
+  async function jobsGo() {
+    const prefix = JOB_PREFIX;
+    const q = encodeURIComponent(`name contains '${prefix}' and trashed=false`);
+    const l = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+    if (!l.ok) return;
+    const files = M.jobOrder((await l.json()).files || [], demo);
+    if (!files.length) return;
+    const gone = [], notes = [];
+    let changed = false;
+    for (const f of files) {
+      const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+      if (!r.ok) continue;
+      let job;
+      try { job = JSON.parse(await r.text()); } catch (e) { gone.push(f.id); continue; }   // not JSON: nobody can use it
+      const res = M.applyJob(state, job, today());
+      if (res.skip === 'unknown') continue;
+      gone.push(f.id);
+      if (res.done || res.skip === 'bad') changed = true;
+      if (res.note) notes.push(res.note);
+    }
+    if (changed) { Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); }
+    for (const id of gone) await driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}`, {method: 'DELETE'}).catch(() => {});
+    if (!changed) return;
+    try { root.sessionStorage.setItem('lite_jobs', JSON.stringify(notes)); } catch (e) { /* no note */ }
+    const reload = () => { if (syncBlocked()) setTimeout(reload, 5000); else leave(); };
+    reload();
+  }
+  function jobsToast() {                                           // after the reload: what Orbit did
+    let notes = [];
+    try { notes = JSON.parse(root.sessionStorage.getItem('lite_jobs') || '[]'); root.sessionStorage.removeItem('lite_jobs'); } catch (e) { notes = []; }
+    if (!Array.isArray(notes) || !notes.length) return;
+    const lines = notes.slice(0, 4).map(n => String(n));
+    if (notes.length > 4) lines.push('+' + (notes.length - 4) + ' more');
+    const t = document.createElement('div');
+    t.className = 'synctoast jobtoast'; t.setAttribute('role', 'status');
+    lines.forEach(n => { const d = document.createElement('div'); d.textContent = n; t.appendChild(d); });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 10000);
+  }
+  document.addEventListener('DOMContentLoaded', () => { jobsToast(); setTimeout(jobsRun); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') jobsRun(); });
+
   function handleForm(form, submitter) {
     const path = pathOf(form.action);
     if (!ROUTES[path]) return;
@@ -1055,57 +1220,88 @@
     return out;
   }
 
-  // ---------- v0.57 a wiped device: sign in with Google, find the newest Drive copy (lockui.js asks the passcode) ----------
-  // Drive stays off until the money is back, so a device that starts new instead can never write over the copy.
+  // ---------- v0.61 a wiped device: Passport's Google sign-in + passcode, then the newest Drive copy comes back ----------
+  // (passport-lock.js shows the screens.) Drive saves wait until the money is back, so nothing writes over the copy.
   let found = null;
-  function restoreOff() {
-    [DRIVE_ON, DRIVE_EMAIL, DRIVE_ID, DRIVE_DIR, DRIVE_DIRTY].forEach(k => lsSet(k, null));
+  function restoreOff() {                                          // 'Start new instead': Drive off, the copy stays as it is
+    [DRIVE_ON, DRIVE_EMAIL, DRIVE_ID, dirKey(), DRIVE_DIRTY, RESTORE].forEach(k => lsSet(k, null));
     setToken(''); found = null;
   }
-  async function restoreFind(pick) {                               // {email, file: null} or {email, file, day, scrambled}
-    if (!clientId()) throw new Error('Google sign-in is not set up yet.');
+  const PC = () => (typeof PassportCloud !== 'undefined' && PassportCloud.enabled ? PassportCloud : null);
+  async function restoreFind() {                                   // {file: null} or {file, obj, kind 'sealed'|'plain', day}
     found = null;
-    try {
-      await loadGsi();
-      lsSet(DRIVE_EMAIL, null);
-      await driveConnect(false, pick);
-      const email = lsGet(DRIVE_EMAIL) || '', f = (await driveList())[0];
-      if (!f) { restoreOff(); return {email, file: null}; }
-      const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
-      if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
-      let obj = null;
-      try { obj = JSON.parse(await r.text()); } catch (e) { /* not JSON */ }
-      if (!obj || obj.app !== 'wheres-my-money-lite' || !(obj.scrambled || M.importBackup(obj))) {
-        throw new Error("The copy in your Google Drive is not a Where's My Money backup.");
-      }
-      found = {file: f, obj};
-      return {email, file: f, day: M.fmt.day(obj.saved || String(f.modifiedTime || '').slice(0, 10)), scrambled: !!obj.scrambled};
-    } catch (e) { restoreOff(); throw e; }
+    const f = (await driveList())[0];
+    if (!f) return {file: null};
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
+    let obj = null;
+    try { obj = JSON.parse(await r.text()); } catch (e) { /* not JSON */ }
+    if (!obj || obj.app !== 'wheres-my-money-lite' || !(obj.scrambled || M.importBackup(obj))) {
+      throw new Error("The copy in your Google Drive is not a Where's My Money backup.");
+    }
+    found = {file: f, obj};
+    return {file: f, obj, kind: obj.scrambled ? 'sealed' : 'plain', day: M.fmt.day(obj.saved || String(f.modifiedTime || '').slice(0, 10))};
   }
-  const restoreOpen = secret => (found && found.obj.scrambled ? root.Lock.adopt(found.obj.scrambled, secret) : Promise.resolve(null));
   function restoreFinish(st) {                                     // the money is back: keep it, and Drive carries on with that file
+    if (!found) return false;
     const s = M.importBackup({app: found.obj.app, saved: found.obj.saved, state: st || found.obj.state});
     if (!s) return false;
-    state = s; Store.save(s);
+    signedOut = false;                                             // v0.62: signed in again on this page: keep it
+    state = s; Store.save(s); hadState = true;
     lsSet(DRIVE_ID, JSON.stringify({name: found.file.name, id: found.file.id}));
-    lsSet(DRIVE_DIRTY, null);
+    lsSet(DRIVE_DIRTY, null); lsSet(RESTORE, null);
     return true;
   }
-  // v0.58 a new person is asked to turn Drive on straight after the passcode. A Google account that already holds a copy
-  // is NOT used (it would be written over): they get it back with Sign in with Google on a fresh start instead.
-  async function setupConnect() {
+  async function restoreConnect() {                                // a tap: the passport's Google account
     await loadGsi();
-    lsSet(DRIVE_EMAIL, null);
-    await driveConnect(false);
-    let had = [];
-    try { had = await driveList(); } catch (e) { restoreOff(); throw e; }
-    if (had.length) { const email = lsGet(DRIVE_EMAIL) || 'that Google account'; restoreOff(); return {email, had: true}; }
-    lsSet(DRIVE_DIRTY, String(Date.now()));                         // the first copy goes up soon
-    driveSoon(); driveMenu(); accMenu();
-    return {email: lsGet(DRIVE_EMAIL) || '', had: false};
+    if (PC() && root.LockUI && root.LockUI.email()) await PC().ensureToken(root.LockUI.email());
+    else await driveConnect(false);
   }
-  root.LiteRestore = {find: restoreFind, open: restoreOpen, finish: restoreFinish, off: restoreOff, ready: () => !!clientId(),
-                      connect: setupConnect, isOn: () => !!lsGet(DRIVE_ON)};
+  root.LiteRestore = {find: restoreFind, finish: restoreFinish, off: restoreOff, none: () => lsSet(RESTORE, null),
+                      connect: restoreConnect, hasToken: () => !!getToken(), ready: () => !!clientId(), isOn: () => !!lsGet(DRIVE_ON)};
+
+  // ---------- v0.61 🛂 Passport tells the app who is in ----------
+  // The first time a passport is used here (a real Google one): Drive is on with that Google account. No money here yet
+  // (a wiped device or a new person) = get the newest Drive copy first. Another Google account than before = new files.
+  function ppUnlocked(p, cloud) {
+    if (!cloud || !p || !p.email) return {};
+    if (lsGet(PPSEEN) !== p.email) {
+      lsSet(PPSEEN, p.email);
+      if (clientId()) {
+        const was = lsGet(DRIVE_EMAIL);
+        if (was && was.toLowerCase() !== p.email.toLowerCase()) {   // its files are in the other account's Drive
+          [DRIVE_ID, DK('ppdir'), DK('ppsafe'), DK('summary'), DK('moved'), DK('synced')].forEach(k => lsSet(k, null));
+          if (hadState) lsSet(DRIVE_DIRTY, String(Date.now()));
+        }
+        lsSet(DRIVE_ON, '1'); lsSet(DRIVE_EMAIL, p.email);
+        if (!hadState) lsSet(RESTORE, 'need');
+        driveSign(); driveMenu(); accMenu();
+      }
+    }
+    return {restore: lsGet(RESTORE) === 'need'};
+  }
+  // 🚪 Sign out: what is not in Drive yet goes there first (or a backup file is downloaded), then WMM's keys leave this device
+  async function signOut() {
+    let saved = false;
+    const money = hadState && lsGet(RESTORE) !== 'need';
+    if (money && lsGet(DRIVE_ON) && clientId()) {
+      try {
+        if (!getToken() && PC() && root.LockUI && root.LockUI.email()) await PC().ensureToken(root.LockUI.email());
+        if (lsGet(DRIVE_DIRTY)) await driveSave(false);
+        saved = !!getToken();
+      } catch (e) { saved = false; }
+    }
+    if (money && !saved) {
+      try { fileOut(M.backupName(today()), JSON.stringify(await backupFile(), null, 1)); } catch (e) { /* nothing to keep */ }
+    }
+    signedOut = true; hadState = false; clearTimeout(driveTimer);
+    const mine = k => (demo ? k.indexOf('lite_demo_') === 0 && k !== 'lite_demo_lock' : k.indexOf('lite_') === 0 && k.indexOf('lite_demo_') !== 0);
+    [root.localStorage, root.sessionStorage].forEach(area => {
+      try { Object.keys(area).filter(mine).forEach(k => area.removeItem(k)); } catch (e) { /* ignore */ }
+    });
+  }
+  root.LitePassport = {unlocked: ppUnlocked, signOut, signedOut: () => signedOut,
+                       pending: email => !!(PC() && email && clientId() && (lsGet(PPSEEN) !== email || lsGet(RESTORE) === 'need'))};
 
   root.Lite = {start, Store, today, state: () => state, run, leave, saveBackup};
 })(window);

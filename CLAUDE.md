@@ -318,3 +318,6 @@
   'Not on this device'), .ps-row #cpw Change passcode | #nb New backup codes, .ps-row #lock 🔒 Lock now | #out Sign out (.ps-out red).
   lite.css #wmmlock overrides for .ps-home/.ps-switch/.ps-out. gob6/v044 changed on purpose (switch, 'New backup codes').
   Tests 124 node + 264 browser (test_v062.py). Flaky under -n 4 only: test_gob9 save, test_v055 scan.
+- **3 Nov v0.63 MOVED TO LIVE (Darren: "we moving to live, i got a copy"): live = demo = v0.63 (so Passport ID v0.61-v0.63 is live).**
+  Live now has passport/, passport-lock.js, wmmkey.js; lockui.js gone. On first passcode the old lite_lock_v1 moves into the passport.
+  Tests 124 node + 264 browser (3 timing flakes under -n 4 passed alone: test_v055 typed code, test_v061 sign out, test_v048 cloud tap).
