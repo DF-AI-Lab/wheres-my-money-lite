@@ -306,3 +306,9 @@
   ?lock=0 off. tools/move_to_live.py now copies sub-folders (passport/). Tests: conftest seeds a passport (PIN, PP_CODES, MK, DF123456,
   fake.person@example.com) + KEYREC + ppseen; test_v061.py (PDrive = fake Drive with q filters + parents); gob6/v042/v043/v044 rewritten for
   Passport, v057/v058 removed (replaced by v061). Tests 124 node + 262 browser (-n 4 --timeout; -n 8 makes timing tests flaky). NEXT: Darren tries /demo/?lock=1 then ?lock=google; Orbit should write jobs into the WMM folder.
+- **3 Nov v0.62 (demo only; live still v0.59): Darren tried ?lock=google: money did not come back + Google asked 'tick the Drive box' every sign-in.**
+  1) Sign out then sign in on the SAME page: the restore ran while lite.js `signedOut` was still true, so Store.save did nothing and the
+  reload showed starter money. Fix: restoreFinish clears signedOut; passport-lock goIn() (no copy / Start new) reloads clean when signed out.
+  2) Passport v0.3.4 (Passport-ID repo first, then copied): PassportCloud.signOut no longer calls oauth2.revoke (it took the Drive permission
+  away). Note: opening the ?lock=google link itself wipes the demo on purpose; after the first time use plain /demo/.
+  Tests 124 node + 263 browser (test_v062.py). test_v055 scan test is flaky before and after (fails ~half the runs alone).

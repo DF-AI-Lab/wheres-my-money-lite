@@ -79,11 +79,10 @@ const PassportCloud = (() => {
     const t2 = saved(); t2.email = email; sessionStorage.setItem(TOKEN_KEY, JSON.stringify(t2));
   }
 
-  // forget the Google sign-in on this device (Drive files stay)
+  // forget the Google sign-in on this device (Drive files stay).
+  // v0.3.4: no revoke. Revoke took the Drive permission away, so every sign-in showed Google's 'tick the Drive box' again.
   function signOut() {
-    const t = saved();
     try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
-    try { if (t && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(t.token, () => {}); } catch {}
   }
 
   // ---------- Drive helpers ----------

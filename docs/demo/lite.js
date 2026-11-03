@@ -1246,6 +1246,7 @@
     if (!found) return false;
     const s = M.importBackup({app: found.obj.app, saved: found.obj.saved, state: st || found.obj.state});
     if (!s) return false;
+    signedOut = false;                                             // v0.62: signed in again on this page: keep it
     state = s; Store.save(s); hadState = true;
     lsSet(DRIVE_ID, JSON.stringify({name: found.file.name, id: found.file.id}));
     lsSet(DRIVE_DIRTY, null); lsSet(RESTORE, null);

@@ -141,7 +141,11 @@
     const L = lite();
     const r = L ? L.unlocked(p, PP().cloud) : {};
     if (r.restore) return restore();
-    if (L && L.signedOut()) { setStamp(true); root.location.reload(); return; }   // signed in again: start clean
+    goIn();
+  }
+  function goIn() {                                              // signed out on this page, then in again: start clean
+    const L = lite();
+    if (L && L.signedOut()) { setStamp(true); root.location.reload(); return; }
     enter();
   }
 
@@ -164,7 +168,7 @@
       <div class="ps-grow"></div>
       <button class="ps-btn" id="wmmrgo" hidden>☁️ Get my money from Drive</button>
       <button class="ps-link" id="wmmrnew">Start new instead</button>`);
-    $('wmmrnew').addEventListener('click', () => { R.off(); enter(); });
+    $('wmmrnew').addEventListener('click', () => { R.off(); goIn(); });
     $('wmmrgo').addEventListener('click', async () => {
       btn($('wmmrgo'), 'Opening Google…');
       try { await R.connect(); restore(); } catch (e) { restore(esc(e && e.message || 'Something went wrong. Try again.')); }
@@ -172,7 +176,7 @@
     if (!R.hasToken()) { $('wmmrmsg').textContent = 'Tap to look in your Google Drive.'; $('wmmrgo').hidden = false; return; }
     let f;
     try { f = await R.find(); } catch (e) { $('wmmrmsg').textContent = esc(e && e.message || 'Could not look in Drive.'); $('wmmrgo').hidden = false; $('wmmrgo').textContent = 'Try again'; return; }
-    if (!f.file) { R.none(); enter(); return; }                 // a new person: nothing to bring back
+    if (!f.file) { R.none(); goIn(); return; }                 // a new person: nothing to bring back
     if (f.kind === 'plain') { finish(null); return; }
     const sealed = f.obj.scrambled;
     if (sealed.v === 2) {
@@ -197,7 +201,7 @@
       </form>
       <button class="ps-link" id="wmmrnew">Start new instead</button>`);
     $('wmmold').focus();
-    $('wmmrnew').addEventListener('click', () => { root.LiteRestore.off(); enter(); });
+    $('wmmrnew').addEventListener('click', () => { root.LiteRestore.off(); goIn(); });
     $('wmmoldform').addEventListener('submit', async e => {
       e.preventDefault();
       btn($('wmmoldgo'), 'Checking…');
