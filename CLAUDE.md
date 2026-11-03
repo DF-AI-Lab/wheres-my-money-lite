@@ -312,3 +312,9 @@
   2) Passport v0.3.4 (Passport-ID repo first, then copied): PassportCloud.signOut no longer calls oauth2.revoke (it took the Drive permission
   away). Note: opening the ?lock=google link itself wipes the demo on purpose; after the first time use plain /demo/.
   Tests 124 node + 263 browser (test_v062.py). test_v055 scan test is flaky before and after (fails ~half the runs alone).
+- **3 Nov v0.63 (demo only; live still v0.59; mock https://claude.ai/artifact/Si9fuCGNRNq8DzxoNjfiYH): Passport settings on ONE screen.**
+  Passport v0.3.5 (Passport-ID first, then copied): settings = .ps-set: #back '‹ Home' (.ps-home) at the top (no big 'Back to…' button),
+  .ps-me logo + 'Your passport' + 'You're in ✓', card rows (Fingerprint last = #fpt .ps-switch role=switch aria-checked; no fingerprint =
+  'Not on this device'), .ps-row #cpw Change passcode | #nb New backup codes, .ps-row #lock 🔒 Lock now | #out Sign out (.ps-out red).
+  lite.css #wmmlock overrides for .ps-home/.ps-switch/.ps-out. gob6/v044 changed on purpose (switch, 'New backup codes').
+  Tests 124 node + 264 browser (test_v062.py). Flaky under -n 4 only: test_gob9 save, test_v055 scan.

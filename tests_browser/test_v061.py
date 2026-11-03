@@ -222,7 +222,7 @@ def test_the_old_lock_files_are_gone_and_passport_files_are_copied_untouched():
             assert (demo / "passport" / f).read_text() == (master / f).read_text(), f
     theme = json.loads((demo / "passport" / "theme.json").read_text())
     assert theme["drive"] == "WMM" and theme["font"] == "Manrope" and "lite-192.png" in theme["logo"]["value"]
-    assert "Passport v0.3.4" in (demo / "passport" / "PASSPORT.md").read_text()
+    assert "Passport v0.3.5" in (demo / "passport" / "PASSPORT.md").read_text()
     html = (demo / "index.html").read_text()
     order = [html.index(s) for s in ['src="lite.js', 'src="passport/config.js', 'src="passport/google.js', 'src="passport/passport.js',
                                      'src="passport/ui.js', 'src="passport-lock.js']]

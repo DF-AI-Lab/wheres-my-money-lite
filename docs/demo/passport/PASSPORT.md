@@ -21,7 +21,7 @@ passport/
 ```
 
 Add at the bottom of the app's `passport/PASSPORT.md`:
-`This app has Passport v0.3.4. Update from DF-AI-Lab/Passport-ID.`
+`This app has Passport v0.3.5. Update from DF-AI-Lab/Passport-ID.`
 
 ---
 
@@ -96,4 +96,4 @@ if (!bytes) PassportUI.needKey(() => { bytes = Passport.key(email); openSecrets(
 - If the app must break a rule, write why in `passport-id.md` under "Differences".
 
 ---
-This app has Passport v0.3.4. Update from DF-AI-Lab/Passport-ID.
+This app has Passport v0.3.5. Update from DF-AI-Lab/Passport-ID.

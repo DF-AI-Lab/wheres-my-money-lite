@@ -126,7 +126,7 @@ def test_new_backup_codes_in_passport_settings(page, base):
     page.goto(base + TODAY)
     page.click("#setbtn")
     page.click("#passportbtn")
-    step(page, "Make new backup codes")
+    step(page, "New backup codes")
     page.click("#passport #nb")
     step(page, "needs your passcode")                               # after a reload the hidden key is closed
     page.fill("#passport #pc", PIN)
@@ -201,9 +201,9 @@ def _finger_on(pg, url):
     unlock(pg)
     pg.click("#setbtn")
     pg.click("#passportbtn")
-    step(pg, "Turn fingerprint on")
+    pg.wait_for_selector('#passport #fpt[aria-checked="false"]')     # v0.63: a switch
     pg.click("#passport #fpt")
-    step(pg, "Turn fingerprint off")
+    pg.wait_for_selector('#passport #fpt[aria-checked="true"]')
     assert passport(pg)["fingerprints"].get("wmm")
 
 
@@ -232,5 +232,5 @@ def test_fingerprint_can_be_turned_off(locked, base):
     url = base.replace("127.0.0.1", "localhost")
     _finger_on(locked, url)
     locked.click("#passport #fpt")
-    step(locked, "Turn fingerprint on")
+    locked.wait_for_selector('#passport #fpt[aria-checked="false"]')
     assert not passport(locked)["fingerprints"].get("wmm")

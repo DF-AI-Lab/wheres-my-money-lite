@@ -10,7 +10,7 @@ GRAB = "window.__copied = null; navigator.clipboard.writeText = t => { window.__
 def test_copy_all_backup_codes(page, base):
     page.goto(base + TODAY)
     page.click("#setbtn"); page.click("#passportbtn")
-    step(page, "Make new backup codes")
+    step(page, "New backup codes")
     page.click("#passport #nb")
     page.fill("#passport #pc", PIN)
     page.click("#passport #go")

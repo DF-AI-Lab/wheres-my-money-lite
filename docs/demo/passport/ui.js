@@ -334,28 +334,35 @@ const PassportUI = (() => {
     const email = Passport.appAccount(APP); const p = Passport.find(email);
     const can = await Passport.fingerprintAvailable();
     const fp = p.fingerprints[APP];
-    show(`${appSection(true)}
-      <h2 class="ps-h">You're in ✓</h2>
-      <p class="ps-sub">Settings</p>
+    // v0.3.5 (Darren): all on one screen. '‹ Home' at the top, fingerprint = a switch, two buttons per line.
+    show(`<div class="ps-set">
+      ${onUnlocked ? `<button class="ps-home" id="back">‹ Home</button>` : ''}
+      <header class="ps-me"><div class="ps-tile">${T.logo.type === 'svg' ? T.logo.value : esc(T.logo.value)}</div>
+        <div><h2 class="ps-h">Your passport</h2><p class="ps-ok">You're in ✓</p></div></header>
       <dl class="ps-card">
-        <div><dt>Your passport</dt><dd>${esc(p.id)}</dd></div>
+        <div><dt>Passport</dt><dd>${esc(p.id)}</dd></div>
         <div><dt>Name</dt><dd>${esc(p.name)}</dd></div>
         <div><dt>Email</dt><dd>${esc(p.email)}</dd></div>
         <div><dt>Drive folder</dt><dd>${CLOUD ? esc(PassportCloud.ROOT) + ' / ' : ''}${esc(p.id)} / ${esc(T.drive)}</dd></div>
         <div><dt>Backup codes left</dt><dd>${Passport.backupLeft(p)} of 10</dd></div>
-        <div><dt>Fingerprint</dt><dd>${!can ? 'Not on this device' : fp ? 'On' : 'Off'}</dd></div>
         <div><dt>Hidden key</dt><dd>${Passport.key(email) ? 'Open ✓' : 'Locked'}</dd></div>
         <div><dt>Saved in Drive</dt><dd>${!CLOUD ? 'Pretend mode' : p.dirty ? 'Not yet' : 'Yes ✓'}</dd></div>
+        <div><dt id="fplbl">Fingerprint</dt><dd>${can
+          ? `<button class="ps-switch" id="fpt" role="switch" aria-checked="${fp ? 'true' : 'false'}" aria-labelledby="fplbl" title="${fp ? 'Turn fingerprint off' : 'Turn fingerprint on'}"></button>`
+          : 'Not on this device'}</dd></div>
       </dl>
       <div id="msg"></div>
       ${CLOUD && p.dirty ? '<button class="ps-btn" id="sv">Save to Drive now</button>' : ''}
-      ${can ? `<button class="ps-btn ps-ghost" id="fpt">${fp ? 'Turn fingerprint off' : 'Turn fingerprint on'}</button>` : ''}
-      <button class="ps-btn ps-ghost" id="cpw">Change passcode</button>
-      <button class="ps-btn ps-ghost" id="nb">Make new backup codes</button>
-      ${onUnlocked ? `<button class="ps-btn" id="back">Back to ${esc(T.name)}</button>` : ''}
-      <button class="ps-btn${onUnlocked ? ' ps-ghost' : ''}" id="lock">Lock now</button>
-      <button class="ps-btn ps-ghost" id="out">Sign out</button>
-      <p class="ps-sub ps-center">Sign out to use another Google account. Your passport stays safe in Drive.</p>`);
+      <div class="ps-row">
+        <button class="ps-btn ps-ghost" id="cpw">Change passcode</button>
+        <button class="ps-btn ps-ghost" id="nb">New backup codes</button>
+      </div>
+      <div class="ps-row">
+        <button class="ps-btn ps-ghost" id="lock">🔒 Lock now</button>
+        <button class="ps-btn ps-ghost ps-out" id="out">Sign out</button>
+      </div>
+      <p class="ps-small">Sign out to use another Google account. Your passport stays safe in Drive.</p>
+      </div>`);
     on('#sv', 'click', async () => {
       busy($('#sv'), 'Saving…');
       try { await Passport.sync(email, true); settings(); }

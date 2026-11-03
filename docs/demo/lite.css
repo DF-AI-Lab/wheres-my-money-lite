@@ -108,6 +108,10 @@ html.lockon .wrap { display: none; }
 #wmmlock .ps-screen .ps-link { background: none; color: var(--ps-link); border: none; font-weight: 400; border-radius: 0; }
 #wmmlock .ps-screen .ps-tile { background: transparent; }
 #wmmlock .ps-logoimg { width: 100%; height: 100%; border-radius: inherit; display: block; }
+#wmmlock .ps-screen .ps-home { background: none; border: none; color: var(--ps-accent); border-radius: 8px; }
+#wmmlock .ps-screen .ps-switch { border-radius: 99px; background: var(--ps-bg, transparent); border: 1px solid var(--ps-fieldBorder); }
+#wmmlock .ps-screen .ps-switch[aria-checked="true"] { background: var(--ps-accent); border-color: var(--ps-accent); }
+#wmmlock .ps-screen .ps-ghost.ps-out { color: var(--ps-error); }
 .box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
        width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; margin: auto; }
 .box img { width: 64px; height: 64px; border-radius: 16px; }

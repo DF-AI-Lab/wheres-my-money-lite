@@ -61,3 +61,30 @@ def test_demo_real_passport_saves_and_comes_back_after_sign_out(browser, site): 
     assert shown(pg)
     assert not pg.errors
     d.close()
+
+
+# ---------- v0.63 (Darren, 3 Nov, mock https://claude.ai/artifact/Si9fuCGNRNq8DzxoNjfiYH): Passport settings on ONE screen ----------
+
+def test_passport_settings_fit_one_phone_screen(browser, base):
+    ctx = _context(browser)
+    pg = _page(ctx)
+    pg.goto(base + TODAY)
+    pg.click("#setbtn")
+    pg.click("#passportbtn")
+    screen(pg, "Your passport")
+    home = pg.locator("#passport #back")
+    assert home.inner_text().strip() == "‹ Home"                             # no big 'Back to Where's My Money?' button
+    assert "Back to" not in pg.locator("#passport").inner_text()
+    box = lambda s: pg.locator("#passport " + s).bounding_box()
+    assert box("#back")["y"] < box(".ps-card")["y"]                          # Home at the top
+    assert abs(box("#lock")["y"] - box("#out")["y"]) < 2                     # Lock now + Sign out on one line
+    assert abs(box("#cpw")["y"] - box("#nb")["y"]) < 2                       # passcode + codes on one line
+    card = pg.locator("#passport .ps-card").inner_text()
+    assert "Fingerprint" in card and (pg.locator("#passport #fpt[role=switch]").count() == 1 or "Not on this device" in card)
+    last = pg.locator("#passport .ps-set .ps-small").bounding_box()
+    assert last["y"] + last["height"] <= 844                                 # all on one screen (390 x 844)
+    assert pg.evaluate("document.getElementById('wmmlock').scrollHeight <= document.getElementById('wmmlock').clientHeight + 1")
+    home.click()
+    pg.wait_for_selector("#wmmlock", state="hidden")
+    assert not pg.errors
+    ctx.close()
