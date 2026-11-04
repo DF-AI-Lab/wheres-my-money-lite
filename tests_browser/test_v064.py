@@ -201,3 +201,19 @@ def test_settings_says_which_device_is_the_main(browser, base):
     pc.click("#setbtn")
     assert "Linked to your" in pc.locator("#devlink").inner_text()
     d.close()
+
+
+# ---------- v0.65: Pay can be changed without a new month ----------
+
+def test_pay_can_be_changed_any_time(page, base):
+    page.goto(base + DEMO)
+    page.click("#quicktab")
+    page.click("#nmpayedit")
+    page.locator(".litesheet input").last.fill("2750")
+    with page.expect_navigation():
+        page.locator(".litesheet button.ok").last.click()
+    page.wait_for_load_state()
+    assert page.evaluate("Lite.state().pay") == 2750
+    page.click("#quicktab")
+    assert page.locator("#nm-pay").inner_text().strip() == "£2,750.00"
+    assert not page.errors

@@ -342,3 +342,5 @@
   Tests changed on purpose: golite/step10/step11 tap #nmstart; gob9/v037/v038/v061 fakes return modifiedTime / sort newest / seed
   lite_drive_synced; v055 greyed test = #pairbox hidden. Tests 124 node + 272 browser (test_v064.py). Flaky under -n 4 (pass alone, old
   code too): test_v045 both_changed_keep, test_v055 scan.
+- **4 Nov v0.65 (demo only; live still v0.63):** Pay in 'This month' is a button (#nmpayedit, pencil) = Sheet.ask then POST /pay (change this
+  month's pay any time, no new month). Tests 124 node + 273 browser (flake under -n 4: test_v048 cloud tap).

@@ -15,23 +15,23 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.64"></script>
-<script src="money.js?v=0.64"></script>
-<script src="render.js?v=0.64"></script>
-<script src="sheet.js?v=0.64"></script>
-<script src="lite.js?v=0.64"></script>
-<script src="lock.js?v=0.64"></script>
-<script src="wmmkey.js?v=0.64"></script>
+<script src="config.js?v=0.65"></script>
+<script src="money.js?v=0.65"></script>
+<script src="render.js?v=0.65"></script>
+<script src="sheet.js?v=0.65"></script>
+<script src="lite.js?v=0.65"></script>
+<script src="lock.js?v=0.65"></script>
+<script src="wmmkey.js?v=0.65"></script>
 <!-- v0.61 🛂 Passport ID = the lock (passport/ = a copy of DF-AI-Lab/Passport-ID, never edited here) -->
-<script src="passport/config.js?v=0.64"></script>
+<script src="passport/config.js?v=0.65"></script>
 <script>
 // the demo copy: ?lock=1 = pretend Passport (no Google, nothing real touched); ?lock=google = the real one
 if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_demo_lock') !== 'google') PASSPORT_CONFIG.googleClientId = ''; } catch (e) { PASSPORT_CONFIG.googleClientId = ''; } }
 </script>
-<script src="passport/google.js?v=0.64"></script>
-<script src="passport/passport.js?v=0.64"></script>
-<script src="passport/ui.js?v=0.64"></script>
-<script src="passport-lock.js?v=0.64"></script>
+<script src="passport/google.js?v=0.65"></script>
+<script src="passport/passport.js?v=0.65"></script>
+<script src="passport/ui.js?v=0.65"></script>
+<script src="passport-lock.js?v=0.65"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -188,9 +188,9 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.64">
-<link rel="stylesheet" href="passport/passport.css?v=0.64">
-<link rel="stylesheet" href="lite.css?v=0.64">
+<link rel="stylesheet" href="look.css?v=0.65">
+<link rel="stylesheet" href="passport/passport.css?v=0.65">
+<link rel="stylesheet" href="lite.css?v=0.65">
 </head>
 <body class="demo">
 
@@ -228,7 +228,7 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.64</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.65</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -400,7 +400,7 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
   <div class="q-pay">
     <div class="q-head"><div class="q-title">This month</div><span class="q-pill" id="paypill" hidden></span></div>
     <div class="nmrows" id="nmrows">
-      <div class="nmrow"><span>Pay<small>This month's wage</small></span><b id="nm-pay">£0.00</b></div>
+      <div class="nmrow"><span>Pay<small>This month's wage</small></span><button type="button" class="nmedit" id="nmpayedit" title="Change this month's pay"><b id="nm-pay">£0.00</b><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button></div>
       <div class="nmrow"><span>Left from last month<small>Set on payday · stays till the next one</small></span><b id="nm-left"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>£0.00</span></b></div>
       <div class="nmrow sofar"><span>Left so far<small>This month, live · carries over on payday</small></span><b id="nm-sofar">£0.00</b></div>
       <label class="nmrow nmday"><span>Payday<small>Day of the month you get paid</small></span><input class="amount" type="text" id="qday" inputmode="numeric" placeholder="25th" value="" autocomplete="off" aria-label="Payday, the day of the month"></label>
@@ -523,6 +523,15 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
     const nmBtn = document.getElementById('nmstart'), nmForm = document.getElementById('nmform');
     const showForm = on => { nmForm.hidden = !on; nmBtn.hidden = on; document.getElementById('nmnote').hidden = on; nmBtn.setAttribute('aria-expanded', on); };
     nmBtn.addEventListener('click', () => { showForm(true); const i = document.getElementById('qpay'); i.focus(); });
+    // v0.65: Pay can be changed any time (POST /pay), no new month needed
+    document.getElementById('nmpayedit').addEventListener('click', () => {
+      Sheet.ask('✏️ Change this month\'s pay', 'Pay', Number(Lite.state().pay).toFixed(2), 'decimal').then(v => {
+        if (v === null || !String(v).trim()) return;
+        const f = document.createElement('form'); f.method = 'post'; f.action = '/pay';
+        const i = document.createElement('input'); i.type = 'hidden'; i.name = 'pay'; i.value = v; f.appendChild(i);
+        document.body.appendChild(f); f.submit();
+      });
+    });
     document.querySelectorAll('.tap').forEach(b => b.addEventListener('click', () => {
       openQuick(true); showForm(true); const i = document.getElementById(b.dataset.edit); i.focus(); i.select();
     }));

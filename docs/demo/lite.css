@@ -579,6 +579,10 @@ body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: va
 .nmrow.sofar > b { color: var(--accent); font-size: 20px; }
 .nmrow.sofar > b.neg { color: var(--bad); }
 .nmrow.nmday { border-bottom: 0; }
+.nmedit { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; border-radius: 8px; }
+.nmedit b { font-size: 17px; font-weight: 800; white-space: nowrap; }
+.nmedit svg { width: 16px; height: 16px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.nmedit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .nmrow.nmday input { width: 96px; flex: 0 0 96px; text-align: center; }
 .demo .q-new { display: block; width: 100%; margin: 12px 0 0; padding: 14px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent);
                font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
