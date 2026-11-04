@@ -344,3 +344,5 @@
   code too): test_v045 both_changed_keep, test_v055 scan.
 - **4 Nov v0.65 (demo only; live still v0.63):** Pay in 'This month' is a button (#nmpayedit, pencil) = Sheet.ask then POST /pay (change this
   month's pay any time, no new month). Tests 124 node + 273 browser (flake under -n 4: test_v048 cloud tap).
+- **4 Nov v0.66 (demo only; live still v0.63):** Left from last month in 'This month' is a button too (#nmleftedit, pencil, no lock icon) =
+  Sheet.ask then POST /left (fix it any time; Left so far + every total follow). Tests 124 node + 274 browser.
