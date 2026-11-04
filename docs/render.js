@@ -462,8 +462,8 @@
   function showView(state, today) {
     const view = new URLSearchParams(location.search).get('view'), body = document.body;
     document.querySelectorAll('a[data-view]').forEach(a => { a.href = viewUrl(a.dataset.view); });
-    document.querySelectorAll('#invite a.back, #drive a.back, #account a.back').forEach(a => { a.href = viewUrl(''); });
-    if (!['ideas', 'invite', 'drive', 'account'].includes(view)) return;
+    document.querySelectorAll('#invite a.back, #drive a.back, #account a.back, #devices a.back').forEach(a => { a.href = viewUrl(''); });
+    if (!['ideas', 'invite', 'drive', 'account', 'devices'].includes(view)) return;
     body.dataset.view = view;                                    // lite.css hides the home page parts
     const box = document.getElementById(view);
     if (!box) return;
@@ -516,6 +516,11 @@
       const lh = document.getElementById('lhval');
       if (lh) lh.textContent = money(spare);
     }
+    // v0.64 (mock 1): this month at a glance. Left from last month stays as set on payday; Left so far is live.
+    const nm = (id, x) => { const el = document.getElementById(id); if (el) (el.querySelector('span') || el).textContent = money(x); };
+    nm('nm-pay', r.pay); nm('nm-left', r.left); nm('nm-sofar', spare);
+    const sofar = document.getElementById('nm-sofar');
+    if (sofar) sofar.classList.toggle('neg', spare < 0);
 
     // payday date (the pill and the box) and the last backup
     const day = document.getElementById('qday'), pillEl = document.getElementById('paypill');

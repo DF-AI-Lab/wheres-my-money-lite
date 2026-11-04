@@ -353,3 +353,5 @@
   shown again, every 30 s. Main saves to Drive 5 s after a change (was 60 s). Linked with no Google token = #devwait.tapme '🔄 Tap to get
   your Main's latest' (quiet reconnect, then devCheck). Only the Main approves changes (as v0.64). Tests 124 node + 275 browser
   (flaky under -n 4, pass alone: test_v055 scan, test_v061 sign out).
+- **4 Nov v0.67 MOVED TO LIVE (Darren: "worked it back and forth, move to live"): live = demo = v0.67** (so v0.64-v0.67 are live: This month box,
+  Pay/Left edit, never write over another device, Your devices Main + auto-follow).
