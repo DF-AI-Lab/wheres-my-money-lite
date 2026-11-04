@@ -233,3 +233,31 @@ def test_left_from_last_month_can_be_fixed_any_time(page, base):
     sofar = page.evaluate("Money.monthEndSpare(Lite.state())")
     assert page.locator("#nm-sofar").inner_text().strip() == "£{:,.2f}".format(sofar)
     assert not page.errors
+
+
+# ---------- v0.67: another device follows the Main on its own (no code) ----------
+
+def test_a_device_follows_the_main_without_a_code(browser, base):
+    d = Drive()
+    phone, pc = _two(browser, base, d)
+    pc.evaluate("""() => { const s = JSON.parse(localStorage.getItem('lite_state_v1'));
+        s.spends.push({id: 9999, name: 'PcOld', amount: 7, date: s.spends.length ? s.spends[0].date : '2026-11-01'});
+        localStorage.setItem('lite_state_v1', JSON.stringify(s)); localStorage.removeItem('lite_drive_blank'); }""")   # the PC had its own money (not sent)
+    pc.reload()
+    phone.goto(base + TODAY)
+    post(phone, 'form[action="/add"]', {"amount": "5", "name": "PhoneMoney"})
+    make_main(phone, base)
+    pc.goto(base + TODAY)                                                  # start-up check: follows the Main
+    pc.wait_for_function("localStorage.getItem('lite_drive_role') === 'linked'", timeout=15000)
+    pc.wait_for_load_state()
+    wait_spend(pc, "PhoneMoney")
+    assert "PcOld" not in spends(pc)
+    names = [f["name"] for f in d.files.values()]
+    assert any("this device before following" in n for n in names)   # the PC's old money is kept safe
+    note = json.loads([f for f in d.files.values() if f["name"] == "wmm-lite-devices.json"][0]["text"])
+    assert len(note["devices"]) == 2
+    phone.goto(base + TODAY)                                               # the Main's next change reaches the PC
+    post(phone, 'form[action="/add"]', {"amount": "2", "name": "Later"})
+    wait_spend(pc, "Later")
+    assert not pc.errors
+    d.close()

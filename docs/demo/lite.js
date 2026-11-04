@@ -748,7 +748,7 @@
     clearTimeout(driveTimer);
     const at = Number(lsGet(DRIVE_DIRTY));
     if (!at || !lsGet(DRIVE_ON) || !getToken()) return;
-    const wait = root.LITE_DRIVE_WAIT || (syncOn() ? 5000 : 60000);   // tests make it short; in step = 5 s
+    const wait = root.LITE_DRIVE_WAIT || (syncOn() || devRole() === 'main' ? 5000 : 60000);   // v0.67: a Main sends in 5 s   // tests make it short; in step = 5 s
     driveTimer = setTimeout(() => driveAuto(false), Math.max(0, at + wait - Date.now()));
   }
   function driveAuto(hidden) {
@@ -1065,20 +1065,28 @@
   function devBand() {                                             // linked: '⏳ 2 changes waiting for your Main'
     let el = document.getElementById('devwait');
     const out = devRole() === 'linked' ? jsonLs(DEV_OUT, []) : [];
-    if (!out.length) { if (el) el.remove(); return; }
+    const stale = devRole() === 'linked' && !getToken() && !out.length;   // v0.67: the Google sign-in ran out
+    if (!out.length && !stale) { if (el) el.remove(); return; }
     if (!el) {
       const cards = document.getElementById('cards');
       if (!cards) return;
       el = document.createElement('p'); el.id = 'devwait'; el.className = 'devwait'; el.setAttribute('role', 'status');
       cards.parentNode.insertBefore(el, cards);
     }
+    if (stale) {
+      el.textContent = `🔄 Tap to get your ${devMainName()}'s latest`; el.classList.add('tapme'); el.setAttribute('role', 'button'); el.tabIndex = 0;
+      el.onclick = () => { el.textContent = '🔄 Getting the latest…'; loadGsi().then(() => getToken() || driveConnect(true)).then(() => { devBand(); devCheck(); }, devBand); };
+      return;
+    }
+    el.classList.remove('tapme'); el.removeAttribute('tabindex'); el.setAttribute('role', 'status'); el.onclick = null;
     const n = out.length, sent = out.every(x => x.sent), s = n === 1 ? '' : 's';
     el.textContent = sent ? `⏳ ${n} change${s} waiting for your ${devMainName()} to say yes` : `⏳ ${n} change${s} not sent yet · they go when you're online`;
   }
   let devBusy = false, reqLater = false;
   async function devCheck() {
-    const role = devRole();
-    if (!role || devBusy || leaving || !getToken()) return;
+    const role = lsGet(DRIVE_ON) ? (lsGet(DEV_ROLE) || 'none') : null;
+    if (role === 'linked' && !getToken()) { devBand(); return; }   // v0.67: say so, one tap gets the latest
+    if (!role || devBusy || leaving || !getToken() || lsGet(RESTORE) === 'need') return;
     const html = document.documentElement;
     if (html.classList.contains('lockon')) {                       // after the unlock, like Orbit's jobs
       const mo = new MutationObserver(() => { if (!html.classList.contains('lockon')) { mo.disconnect(); devCheck(); } });
@@ -1090,8 +1098,36 @@
       const note = (await devNote()).obj;
       if (role === 'linked') await linkedCheck(note);
       else if (role === 'main') await mainCheck(note);
+      else await autoFollow(note);
     } catch (e) { /* offline: next time */ }
     finally { devBusy = false; devMenu(); }
+  }
+  async function safeUpload(obj, why) {                             // this device's own money -> Safety copies (v0.67)
+    const dir = await safeFolder().catch(() => null), b = 'wmm' + Date.now();
+    const meta = Object.assign({name: `${SAFE_BASE} ${why} ${today()}.json`, mimeType: 'application/json'}, dir ? {parents: [dir]} : {});
+    const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+                 `--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(obj)}\r\n--${b}--`;
+    const r = await driveFetch(`${DRIVE_UP}?uploadType=multipart&fields=id`,
+      {method: 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body});
+    if (!r.ok) throw new Error('Google Drive would not take the safety copy (error ' + r.status + ').');
+  }
+  async function autoFollow(note) {                                 // v0.67: a Main exists = this device follows it, no code to type
+    if (!note.main || note.main === devId() || syncBlocked()) return;
+    const f = (await driveList())[0];
+    if (!f) return;
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    if (!r.ok) return;
+    const theirs = await driveOpen(await r.text());
+    if (!theirs) return;
+    if (hadState && bare(theirs) !== bare(state)) await safeUpload(await backupFile(), 'this device before following');   // never lost
+    const main = note.devices.find(d => d.id === note.main), from = main ? main.name : 'Main';
+    const {id, obj} = await devNote();
+    devAdd(obj); await notePut(DEV_FILE, obj, id);
+    state = theirs; Store.save(theirs); hadState = true;
+    lsSet(DEV_ROLE, 'linked'); lsSet(DEV_MAIN, from); lsSet(DEV_OUT, null); lsSet(DEV_LIST, JSON.stringify(obj));
+    lsSet(DRIVE_SYNCED, stampOf(f)); lsSet(DRIVE_DIRTY, null); lsSet(DRIVE_UNDO, null); lsSet(DRIVE_ID, JSON.stringify({name: f.name, id: f.id}));
+    try { root.sessionStorage.setItem('lite_synced', 'linked'); } catch (e) { /* ignore */ }
+    leave();
   }
   async function linkedCheck(note) {
     const me = note.devices.find(d => d.id === devId());

@@ -346,3 +346,10 @@
   month's pay any time, no new month). Tests 124 node + 273 browser (flake under -n 4: test_v048 cloud tap).
 - **4 Nov v0.66 (demo only; live still v0.63):** Left from last month in 'This month' is a button too (#nmleftedit, pencil, no lock icon) =
   Sheet.ask then POST /left (fix it any time; Left so far + every total follow). Tests 124 node + 274 browser.
+- **4 Nov v0.67 (demo only; live still v0.63): Darren: "PC not updating" (it was never linked: a code was needed).** lite.js devCheck now also runs
+  with no role: autoFollow(note) = a Main is in wmm-lite-devices.json and it isn't this device -> this device's own money (if not blank and
+  different) goes to Safety copies via safeUpload ('wmm-lite-safety this device before following DATE.json'), then it joins the list, role
+  linked, copies the Main's newest copy, reloads (toast 'Linked'). No code needed (same Google account = same person). Checks: start-up,
+  shown again, every 30 s. Main saves to Drive 5 s after a change (was 60 s). Linked with no Google token = #devwait.tapme '🔄 Tap to get
+  your Main's latest' (quiet reconnect, then devCheck). Only the Main approves changes (as v0.64). Tests 124 node + 275 browser
+  (flaky under -n 4, pass alone: test_v055 scan, test_v061 sign out).

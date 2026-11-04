@@ -612,6 +612,7 @@ body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: va
 #devices .pairrow2 { display: flex; gap: 8px; }
 #devices .pairrow2 input { flex: 1; min-width: 0; font-size: 18px; letter-spacing: .1em; }
 #devices .pairrow2 button { width: auto; margin: 0; }
+.devwait.tapme { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .devwait { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
            border: 1px solid color-mix(in srgb, var(--spend, #f5b83d) 55%, transparent); background: color-mix(in srgb, var(--spend, #f5b83d) 12%, transparent); }
 .sheetback .aplist { display: flex; flex-direction: column; gap: 8px; margin: 0 0 6px; max-height: 45vh; overflow-y: auto; }
