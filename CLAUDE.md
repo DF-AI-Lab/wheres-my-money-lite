@@ -321,3 +321,24 @@
 - **3 Nov v0.63 MOVED TO LIVE (Darren: "we moving to live, i got a copy"): live = demo = v0.63 (so Passport ID v0.61-v0.63 is live).**
   Live now has passport/, passport-lock.js, wmmkey.js; lockui.js gone. On first passcode the old lite_lock_v1 moves into the passport.
   Tests 124 node + 264 browser (3 timing flakes under -n 4 passed alone: test_v055 typed code, test_v061 sign out, test_v048 cloud tap).
+- **4 Nov v0.64 (demo only; live still v0.63; mock https://claude.ai/artifact/5jrk4Euv1xNFioJpeZaWjD): Darren: the PC wrote over the phone's
+  Drive copy (no check unless ?beta=sync) + the payday box said "Last month's spare" for THIS month's spare.**
+  1) #quick = 'This month': .nmrow #nm-pay / #nm-left (lock icon, = state.left as set on payday) / .sofar #nm-sofar (monthEndSpare, live) /
+  .nmday #qday; #nmstart 'Start a new month' shows #nmform (the old #payform, labels New pay / Really left in your bank, button
+  'Start new month', same #newmonth sheet). .tap opens the form too. Hint 'The app thinks £X is left'.
+  2) lite.js guardNewer(hidden) in driveSaveNow for everyone (not only sync): newest Drive copy stamp != DK('synced') = another device saved
+  since: hidden/typing = refuse (stays dirty); else open it, same money = carry on, else Sheet.choose '⚠️ Another device saved too' (Drive
+  copy = syncUse reload / This device's = safeKeep (copy to 'wmm-lite-safety other device YYYY-MM-DD.json') then write / Not now = nothing).
+  Drive Load + restore now set DK('synced').
+  3) 📱 Your devices (?view=devices, Settings → Cloud #devlink): Drive notes wmm-lite-devices.json {main, devices:[{id,name}]} and
+  wmm-lite-invite.json {code, exp, main, from, joined} (demo: wmm-lite-demo-*). DK('devid'/'role' main|linked/'mainname'/'outbox'/'devices'/
+  'reqdone'). #devmain = devMakeMain (safeKeep the old Drive copy, write this money). Main: #devinvite code + QR (?join=CODE), polls joined.
+  Other device: #devjoinform = devJoin (copies the Main's newest copy; its old money = DRIVE_UNDO + a downloaded file). LINKED: run() applies
+  locally + outAdd (label from changeLabel, same-thing edits merged) → outSend = one file wmm-lite-req-<devid>-<ms>.json; never writes the
+  backup (driveSaveNow throws), no Orbit jobs; #devwait band '⏳ N changes waiting for your <Main>'; when its req files are gone it loads the
+  Main's copy (toast). MAIN: mainCheck lists all req files → #approve sheet (.aprow tick boxes, #apyes 'Add ticked (N)' / #apno Not now) →
+  ROUTES replayed, saved to Drive, THEN files deleted (DK('reqdone') stops doubles). devCheck on load, unlock, visible, every 30 s. Old
+  #pairbox only shows with ?beta=sync. Not built: the 'you changed this on the phone too' flag from mock 4.
+  Tests changed on purpose: golite/step10/step11 tap #nmstart; gob9/v037/v038/v061 fakes return modifiedTime / sort newest / seed
+  lite_drive_synced; v055 greyed test = #pairbox hidden. Tests 124 node + 272 browser (test_v064.py). Flaky under -n 4 (pass alone, old
+  code too): test_v045 both_changed_keep, test_v055 scan.

@@ -139,7 +139,8 @@ def fake_drive(page, listed=None):
             log["deletes"].append(req.url.split("/files/")[1].split("?")[0])
             return route.fulfill(status=204, body="")
         if req.method == "GET":
-            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"files": listed or []}))
+            files = sorted(listed or [], key=lambda f: f.get("modifiedTime", ""), reverse=True)   # newest first, like Drive
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"files": files}))
         return route.fulfill(status=404, body="")
     page.route("https://www.googleapis.com/**", api)
     return log
@@ -194,6 +195,7 @@ def test_a_new_month_keeps_only_the_last_three(page, base):
     log = fake_drive(page, listed=old + [{"id": "new1", "name": "wheres-my-money-backup Oct 2024.json",
                                           "modifiedTime": "2024-11-08T00:00:00Z"}])
     connect(page, base)
+    page.evaluate("localStorage.setItem('lite_drive_synced', 'new1@2024-11-08T00:00:00Z')")   # v0.64: this device saved it
     page.goto(base + TODAY)
     post(page, 'form[action="/add"]', {"amount": "3", "name": "X"})
     hide(page)

@@ -297,8 +297,8 @@ def test_payday_panel_backup_button_and_last_saved(page, base):
     assert page.locator("#lastsaved").inner_text().strip() == "Last saved 3 Nov · 5 days ago"
     q, s = box(page, "#quick"), box(page, "#qsave")
     assert s["width"] > q["width"] * 0.7                              # the big button
-    go = box(page, "#quick .q-go")
-    assert s["y"] > go["y"]                                           # under Work it out
+    go = box(page, "#nmstart")                                      # v0.64: Start a new month
+    assert s["y"] > go["y"]                                           # under it
 
 
 def test_saving_a_backup_remembers_the_day(page, base):

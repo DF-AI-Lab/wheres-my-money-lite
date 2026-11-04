@@ -135,6 +135,7 @@ def test_new_month_asks_in_a_sheet_not_a_browser_box(page, base):
     page.on("dialog", lambda d: (dialogs.append(d.message), d.dismiss()))
     months = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1')).history.length")
     page.click("#quicktab")
+    page.click("#nmstart")                                        # v0.64: the form opens on Start a new month
     page.fill("#qpay", "2600")
     page.fill("#qleft", "100")
     page.click("#payform .q-go")

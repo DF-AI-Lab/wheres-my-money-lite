@@ -36,13 +36,17 @@ def drive(page):
             d["posts"].append(m)
             if "upload/" in url:
                 page.wait_for_timeout(300)
-            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid, "trashed": bool(gone(fid))}))
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid, "trashed": bool(gone(fid)),
+                                                                                        "modifiedTime": d["files"][fid]["modifiedTime"]}))
         if req.method == "PATCH":
             fid = url.split("/files/")[1].split("?")[0]
             if fid not in d["files"]:
                 return route.fulfill(status=404, body="")
             d["patches"] = d.get("patches", 0) + 1
-            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid, "trashed": bool(gone(fid))}))
+            d["n"] += 1
+            d["files"][fid]["modifiedTime"] = "2024-11-08T10:%02d:00Z" % d["n"]
+            return route.fulfill(status=200, content_type="application/json", body=json.dumps({"id": fid, "trashed": bool(gone(fid)),
+                                                                                        "modifiedTime": d["files"][fid]["modifiedTime"]}))
         if req.method == "DELETE":
             d["files"].pop(url.split("/files/")[1].split("?")[0], None)
             return route.fulfill(status=204, body="")

@@ -159,8 +159,11 @@
       unknown = !state.bills.some(b => b.key === getter(data)('key'));
     }
     const before = path === '/bill/add' ? state.bills.length : 0;
+    const linked = devRole() === 'linked' && path !== '/backup/saved';   // v0.64: a linked device asks its Main
+    const label = linked ? changeLabel(path, getter(data), state) : '';
     const error = fn(state, getter(data));
-    if (!error) { blankSet(false); hadState = true; Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon(); }   // Drive: 1 minute on, or when hidden
+    if (!error && linked) { blankSet(false); hadState = true; Store.save(state); outAdd(path, data, label); outSoon(); }
+    else if (!error) { blankSet(false); hadState = true; Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); driveSign(); driveSoon(); }   // Drive: 1 minute on, or when hidden
     // a new bill glows once on the next page (v0.36, mock D)
     if (path === '/bill/add' && !error && state.bills.length > before) {
       try { root.sessionStorage.setItem('lite_glow', state.bills[state.bills.length - 1].key); } catch (e) { /* ignore */ }
@@ -262,7 +265,7 @@
     if (saved) saved.textContent = M.backupText(day, day);
     if (root.refreshBell) root.refreshBell();
   }
-  async function loadBackup(text) {                                // the text of a backup file (from a file or from Drive)
+  async function loadBackup(text, stamp) {                         // stamp: the Drive copy it came from (v0.64)                                // the text of a backup file (from a file or from Drive)
     let obj = null;
     try { obj = JSON.parse(text); } catch (e) { /* not JSON */ }
     if (obj && typeof obj === 'object' && obj.app === 'wheres-my-money-lite' && obj.scrambled) {   // scrambled: ask for the key
@@ -277,6 +280,7 @@
     if (!await root.Sheet.confirm('📂 Load this backup?', 'Everything on this phone is replaced with the backup from ' + M.fmt.day(obj.saved) + '.', 'Replace', true)) return;
     lsSet(DRIVE_UNDO, JSON.stringify(state));                      // v0.56: ↩️ Undo after the reload
     try { root.sessionStorage.setItem('lite_synced', 'load'); } catch (e) { /* ignore */ }
+    if (stamp) lsSet(DRIVE_SYNCED, stamp);
     Store.save(s);
     location.reload();
   }
@@ -438,6 +442,7 @@
   async function driveSaveNow(hidden) {
     if (lsGet(RESTORE) === 'need') throw new Error('Getting your money back from Google Drive first.');   // v0.61: never over the copy
     await moveIn();                                                // v0.61: once, into the passport's WMM folder
+    if (devRole() === 'linked') throw new Error('This device is linked: its changes go to your Main to say yes.');   // v0.64
     const was = lsGet(DRIVE_DIRTY);                                // a change made while this one is going stays to send
     if (syncOn()) {                                                // v0.45: never write over a newer copy from the other device
       const f = (await driveList())[0];
@@ -445,7 +450,7 @@
         setTimeout(() => syncCheck(), 0);
         throw new Error('Your other device saved a newer copy first. Nothing was written over it.');
       }
-    }
+    } else await guardNewer(hidden);                               // v0.64: the same check for everyone (Darren, 4 Nov)
     const text = JSON.stringify(await backupFile()), name = M.driveName(state, today(), demo);
     let saved = null;
     try { saved = JSON.parse(lsGet(DRIVE_ID)); } catch (e) { /* an old plain id: a new month file */ }
@@ -515,7 +520,7 @@
     if (!list.length) throw new Error('There is no copy in your Google Drive yet. Save one first.');
     const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(list[0].id)}?alt=media`);
     if (!r.ok) throw new Error('Could not read the copy from Google Drive (error ' + r.status + ').');
-    await loadBackup(await r.text());
+    await loadBackup(await r.text(), stampOf(list[0]));
   }
   async function driveDownload() {                                 // v0.55: the newest Drive copy as a file here
     const list = await driveList();
@@ -605,7 +610,7 @@
     safeFiles.forEach(f => {
       const row = document.createElement('div');
       row.className = 'saferow';
-      row.innerHTML = '<span><b></b><span class="sub">Start of the day</span></span>' +
+      row.innerHTML = '<span><b></b><span class="sub">' + (/ other device /.test(f.name) ? "Another device's copy" : 'Start of the day') + '</span></span>' +
         '<button type="button" class="small safeload">Load</button><button type="button" class="small safedl" aria-label="Download">⬇️</button>';
       row.querySelector('b').textContent = M.fmt.day(f.day);
       row.querySelector('.safeload').dataset.id = f.id;
@@ -783,6 +788,7 @@
       tried = Date.now();
       driveConnect(true).then(() => (syncOn() ? syncCheck() : driveAuto(false)))   // v0.40: a change not sent last time goes now
         .then(() => jobsRun())                                     // v0.60: then Orbit's jobs
+        .then(() => devCheck())                                    // v0.64: then the Main / linked devices
         .catch(() => { /* blocked or closed: try again next visit */ });
     };
     document.addEventListener('pointerdown', once, true);
@@ -872,7 +878,12 @@
     if (!shown) return;
     const t = document.createElement('div');
     t.className = 'synctoast'; t.setAttribute('role', 'status');
-    t.innerHTML = (shown === 'load' ? '<span>📂 Backup loaded</span>' : '<span>🔁 Updated from your other device</span>') + (lsGet(DRIVE_UNDO) ? '<button type="button" class="syncundo">↩️ Undo</button>' : '');
+    const said = shown === 'load' ? '📂 Backup loaded' : shown === 'main' ? '🔁 Updated from your ' + devMainName()
+      : shown === 'linked' ? '🔗 Linked · money copied from your ' + devMainName()
+      : /^approved:/.test(shown) ? '✅ Added ' + shown.split(':')[1] + ' change' + (shown.split(':')[1] === '1' ? '' : 's') + ' from your other device'
+      : '🔁 Updated from your other device';
+    t.innerHTML = '<span></span>' + (lsGet(DRIVE_UNDO) && !/^(main|approved)/.test(shown) ? '<button type="button" class="syncundo">↩️ Undo</button>' : '');
+    t.querySelector('span').textContent = said;
     document.body.appendChild(t);
     const gone = setTimeout(() => t.remove(), 10000);
     const u = t.querySelector('.syncundo');
@@ -893,6 +904,470 @@
   }
   function syncTurnOff() { lsSet(DRIVE_SYNC, null); lsSet(DRIVE_SYNCED, null); lsSet(DRIVE_PAIRED, null); pairBox(); }
   root.LiteSync = {on: syncTurnOn, off: syncTurnOff};              // (tests turn it on without pairing)
+
+  // ---------- v0.64 ⚠️ never write over another device's save without asking (Darren, 4 Nov: the PC wrote over the phone) ----------
+  // DRIVE_SYNCED = the Drive copy this device last sent or loaded. A different newest copy = another device saved since.
+  async function safeKeep(id) {                                    // that copy goes in Safety copies before it is written over
+    try {
+      const dir = await safeFolder().catch(() => null);
+      await driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}/copy?fields=id`, {method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(Object.assign({name: `${SAFE_BASE} other device ${today()}.json`}, dir ? {parents: [dir]} : {}))});
+    } catch (e) { /* the daily copy is still there */ }
+  }
+  async function guardNewer(hidden) {
+    const f = (await driveList())[0];
+    if (!f) return;
+    const st = stampOf(f);
+    if (st === lsGet(DRIVE_SYNCED)) return;
+    const stop = () => { throw new Error('Another device saved to Google Drive since this one. Nothing was written over it.'); };
+    if (hidden || syncBlocked()) stop();                           // never ask while the app closes or the person is typing
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    if (!r.ok) stop();
+    const theirs = await driveOpen(await r.text());
+    if (!theirs) stop();
+    if (bare(theirs) === bare(state)) { lsSet(DRIVE_SYNCED, st); return; }
+    const spare = s => M.fmt.money(M.monthEndSpare(s));
+    const pick = await root.Sheet.choose('⚠️ Another device saved too',
+      'Your Google Drive copy was changed by another device since this one last saved. Which money do you want to keep? The other one goes in Safety copies.',
+      `☁️ The Drive copy · ${spare(theirs)} spare`, `📱 This device's · ${spare(state)} spare`);
+    if (pick === null) stop();
+    if (pick === 'a') { syncUse(theirs, st); throw new Error('Loading the Drive copy…'); }
+    await safeKeep(f.id);
+    lsSet(DRIVE_SYNCED, st);
+  }
+
+  // ---------- v0.64 📱 Your devices: one Main, others linked (mock https://claude.ai/artifact/5jrk4Euv1xNFioJpeZaWjD) ----------
+  // The Main holds the real money and is the only device that writes the Drive copy. A linked device copies it; its own
+  // changes show on it straight away and go to Drive as request files. The Main lists them with tick boxes; the ticked
+  // ones are done on the Main, saved, then the request files go. The linked device then copies the Main again.
+  const DEV_FILE = demo ? 'wmm-lite-demo-devices.json' : 'wmm-lite-devices.json';
+  const INV_FILE = demo ? 'wmm-lite-demo-invite.json' : 'wmm-lite-invite.json';
+  const REQ_PREFIX = demo ? 'wmm-lite-demo-req-' : 'wmm-lite-req-';
+  const DEV_ID = DK('devid'), DEV_ROLE = DK('role'), DEV_MAIN = DK('mainname'), DEV_OUT = DK('outbox'), DEV_LIST = DK('devices'), DEV_DONE = DK('reqdone');
+  function devId() {
+    let id = lsGet(DEV_ID);
+    if (!id) { const a = new Uint32Array(2); root.crypto.getRandomValues(a); id = a[0].toString(36) + a[1].toString(36); lsSet(DEV_ID, id); }
+    return id;
+  }
+  function devRole() { return lsGet(DRIVE_ON) ? lsGet(DEV_ROLE) : null; }   // 'main' | 'linked' | null
+  const devMainName = () => lsGet(DEV_MAIN) || 'Main';
+  const jsonLs = (k, d) => { try { const v = JSON.parse(lsGet(k)); return v === null ? d : v; } catch (e) { return d; } };
+  async function noteGet(name) {                                   // {id, obj} or null
+    const q = encodeURIComponent(`name='${qEsc(name)}' and trashed=false`);
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+    if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
+    const f = ((await r.json()).files || []).find(x => x.name === name);
+    if (!f) return null;
+    const t = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    try { return t.ok ? {id: f.id, obj: JSON.parse(await t.text())} : null; } catch (e) { return null; }
+  }
+  async function notePut(name, obj, id) {
+    const folder = id ? null : await driveFolder();
+    const b = 'wmm' + Date.now(), meta = id ? {name} : Object.assign({name, mimeType: 'application/json'}, folder ? {parents: [folder]} : {});
+    const body = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n` +
+                 `--${b}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(obj)}\r\n--${b}--`;
+    const r = await driveFetch(`${DRIVE_UP}${id ? '/' + encodeURIComponent(id) : ''}?uploadType=multipart&fields=id`,
+      {method: id ? 'PATCH' : 'POST', headers: {'Content-Type': 'multipart/related; boundary=' + b}, body});
+    if (!r.ok) throw new Error('Google Drive would not take it (error ' + r.status + ').');
+    return ((await r.json().catch(() => ({}))).id) || id;
+  }
+  const fileGone = id => driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}`, {method: 'DELETE'}).catch(() => {});
+  async function devNote() {                                        // the devices note {v, main, devices:[{id,name,at}]} (+ its file id)
+    const n = await noteGet(DEV_FILE);
+    const obj = n && n.obj && typeof n.obj === 'object' ? n.obj : {v: 1, main: null, devices: []};
+    if (!Array.isArray(obj.devices)) obj.devices = [];
+    lsSet(DEV_LIST, JSON.stringify(obj));
+    return {id: n && n.id, obj};
+  }
+  const devAdd = (obj, name) => {
+    obj.devices = obj.devices.filter(d => d.id !== devId());
+    obj.devices.push({id: devId(), name: String(name || deviceName()).slice(0, 40), at: new Date().toISOString()});
+  };
+
+  // what a change says in the Main's list (worked out before the change, so a removed spend still has its name)
+  function changeLabel(path, get, s) {
+    const gbp = v => M.fmt.money(parseFloat(String(v).replace(/[£,]/g, '')) || 0);
+    const bill = () => ((s.bills || []).find(b => b.key === get('key')) || {}).name || 'a bill';
+    const pot = () => ((s.pots || []).find(p => p.key === get('key')) || {}).name || 'a pot';
+    const spend = () => ((s.spends || []).find(x => String(x.id) === String(get('id'))) || {}).name || 'a spend';
+    const L = {
+      '/add': () => (get('upcoming') === '1' ? 'Upcoming spend · ' : 'Spend · ') + (get('name') || 'Spend') + ' ' + gbp(get('amount')),
+      '/remove': () => 'Removed spend · ' + spend(),
+      '/spend/paid': () => 'Spend paid · ' + spend(),
+      '/spend/date': () => 'Spend date · ' + spend(),
+      '/spend/cat': () => 'Spend category · ' + spend() + ' → ' + get('cat'),
+      '/spend/amount': () => 'Spend amount · ' + spend() + ' → ' + gbp(get('amount')),
+      '/spend/name': () => 'Spend name · ' + spend() + ' → ' + get('name'),
+      '/pay': () => 'Pay → ' + gbp(get('pay')),
+      '/left': () => 'Left from last month → ' + gbp(get('amount')),
+      '/payday': () => 'New month · pay ' + gbp(get('pay')) + ', left ' + gbp(get('left')),
+      '/payday/day': () => 'Payday → ' + get('day'),
+      '/bill': () => 'Bill amount · ' + bill() + ' → ' + gbp(get('amount')),
+      '/bill/add': () => 'New bill · ' + (get('name') || 'Bill') + ' ' + gbp(get('amount')),
+      '/bill/paid': () => (get('paid') === '1' ? 'Marked paid · ' : 'Not paid yet · ') + bill(),
+      '/bills/paid': () => 'Marked bills paid',
+      '/bill/name': () => 'Bill name · ' + bill() + ' → ' + get('name'),
+      '/bill/due': () => 'Bill due day · ' + bill() + ' → ' + get('day'),
+      '/bill/cat': () => 'Bill category · ' + bill() + ' → ' + get('cat'),
+      '/bill/delete': () => 'Deleted bill · ' + bill(),
+      '/stopped': () => (get('stopped') === '1' ? 'Paused · ' : 'Resumed · ') + bill(),
+      '/pot/add': () => 'New pot · ' + (get('name') || 'Pot') + ' ' + gbp(get('amount')),
+      '/pot/amount': () => 'Pot amount · ' + pot() + ' → ' + gbp(get('amount')),
+      '/pot/delete': () => 'Deleted pot · ' + pot(),
+      '/card/add': () => (get('paid') === '1' ? 'Card paid off · ' : 'Card spend · ') + (get('name') || '') + ' ' + gbp(get('amount')),
+      '/card/remove': () => 'Removed a card line',
+      '/card/balance': () => 'Card used → ' + gbp(get('amount')),
+      '/card/limit': () => 'Card limit → ' + gbp(get('amount')),
+    };
+    try { return (L[path] ? L[path]() : 'Changed · ' + path.replace(/^\//, '').replace(/\//g, ' ')).slice(0, 120); }
+    catch (e) { return 'Changed · ' + path; }
+  }
+  const SAME_THING = ['/bill', '/pay', '/left', '/payday/day', '/layout', '/spend/amount', '/pot/amount', '/card/limit', '/card/balance'];
+  function fieldsOf(data) {
+    const o = {};
+    if (data && typeof data.entries === 'function') { for (const [k, v] of data.entries()) if (typeof v === 'string') o[k] = v; }
+    else if (data && data.obj && typeof data.obj === 'object') Object.assign(o, data.obj);
+    return o;
+  }
+  // a linked device: the change is kept to send (typing a bill amount = one change, not one per key)
+  function outAdd(path, data, label) {
+    const out = jsonLs(DEV_OUT, []), fields = fieldsOf(data), who = f => f.key || f.id || f.card || '';
+    const last = out[out.length - 1];
+    const item = {n: Date.now() + '-' + Math.random().toString(36).slice(2, 6), path, fields, label, at: new Date().toISOString(), sent: null};
+    if (last && !last.sent && last.path === path && SAME_THING.indexOf(path) >= 0 && who(last.fields) === who(fields)) out[out.length - 1] = item;
+    else out.push(item);
+    lsSet(DEV_OUT, JSON.stringify(out));
+  }
+  let outBusy = false;
+  async function outSend() {                                        // what is not sent yet goes as one request file
+    if (outBusy || !getToken()) return;
+    const out = jsonLs(DEV_OUT, []), fresh = out.filter(x => !x.sent);
+    if (!fresh.length) return;
+    outBusy = true;
+    try {
+      const name = `${REQ_PREFIX}${devId()}-${Date.now()}.json`;
+      await notePut(name, {v: 1, devid: devId(), from: deviceName(), at: new Date().toISOString(),
+                           changes: fresh.map(x => ({n: x.n, path: x.path, fields: x.fields, label: x.label, at: x.at}))});
+      const now = jsonLs(DEV_OUT, []);
+      now.forEach(x => { if (fresh.some(y => y.n === x.n)) x.sent = name; });
+      lsSet(DEV_OUT, JSON.stringify(now));
+    } finally { outBusy = false; }
+  }
+  let outTimer = 0;
+  function outSoon() { clearTimeout(outTimer); outTimer = setTimeout(() => { outSend().then(devBand, devBand); }, root.LITE_DRIVE_WAIT || 5000); devBand(); }
+  async function reqList(mine) {                                    // request files (only this device's, or every device's)
+    const q = encodeURIComponent(`name contains '${REQ_PREFIX}${mine ? devId() + '-' : ''}' and trashed=false`);
+    const r = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
+    if (!r.ok) throw new Error('Could not look in your Google Drive (error ' + r.status + ').');
+    return ((await r.json()).files || []).filter(f => f.name && f.name.indexOf(REQ_PREFIX + (mine ? devId() + '-' : '')) === 0)
+      .sort((a, b) => (a.name < b.name ? -1 : 1));
+  }
+  function devBand() {                                             // linked: '⏳ 2 changes waiting for your Main'
+    let el = document.getElementById('devwait');
+    const out = devRole() === 'linked' ? jsonLs(DEV_OUT, []) : [];
+    if (!out.length) { if (el) el.remove(); return; }
+    if (!el) {
+      const cards = document.getElementById('cards');
+      if (!cards) return;
+      el = document.createElement('p'); el.id = 'devwait'; el.className = 'devwait'; el.setAttribute('role', 'status');
+      cards.parentNode.insertBefore(el, cards);
+    }
+    const n = out.length, sent = out.every(x => x.sent), s = n === 1 ? '' : 's';
+    el.textContent = sent ? `⏳ ${n} change${s} waiting for your ${devMainName()} to say yes` : `⏳ ${n} change${s} not sent yet · they go when you're online`;
+  }
+  let devBusy = false, reqLater = false;
+  async function devCheck() {
+    const role = devRole();
+    if (!role || devBusy || leaving || !getToken()) return;
+    const html = document.documentElement;
+    if (html.classList.contains('lockon')) {                       // after the unlock, like Orbit's jobs
+      const mo = new MutationObserver(() => { if (!html.classList.contains('lockon')) { mo.disconnect(); devCheck(); } });
+      mo.observe(html, {attributes: true, attributeFilter: ['class']});
+      return;
+    }
+    devBusy = true;
+    try {
+      const note = (await devNote()).obj;
+      if (role === 'linked') await linkedCheck(note);
+      else if (role === 'main') await mainCheck(note);
+    } catch (e) { /* offline: next time */ }
+    finally { devBusy = false; devMenu(); }
+  }
+  async function linkedCheck(note) {
+    const me = note.devices.find(d => d.id === devId());
+    if (note.main === devId()) { lsSet(DEV_ROLE, 'main'); return; }
+    if (!me || !note.main) {                                       // the Main took this device off the list
+      lsSet(DEV_ROLE, null); lsSet(DEV_OUT, null); devBand();
+      root.Sheet.tell('🔗 Not linked any more', 'This device is not linked to your Main now. Its money stays as it is.');
+      return;
+    }
+    const main = note.devices.find(d => d.id === note.main);
+    if (main) lsSet(DEV_MAIN, main.name);
+    await outSend();
+    const live = (await reqList(true)).map(f => f.name);
+    const out = jsonLs(DEV_OUT, []).filter(x => !x.sent || live.indexOf(x.sent) >= 0);   // gone from Drive = the Main has done it
+    lsSet(DEV_OUT, out.length ? JSON.stringify(out) : null);
+    devBand();
+    if (out.length) return;                                        // still waiting: keep showing this device's changes
+    const f = (await driveList())[0], st = stampOf(f);
+    if (!f || st === lsGet(DRIVE_SYNCED) || syncBlocked()) return;
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    if (!r.ok) return;
+    const theirs = await driveOpen(await r.text());
+    if (!theirs) return;
+    if (bare(theirs) === bare(state)) { lsSet(DRIVE_SYNCED, st); return; }
+    lsSet(DRIVE_UNDO, null);                                       // the Main's money is the real one: no Undo here
+    state = theirs; Store.save(theirs);
+    lsSet(DRIVE_SYNCED, st); lsSet(DRIVE_DIRTY, null);
+    try { root.sessionStorage.setItem('lite_synced', 'main'); } catch (e) { /* ignore */ }
+    leave();
+  }
+  async function mainCheck(note) {
+    if (note.main && note.main !== devId()) {                      // another device was made the Main
+      lsSet(DEV_ROLE, 'linked');
+      const main = note.devices.find(d => d.id === note.main);
+      if (main) lsSet(DEV_MAIN, main.name);
+      return;
+    }
+    if (reqLater) return;
+    if (syncBlocked()) { setTimeout(devCheck, 5000); return; }
+    const done = jsonLs(DEV_DONE, []);
+    const files = await reqList(false);
+    for (const f of files.filter(x => done.indexOf(x.name) >= 0)) await fileGone(f.id);   // done before, the delete was cut off
+    const asks = [];
+    for (const f of files.filter(x => done.indexOf(x.name) < 0)) {
+      const t = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+      let obj = null;
+      try { obj = t.ok ? JSON.parse(await t.text()) : null; } catch (e) { obj = null; }
+      if (!obj || !Array.isArray(obj.changes)) { await fileGone(f.id); continue; }
+      obj.changes.forEach(c => { if (c && ROUTES[c.path]) asks.push({file: f, from: String(obj.from || 'other device').slice(0, 40), c}); });
+      if (!obj.changes.length) await fileGone(f.id);
+    }
+    if (!asks.length) { files.forEach(f => { if (done.indexOf(f.name) < 0 && !asks.some(a => a.file.id === f.id)) fileGone(f.id); }); return; }
+    const ticked = await approveSheet(asks);
+    if (ticked === null) { reqLater = true; return; }
+    let n = 0;
+    asks.forEach((a, i) => {
+      if (ticked.indexOf(i) < 0) return;
+      const f = a.c.fields || {};
+      try { if (!ROUTES[a.c.path](state, getter({get: k => f[k]}))) n++; } catch (e) { /* skip a change that no longer fits */ }
+    });
+    const names = [...new Set(asks.map(a => a.file.name))];
+    lsSet(DEV_DONE, JSON.stringify(done.concat(names).slice(-200)));
+    Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now()));
+    try { await driveSave(false); } catch (e) { /* saved here; Drive next time */ }
+    for (const id of [...new Set(asks.map(a => a.file.id))]) await fileGone(id);   // after the save: the other device then copies it
+    try { root.sessionStorage.setItem('lite_synced', 'approved:' + n); } catch (e) { /* ignore */ }
+    leave();
+  }
+  // the list with tick boxes (mock 4); resolves to the ticked indexes, or null for Not now
+  function approveSheet(asks) {
+    return new Promise(resolve => {
+      document.getElementById('approve')?.remove();
+      const froms = [...new Set(asks.map(a => a.from))], who = froms.length === 1 ? froms[0] : 'other devices';
+      const back = document.createElement('div');
+      back.id = 'approve'; back.className = 'sheetback litesheet';
+      back.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="aptitle"><div class="grab"></div>
+        <h3 id="aptitle"></h3><p>Nothing counts until you say yes. Unticked ones are dropped.</p><div class="aplist"></div>
+        <button type="button" class="pri" id="apyes"></button><button type="button" class="ter" id="apno">Not now</button></div>`;
+      back.querySelector('#aptitle').textContent = `📲 Your ${who} made ${asks.length} change${asks.length === 1 ? '' : 's'}`;
+      const list = back.querySelector('.aplist'), yes = back.querySelector('#apyes');
+      const count = () => { const n = list.querySelectorAll('input:checked').length; yes.textContent = n ? `✅ Add ticked (${n})` : '✅ Drop them all'; };
+      asks.forEach((a, i) => {
+        const row = document.createElement('label'); row.className = 'aprow';
+        const box = document.createElement('input'); box.type = 'checkbox'; box.checked = true; box.value = String(i);
+        const txt = document.createElement('span'); txt.textContent = a.c.label || a.c.path;
+        if (froms.length > 1) { const sub = document.createElement('small'); sub.textContent = a.from; txt.appendChild(sub); }
+        row.append(box, txt); list.appendChild(row);
+        box.addEventListener('change', count);
+      });
+      count();
+      const close = v => { back.remove(); resolve(v); };
+      yes.addEventListener('click', () => close([...list.querySelectorAll('input:checked')].map(b => Number(b.value))));
+      back.querySelector('#apno').addEventListener('click', () => close(null));
+      document.body.appendChild(back);
+      yes.focus();
+    });
+  }
+
+  // making the Main, inviting, joining (?view=devices)
+  async function devMakeMain() {
+    await driveReady();
+    const {id, obj} = await devNote();
+    const was = obj.main && obj.main !== devId() ? (obj.devices.find(d => d.id === obj.main) || {}).name || 'other device' : '';
+    if (!await root.Sheet.confirm('⭐ Make this device the Main?',
+      (was ? `Your ${was} is the Main now. ` : '') + "This device's money becomes the real money in Google Drive. Other devices copy it. The Drive copy there now goes in Safety copies.",
+      'Make it the Main')) return false;
+    const f = (await driveList())[0];
+    if (f && stampOf(f) !== lsGet(DRIVE_SYNCED)) await safeKeep(f.id);
+    obj.main = devId(); devAdd(obj); await notePut(DEV_FILE, obj, id);
+    lsSet(DEV_LIST, JSON.stringify(obj));
+    lsSet(DEV_ROLE, 'main'); lsSet(DEV_MAIN, deviceName()); lsSet(DEV_OUT, null);
+    lsSet(DRIVE_SYNCED, stampOf(f)); lsSet(DRIVE_DIRTY, String(Date.now()));
+    await driveSave(false);
+    return true;
+  }
+  let invNote = null, invTimer = 0;
+  async function devInvite() {
+    await driveReady();
+    if (lsGet(DRIVE_DIRTY)) await driveSave(false);                // the other device copies the newest money
+    const n = new Uint32Array(1); root.crypto.getRandomValues(n);
+    const code = String(n[0] % 1000000).padStart(6, '0'), exp = Date.now() + PAIR_MINS * 60000;
+    const old = await noteGet(INV_FILE).catch(() => null);
+    const note = {code, exp, main: devId(), from: deviceName()};
+    note.id = await notePut(INV_FILE, {code, exp, main: note.main, from: note.from}, old && old.id);
+    invNote = note;
+    const url = location.origin + location.pathname + '?join=' + code;
+    try { const qr = (await loadQr())(0, 'M'); qr.addData(url); qr.make(); document.getElementById('devqr').innerHTML = qr.createSvgTag(5, 2); }
+    catch (e) { document.getElementById('devqr').textContent = ''; }
+    document.getElementById('devnum').textContent = code.slice(0, 3) + ' ' + code.slice(3);
+    document.getElementById('devwaiting').textContent = '⏳ Waiting for your other device…';
+    document.getElementById('devcode').hidden = false;
+    document.getElementById('devinvite').hidden = true;
+    invPoll(note);
+  }
+  function invClose() {
+    clearTimeout(invTimer);
+    const n = invNote; invNote = null;
+    if (n) fileGone(n.id);
+    document.getElementById('devcode').hidden = true;
+    devView();
+  }
+  function invPoll(note) {
+    invTimer = setTimeout(async () => {
+      if (invNote !== note) return;
+      let p = null;
+      try { p = await noteGet(INV_FILE); } catch (e) { /* offline: look again */ }
+      if (invNote !== note) return;
+      if (p && p.obj && p.obj.code === note.code && p.obj.joined) {
+        invNote = null; fileGone(p.id);
+        document.getElementById('devcode').hidden = true;
+        await devNote().catch(() => null);
+        devView();
+        root.Sheet.tell('✅ Linked', `Your ${String(p.obj.joined).slice(0, 40)} now copies this device. Its changes come here for you to say yes.`);
+        return;
+      }
+      if (Date.now() > note.exp) { document.getElementById('devwaiting').textContent = '⌛ The code ran out. Tap Cancel and make a new one.'; return; }
+      invPoll(note);
+    }, root.LITE_PAIR_EVERY || 3000);
+  }
+  async function devJoin(code) {
+    code = String(code || '').replace(/\D/g, '');
+    if (code.length !== 6) throw new Error('Type the 6 numbers from your Main.');
+    await driveReady();
+    const p = await noteGet(INV_FILE);
+    if (!p || !p.obj || p.obj.code !== code || p.obj.joined) throw new Error("That code didn't match. Check it on your Main and try again.");
+    if (Date.now() > p.obj.exp) throw new Error('That code has run out. Make a new one on your Main.');
+    if (p.obj.main === devId()) throw new Error('This device is the Main. Type the code on your other device.');
+    const f = (await driveList())[0];
+    if (!f) throw new Error('Your Main has not saved to Google Drive yet. Try again in a minute.');
+    const r = await driveFetch(`${DRIVE_API}/${encodeURIComponent(f.id)}?alt=media`);
+    const theirs = r.ok ? await driveOpen(await r.text()) : null;
+    if (!theirs) throw new Error("Could not open your Main's money. Try again.");
+    const from = String(p.obj.from || 'Main').slice(0, 40);
+    if (hadState && bare(theirs) !== bare(state)) {
+      if (!await root.Sheet.confirm(`🔗 Copy your ${from}'s money?`,
+        `This device will show the same money as your ${from}. The money here now is kept: tap ↩️ Undo after, or find it in this device's Settings → Load backup.`,
+        'Copy and link')) return;
+      try { fileOut('wmm-before-link ' + today() + '.json', JSON.stringify(await backupFile(), null, 1)); } catch (e) { /* the Undo still has it */ }
+      lsSet(DRIVE_UNDO, JSON.stringify(state));
+    }
+    const {id, obj} = await devNote();
+    obj.main = obj.main || p.obj.main;
+    if (!obj.devices.some(d => d.id === p.obj.main)) obj.devices.push({id: p.obj.main, name: from, at: new Date().toISOString()});
+    devAdd(obj); await notePut(DEV_FILE, obj, id);
+    state = theirs; Store.save(theirs); hadState = true;
+    lsSet(DEV_ROLE, 'linked'); lsSet(DEV_MAIN, from); lsSet(DEV_OUT, null); lsSet(DEV_LIST, JSON.stringify(obj));
+    lsSet(DRIVE_SYNCED, stampOf(f)); lsSet(DRIVE_DIRTY, null); lsSet(DRIVE_ID, JSON.stringify({name: f.name, id: f.id}));
+    await notePut(INV_FILE, Object.assign({}, p.obj, {joined: deviceName()}), p.id);
+    try { root.sessionStorage.setItem('lite_synced', 'linked'); } catch (e) { /* ignore */ }
+    const u = new URL(location.href); u.searchParams.delete('join'); history.replaceState(null, '', u.toString());
+    leave();
+  }
+  async function devUnlink(otherId) {                               // the Main takes one off, or this device leaves
+    await driveReady();
+    const {id, obj} = await devNote();
+    obj.devices = obj.devices.filter(d => d.id !== (otherId || devId()));
+    await notePut(DEV_FILE, obj, id);
+    lsSet(DEV_LIST, JSON.stringify(obj));
+    if (!otherId) { lsSet(DEV_ROLE, null); lsSet(DEV_OUT, null); lsSet(DEV_MAIN, null); devBand(); }
+    devView(); devMenu();
+  }
+  function devMenu() {                                             // the Settings line
+    const sub = document.querySelector('#devlink .sub');
+    if (!sub) return;
+    const role = devRole();
+    sub.textContent = role === 'main' ? '⭐ Main · this device' : role === 'linked' ? 'Linked to your ' + devMainName() : 'One Main, the others follow';
+  }
+  function devView() {                                             // ?view=devices
+    const box = document.getElementById('devices');
+    if (!box || box.hidden) return;
+    const on = !!lsGet(DRIVE_ON) && !!clientId();
+    document.getElementById('devnodrive').hidden = on;
+    document.getElementById('devset').hidden = !on;
+    if (!on) return;
+    const role = devRole(), obj = jsonLs(DEV_LIST, {devices: []}), list = document.getElementById('devlist');
+    list.textContent = '';
+    const rows = (obj.devices || []).slice();
+    if (!rows.some(d => d.id === devId())) rows.unshift({id: devId(), name: deviceName()});
+    rows.sort((a, b) => (a.id === obj.main ? -1 : b.id === obj.main ? 1 : 0));
+    rows.forEach(d => {
+      const me = d.id === devId(), main = d.id === obj.main && (role || !me);
+      const row = document.createElement('div'); row.className = 'devrow' + (main ? ' main' : '');
+      const txt = document.createElement('span'), n = document.createElement('b'), sub = document.createElement('span');
+      sub.className = 'sub'; n.textContent = d.name + (me ? ' (this device)' : '');
+      sub.textContent = main ? 'Holds the real money' : me && role !== 'linked' ? 'Not linked' : 'Linked · copies the Main';
+      txt.append(n, sub); row.append(txt);
+      if (main) { const t = document.createElement('span'); t.className = 'devtag'; t.textContent = 'MAIN'; row.append(t); }
+      else if (!me && role === 'main') {
+        const x = document.createElement('button'); x.type = 'button'; x.className = 'small devremove'; x.textContent = 'Remove';
+        x.addEventListener('click', async () => {
+          if (await root.Sheet.confirm('Remove ' + d.name + '?', 'It stops copying this device. Its money stays as it is there.', 'Remove', true)) devRun(() => devUnlink(d.id))();
+        });
+        row.append(x);
+      }
+      list.append(row);
+    });
+    document.getElementById('devmain').hidden = role === 'main';
+    document.getElementById('devmain').textContent = role === 'linked' ? '⭐ Make this device the Main instead' : '⭐ Make this device the Main';
+    document.getElementById('devinvite').hidden = role !== 'main' || !document.getElementById('devcode').hidden;
+    document.getElementById('devjoinform').hidden = role === 'main';
+    document.getElementById('devleave').hidden = role !== 'linked';
+  }
+  let devRun = fn => fn;
+  function devStart() {
+    const box = document.getElementById('devices');
+    if (!box) return;
+    try {                                                           // the camera link ?join=CODE opens this page
+      const u = new URL(location.href), c = u.searchParams.get('join');
+      if (c && u.searchParams.get('view') !== 'devices') { u.searchParams.set('view', 'devices'); location.replace(u.toString()); return; }
+      if (c) document.getElementById('devjoin').value = c;
+    } catch (e) { /* ignore */ }
+    if (new URLSearchParams(location.search).get('view') !== 'devices') return;
+    const ok = document.getElementById('devok'), err = document.getElementById('deverr');
+    devRun = fn => async () => {
+      ok.hidden = true; err.hidden = true;
+      try { const msg = await fn(); if (typeof msg === 'string') { ok.textContent = msg; ok.hidden = false; } }
+      catch (e) { err.textContent = (e && e.message) || 'Something went wrong. Try again.'; err.hidden = false; }
+      devView(); devMenu();
+    };
+    document.getElementById('devmain').addEventListener('click', devRun(async () => (await devMakeMain()) ? '⭐ This device is the Main now.' : null));
+    document.getElementById('devinvite').addEventListener('click', devRun(devInvite));
+    document.getElementById('devcancel').addEventListener('click', invClose);
+    document.getElementById('devjoinform').addEventListener('submit', e => { e.preventDefault(); devRun(() => devJoin(document.getElementById('devjoin').value))(); });
+    document.getElementById('devleave').addEventListener('click', async () => {
+      if (await root.Sheet.confirm('Unlink this device?', 'It stops copying your Main. The money here stays as it is.', 'Unlink', true)) devRun(() => devUnlink(null))();
+    });
+    devView();
+    if (getToken()) devNote().then(devView, () => {});
+  }
+  root.LiteDevices = {check: devCheck, role: devRole, id: devId};   // (tests)
+  document.addEventListener('DOMContentLoaded', () => { devMenu(); devStart(); devBand(); setTimeout(devCheck, 400); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { reqLater = false; devCheck(); }
+    else if (devRole() === 'linked' && !leaving) outSend().catch(() => {});
+  });
+  setInterval(() => { if (document.visibilityState === 'visible') devCheck(); }, root.LITE_SYNC_EVERY || 30000);
 
   // ---------- v0.55 🔗 pair a device (mock https://claude.ai/artifact/XvEVsgGDZzfsVTLCdSFroq) ----------
   // No server: the two devices meet in the same Google Drive. The device showing the code writes a pair note
@@ -954,7 +1429,7 @@
     const box = document.getElementById('pairbox');
     if (!box) return;
     const beta = !!lsGet(BETA), list = document.getElementById('pairlist');
-    box.hidden = !lsGet(DRIVE_ON);
+    box.hidden = !lsGet(DRIVE_ON) || !beta;                        // v0.64: 📱 Your devices replaces it (beta testers keep it)
     box.classList.toggle('locked', !beta);                         // everyone sees it greyed out; ?beta=sync can use it
     document.getElementById('pairgo').disabled = !beta;
     document.getElementById('pairsoon').hidden = beta;
@@ -1099,7 +1574,7 @@
   // apply, delete, save, reload once. A job we do not know stays in Drive (a newer app may). Offline = next time.
   let jobsBusy = false;
   function jobsRun() {
-    if (jobsBusy || leaving || !lsGet(DRIVE_ON) || !getToken()) return;
+    if (jobsBusy || leaving || !lsGet(DRIVE_ON) || !getToken() || devRole() === 'linked') return;   // v0.64: the Main does them
     const html = document.documentElement;
     if (html.classList.contains('lockon')) {                       // wait for the unlock
       const mo = new MutationObserver(() => { if (!html.classList.contains('lockon')) { mo.disconnect(); jobsRun(); } });
@@ -1196,7 +1671,7 @@
       if (type && /json/.test(type)) {                  // a JSON body: get(name) gives the value as it is
         let obj = {};
         try { obj = JSON.parse(body) || {}; } catch (e) { /* not JSON: empty */ }
-        data = {get: name => (obj && typeof obj === 'object' ? obj[name] : undefined)};
+        data = {obj, get: name => (obj && typeof obj === 'object' ? obj[name] : undefined)};
       } else data = new URLSearchParams(body);
     }
     const quiet = opts.headers && (opts.headers['X-Requested-With'] === 'fetch');
@@ -1250,6 +1725,7 @@
     state = s; Store.save(s); hadState = true;
     lsSet(DRIVE_ID, JSON.stringify({name: found.file.name, id: found.file.id}));
     lsSet(DRIVE_DIRTY, null); lsSet(RESTORE, null);
+    if (found.file.modifiedTime) lsSet(DRIVE_SYNCED, stampOf(found.file));   // v0.64: this copy is the one seen here
     return true;
   }
   async function restoreConnect() {                                // a tap: the passport's Google account
@@ -1287,7 +1763,8 @@
     if (money && lsGet(DRIVE_ON) && clientId()) {
       try {
         if (!getToken() && PC() && root.LockUI && root.LockUI.email()) await PC().ensureToken(root.LockUI.email());
-        if (lsGet(DRIVE_DIRTY)) await driveSave(false);
+        if (devRole() === 'linked') await outSend();                // v0.64: to the Main
+        else if (lsGet(DRIVE_DIRTY)) await driveSave(false);
         saved = !!getToken();
       } catch (e) { saved = false; }
     }

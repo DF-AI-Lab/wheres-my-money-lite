@@ -66,6 +66,7 @@ def test_save_a_scrambled_copy_to_drive(page, base):
     page.click("#driveconnect")
     page.wait_for_selector("#drivesave:not([hidden])", state="attached")
     assert page.evaluate("window.__scope") == "https://www.googleapis.com/auth/drive.file"   # only files this app made
+    page.evaluate("localStorage.setItem('lite_drive_synced', 'backup@2024-11-08T10:00:00Z')")   # v0.64: this device saw that copy
     page.locator("#drivesave").dispatch_event("click")
     page.wait_for_selector("#driveok:not([hidden])")
     up = files["_uploads"][-1]
@@ -75,6 +76,7 @@ def test_save_a_scrambled_copy_to_drive(page, base):
     assert open_scrambled(sealed, PIN)["spends"][0]["name"] == "PlainCheck"
     assert "wheres-my-money-backup Nov 2024.json" in body             # v0.37: one file per pay month, the same name all month
     # saving again updates the same file (PATCH), it does not make a new one each time
+    page.evaluate("localStorage.setItem('lite_drive_synced', 'backup@2024-11-08T10:00:00Z')")   # v0.64: this device saw that copy
     page.locator("#drivesave").dispatch_event("click")
     page.wait_for_timeout(500)
     assert files["_uploads"][-1]["method"] == "PATCH" and "/files/file1" in files["_uploads"][-1]["url"]

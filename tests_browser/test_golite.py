@@ -169,6 +169,7 @@ def test_last_month_rows_have_avg_diff_and_shops(page, base):
 def test_new_payday_saves_the_month_and_fills_in_left(page, base):
     page.goto(base + DEMO)
     page.click("#quicktab")
+    page.click("#nmstart")                                        # v0.64: the form opens on Start a new month
     left = page.locator("#qleft").input_value()
     assert left and float(left) > 0                               # last month's spare, filled in
     assert "please check this each month" in page.locator("#quick").inner_text().lower()
@@ -188,6 +189,7 @@ def test_cancel_just_changes_the_pay(page, base):
     page.goto(base + DEMO)
     months = page.evaluate("JSON.parse(sessionStorage.getItem('lite_demo_v1')).history.length")
     page.click("#quicktab")
+    page.click("#nmstart")                                        # v0.64: the form opens on Start a new month
     page.fill("#qpay", "2550")
     page.click("#payform .q-go")
     with page.expect_navigation():

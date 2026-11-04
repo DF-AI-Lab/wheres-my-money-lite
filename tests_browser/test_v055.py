@@ -48,10 +48,8 @@ def test_pairing_is_greyed_out_for_everyone_else(browser, base):
     ctx, pg = device(browser, d)
     connect(pg, base)
     box = pg.locator("#pairbox")
-    assert box.is_visible() and "locked" in box.get_attribute("class")
-    assert pg.locator("#pairgo").is_disabled()
-    assert "In development" in box.locator(".beta").inner_text()
-    assert pg.locator("#paircodeform").is_hidden()
+    assert box.is_hidden()                                             # v0.64 (on purpose): 📱 Your devices replaced it
+    assert pg.locator("#devlink").count() == 1
     assert pg.locator("#syncbox").count() == 0                         # the old tick box is gone
     pg.goto(base + TODAY + "&beta=sync&view=drive")
     assert "locked" not in pg.locator("#pairbox").get_attribute("class")

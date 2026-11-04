@@ -377,6 +377,8 @@ def test_old_drive_files_move_into_the_wmm_folder_once(browser, base):
     ctx, pg = phone(browser, d)
     pg.goto(base + TODAY)
     connect(pg, base)
+    f = max(d.find(NAME) + d.find("wheres-my-money-backup Oct 2024.json"), key=lambda x: x["modifiedTime"])   # v0.64: seen here
+    pg.evaluate("s => localStorage.setItem('lite_drive_synced', s)", f["id"] + "@" + f["modifiedTime"])
     save_now(pg)
     wmm = ROOT + "/" + PP_ID + "/WMM"
     for name in (NAME, "wheres-my-money-backup Oct 2024.json", "wmm-summary.json", "wmm-lite-pair.json"):

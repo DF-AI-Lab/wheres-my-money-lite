@@ -565,3 +565,61 @@ body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: va
 @media (prefers-reduced-motion: reduce) { .whenseg, .dueday, .duevar, .spenddate { animation: none; } }
 .demo .sheetback .dueseg button { width: auto; margin: 0; padding: 6px 14px; font-size: 13px; }
 .demo .sheetback .dueseg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+/* v0.64 (mock 1): This month = Pay / Left from last month (locked) / Left so far, then 'Start a new month' opens the form */
+.nmrows { display: flex; flex-direction: column; }
+.nmrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+.nmrow > span { display: flex; flex-direction: column; min-width: 0; }
+.nmrow small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.nmrow > b { font-size: 17px; font-weight: 800; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.nmrow > b svg { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2; }
+.nmrow.sofar { margin-top: 10px; padding: 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 12px;
+               background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.nmrow.sofar > span { color: var(--accent); font-weight: 800; }
+.nmrow.sofar > b { color: var(--accent); font-size: 20px; }
+.nmrow.sofar > b.neg { color: var(--bad); }
+.nmrow.nmday { border-bottom: 0; }
+.nmrow.nmday input { width: 96px; flex: 0 0 96px; text-align: center; }
+.demo .q-new { display: block; width: 100%; margin: 12px 0 0; padding: 14px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent);
+               font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+.q-new[hidden], .nmnote[hidden] { display: none; }
+.nmnote { margin: 6px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+.nmform { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* v0.64 📱 Your devices (mock 2-4): one Main, linked devices, their changes wait for a yes */
+#devices .sub { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+#devices h2 { font-size: 18px; margin: 0; }
+#devices .hint { color: var(--muted); font-size: 14px; margin: 6px 0 10px; }
+#devices .devlist { margin: 0 0 14px; }
+#devices .devrow { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin: 0 0 8px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#devices .devrow.main { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+#devices .devrow > span:first-child { flex: 1; min-width: 0; }
+#devices .devtag { font-size: 11px; font-weight: 800; letter-spacing: .06em; background: var(--accent); color: var(--on-accent); border-radius: 99px; padding: 3px 9px; }
+#devices .devrow button.devremove { width: auto; margin: 0; font-size: 14px; padding: 8px 12px; }
+#devices .devcode { margin: 0 0 14px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; text-align: center; }
+#devices .pairnum { font-size: 34px; font-weight: 800; letter-spacing: .14em; color: var(--accent); margin: 2px 0 8px; }
+#devices .pairqr { display: inline-block; background: #fff; padding: 10px; border-radius: 14px; margin: 0 auto 8px; line-height: 0; }
+#devices .pairqr svg { width: 180px; height: 180px; max-width: 100%; }
+#devices .pairqr:empty { display: none; }
+#devices .pairwait { border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: left; font-size: 14px; }
+#devices .devjoinform { margin: 6px 0 14px; text-align: left; }
+#devices .devjoinform[hidden], #devices [hidden] { display: none; }
+#devices .devjoinform label { display: block; font-size: 14px; color: var(--muted); margin: 6px 0; }
+#devices .pairrow2 { display: flex; gap: 8px; }
+#devices .pairrow2 input { flex: 1; min-width: 0; font-size: 18px; letter-spacing: .1em; }
+#devices .pairrow2 button { width: auto; margin: 0; }
+.devwait { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
+           border: 1px solid color-mix(in srgb, var(--spend, #f5b83d) 55%, transparent); background: color-mix(in srgb, var(--spend, #f5b83d) 12%, transparent); }
+.sheetback .aplist { display: flex; flex-direction: column; gap: 8px; margin: 0 0 6px; max-height: 45vh; overflow-y: auto; }
+.sheetback .aprow { display: flex; gap: 12px; align-items: center; padding: 12px 14px; min-height: 44px; box-sizing: border-box;
+                    background: var(--row); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; cursor: pointer; }
+.sheetback .aprow input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: var(--accent); }
+.sheetback .aprow small { display: block; color: var(--muted); font-size: 12px; }
+#devices[hidden] { display: none; }
+#devices { margin: 8px auto 18px; }
+#devices .back { display: block; color: var(--accent); font-weight: 700; text-decoration: none; text-align: left; }
+#devices button.sec { background: transparent; color: var(--text); border: 1px solid var(--border); }
+#devices #devleave:not([hidden]) { display: block; margin: 10px auto 0; width: auto; }
+#devices > #devset > button:not(.small):not([hidden]) { display: block; width: 100%; margin: 0 0 10px; }
+#devices .driveok { color: var(--good); font-weight: 700; margin: 12px 0 0; }
+#devices .err { margin: 12px 0 0; }
