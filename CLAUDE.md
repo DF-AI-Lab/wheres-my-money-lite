@@ -373,3 +373,6 @@
   restore 'need'. summaryWrite: any refusal (not only 404) = find by name, else make it. Tests 140 node + 281 browser
   (test_v069.py; test_v040 london fixture unroutes first). Known flake: test_v055 scan (old code too).
 - **8 Nov v0.69 MOVED TO LIVE (Darren: "move to live"): live = demo = v0.69.** Claude connector "Where's My Money" works (real /mcp, read checked).
+- **🤖 CLAUDE MCP WISH LIST (Darren, 8 Nov: "add to a list"; build when he says):** 1) a CATEGORY on add_spend / add_bill / card_spend
+  (Claude could only set name + amount, so it put "Xmas - Test spend" in the name). Needs: worker tools take `category`, job carries it,
+  M.applyJob sets cat (applyJob has no category today), money_summary lists the categories so Claude picks an existing one.
