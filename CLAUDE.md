@@ -372,3 +372,4 @@
   '0' once Drive took it; jobsRun sends a due summary on open AFTER the jobs (no flag = an older install = due), never while
   restore 'need'. summaryWrite: any refusal (not only 404) = find by name, else make it. Tests 140 node + 281 browser
   (test_v069.py; test_v040 london fixture unroutes first). Known flake: test_v055 scan (old code too).
+- **8 Nov v0.69 MOVED TO LIVE (Darren: "move to live"): live = demo = v0.69.** Claude connector "Where's My Money" works (real /mcp, read checked).

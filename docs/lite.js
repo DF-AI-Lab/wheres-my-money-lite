@@ -472,6 +472,10 @@
     };
     const fresh = async () => { folder = await driveFolder(); return send(null); };
     let id = saved && saved.name === name ? saved.id : null;
+    // v0.69: the Claude summary goes out WITH the backup, not after it. A phone saves as the app closes and freezes it after
+    // the first send, so a summary sent last never went (Darren, 8 Nov: Claude saw yesterday's money). New month file =
+    // the folder may not exist yet: then after, as before. Not sent = DK('sumdue') stays and the next open sends it.
+    const sumGo = id ? summaryWrite(hidden, null).catch(() => {}) : null;
     if (id) await safeDaily(id);                                   // v0.56: the day's first save keeps the old copy first
     let r = id ? await send(id) : await fresh();
     // v0.39: Drive lets you save into a binned file (or a binned folder): that counts as gone too
@@ -487,11 +491,13 @@
     if (lsGet(DRIVE_DIRTY) === was) lsSet(DRIVE_DIRTY, null);
     lsSet(DRIVE_LAST, new Date().toISOString());
     M.setBackupDay(state, today()); Store.save(state);             // counts as a backup (no bell reminder)
-    try { await summaryWrite(hidden, folder); } catch (e) { /* the summary never fails the save */ }
+    if (sumGo) await sumGo;
+    else { try { await summaryWrite(hidden, folder); } catch (e) { /* the summary never fails the save */ } }
   }
   // v0.60 Orbit inbox: wmm-summary.json = totals only, NOT scrambled, next to the backups (for Claude to read)
   async function summaryWrite(hidden, folder) {
     const name = SUMMARY_NAME, key = DK('summary');
+    lsSet(DK('sumdue'), '1');                                      // v0.69: '0' only once Drive has taken it
     folder = folder || await driveFolder();
     const text = JSON.stringify(M.summary(state, today(), new Date().toISOString()));
     const send = async id => {
@@ -506,14 +512,14 @@
       return {ok: r.ok, status: r.status, id: j.id || id, trashed: !!j.trashed};
     };
     let id = lsGet(key), r = id ? await send(id) : null;
-    if (!r || r.status === 404 || r.trashed) {                     // gone: look for it by name, else make it
+    if (!r || !r.ok || r.trashed) {                               // v0.69: any refusal (not only 404): find it by name, else make it                     // gone: look for it by name, else make it
       const q = encodeURIComponent(`name='${name}' and trashed=false`);
       const l = await driveFetch(`${DRIVE_API}?q=${q}&fields=files(id,name)`);
       const f = l.ok ? ((await l.json()).files || []).find(x => x.name === name) : null;
       r = f ? await send(f.id) : null;
       if (!r || !r.ok || r.trashed) r = await send(null);
     }
-    if (r.ok && r.id) lsSet(key, r.id);
+    if (r.ok && r.id) { lsSet(key, r.id); lsSet(DK('sumdue'), '0'); }
   }
   async function driveLoad() {
     const list = await driveList();
@@ -1619,7 +1625,11 @@
     }
     if (syncBlocked()) { setTimeout(jobsRun, 5000); return; }      // typing or a menu open: not under the person
     jobsBusy = true;
-    jobsGo().catch(() => { /* offline or odd: next time */ }).finally(() => { jobsBusy = false; });
+    jobsGo().then(changed => {
+      // v0.69: a summary that never reached Drive (or an install from before v0.69: no flag yet) goes now, AFTER the jobs
+      // (a job = a save soon, and that sends the summary too), so Claude is up to date
+      if (!changed && !leaving && lsGet(DK('sumdue')) !== '0' && lsGet(RESTORE) !== 'need') return summaryWrite(false, null);
+    }).catch(() => { /* offline or odd: next time */ }).finally(() => { jobsBusy = false; });
   }
   async function jobsGo() {
     const prefix = JOB_PREFIX;
@@ -1643,10 +1653,11 @@
     }
     if (changed) { Store.save(state); lsSet(DRIVE_DIRTY, String(Date.now())); }
     for (const id of gone) await driveFetch(`${DRIVE_API}/${encodeURIComponent(id)}`, {method: 'DELETE'}).catch(() => {});
-    if (!changed) return;
+    if (!changed) return false;
     try { root.sessionStorage.setItem('lite_jobs', JSON.stringify(notes)); } catch (e) { /* no note */ }
     const reload = () => { if (syncBlocked()) setTimeout(reload, 5000); else leave(); };
     reload();
+    return true;
   }
   function jobsToast() {                                           // after the reload: what Orbit did
     let notes = [];
