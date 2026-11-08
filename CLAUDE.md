@@ -366,3 +366,9 @@
   (push to this branch/main under worker/). Darren's steps: worker/SETUP.md. Tests 14 worker + 126 node + browser (known flakes only:
   test_v048 cloud tap error, v055 scan, v064 under -n 4).
 - **8 Nov v0.68 MOVED TO LIVE (Darren: "we go straight to live"): live = demo = v0.68.** Next: Darren sets up the Worker (worker/SETUP.md).
+- **8 Nov v0.69 (demo only; live still v0.68): Claude saw yesterday's money (summary 7 Nov, backup saved today).** A phone saves as
+  the app closes and freezes it after the first send; summaryWrite ran AFTER the backup, so it never went. Now driveSaveNow starts
+  summaryWrite together with the backup (existing month file; new month file = after, as before). DK('sumdue') = '1' while sending,
+  '0' once Drive took it; jobsRun sends a due summary on open AFTER the jobs (no flag = an older install = due), never while
+  restore 'need'. summaryWrite: any refusal (not only 404) = find by name, else make it. Tests 140 node + 281 browser
+  (test_v069.py; test_v040 london fixture unroutes first). Known flake: test_v055 scan (old code too).

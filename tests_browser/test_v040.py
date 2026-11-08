@@ -29,7 +29,9 @@ def google(page, wait=60000):
 @pytest.fixture
 def london(browser):
     ctx = _context(browser, timezone_id="Europe/London")
-    yield _page(ctx)
+    pg = _page(ctx)
+    yield pg
+    pg.unroute_all(behavior="ignoreErrors")                             # v0.69: the summary may still be on its way
     ctx.close()
 
 
