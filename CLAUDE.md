@@ -355,3 +355,13 @@
   (flaky under -n 4, pass alone: test_v055 scan, test_v061 sign out).
 - **4 Nov v0.67 MOVED TO LIVE (Darren: "worked it back and forth, move to live"): live = demo = v0.67** (so v0.64-v0.67 are live: This month box,
   Pay/Left edit, never write over another device, Your devices Main + auto-follow).
+- **8 Nov v0.68 (demo only; live still v0.67): 🤖 MCP FOR CLAUDE = `worker/` (Cloudflare Worker wmm-lite, like TaskNotes; built by me,
+  tests first).** Branch claude/cool-bell-u4q8y8 (restarted from jolly-bardeen v0.67). Claude connects ONCE with the passport's Google
+  account: /authorize page → Google (Lite's own client id, scope drive.file, offline) → /google/callback (needs GOOGLE_CLIENT_SECRET,
+  ALLOWED_EMAILS) → Claude's tokens carry the Google refresh token SEALED (AES-GCM from TOKEN_SECRET). No database, no robot account
+  (drive.file only sees files made by the same Google project). /mcp = real files, /demo/mcp = wmm-demo-* files. Tools (Darren agreed):
+  money_summary (wmm-summary.json + waiting jobs), add_spend, add_bill, card_spend, card_paid_off (= v0.60 inbox jobs, from 'Claude',
+  id c-YYYYMMDD-HHMMSS-xxxxxx, written next to the summary), remove_added (only c-… ids: waiting = delete the file, else a remove_spend
+  job). App change: M.summary gets `added` (lines with a job id) + privacy page line. Deploy: .github/workflows/deploy-worker.yml
+  (push to this branch/main under worker/). Darren's steps: worker/SETUP.md. Tests 14 worker + 126 node + browser (known flakes only:
+  test_v048 cloud tap error, v055 scan, v064 under -n 4).

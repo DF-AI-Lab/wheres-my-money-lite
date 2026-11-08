@@ -184,7 +184,7 @@ def test_every_save_writes_a_plain_summary_file(browser, base):
     assert len(summ) == 1
     s = json.loads(summ[0]["text"])                                      # plain JSON: no passcode needed
     assert "scrambled" not in s
-    assert sorted(s) == ["bills", "card", "pots", "spare", "spent", "to_come_out", "updated"]
+    assert sorted(s) == ["added", "bills", "card", "pots", "spare", "spent", "to_come_out", "updated"]
     assert all(set(b) == {"name", "amount", "day", "paid"} for b in s["bills"]) and s["bills"]
     assert isinstance(s["spare"], (int, float)) and s["card"]["free"] >= 0
     assert all(set(p) == {"name", "budget", "used"} for p in s["pots"])

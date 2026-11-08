@@ -1,0 +1,13 @@
+# Where's My Money? Lite: the MCP Worker for Claude (free Cloudflare plan is plenty). Steps: worker/SETUP.md
+name = "wmm-lite"
+main = "src/index.js"
+compatibility_date = "2025-06-01"
+
+[vars]
+# Same Google project as Lite + Passport (docs/passport/config.js). Not a secret.
+GOOGLE_CLIENT_ID = "1018863337394-dhhfi006uhdf715dovuqetkl22tj5gdo.apps.googleusercontent.com"
+
+# Secrets (GitHub repo secrets, sent by the Deploy Worker action; never in this file):
+#   GOOGLE_CLIENT_SECRET  from Google Cloud → Clients → the Lite web client
+#   TOKEN_SECRET          long random text; signs Claude's login (change it = Claude must connect again)
+#   ALLOWED_EMAILS        your passport's Gmail (comma list). Empty = any Google account can connect to ITS OWN Lite files
