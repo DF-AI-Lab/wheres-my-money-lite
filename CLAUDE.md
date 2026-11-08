@@ -355,3 +355,6 @@
   (flaky under -n 4, pass alone: test_v055 scan, test_v061 sign out).
 - **4 Nov v0.67 MOVED TO LIVE (Darren: "worked it back and forth, move to live"): live = demo = v0.67** (so v0.64-v0.67 are live: This month box,
   Pay/Left edit, never write over another device, Your devices Main + auto-follow).
+- **8 Nov: SITE WENT 404.** Pages was built from branch jolly-bardeen; PR #3 merged it into main and the branch was deleted, so
+  GitHub turned Pages off. Darren set Pages = **main /docs** (working again). "Move to live" now = get it onto main. Never delete
+  the Pages branch.
