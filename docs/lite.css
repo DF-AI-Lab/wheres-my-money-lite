@@ -1,0 +1,630 @@
+/* Lite's own additions (Go A). look.css never changes; this file only adds the parts that are new:
+   pots (the one new colour: orange), the Paid / ⓘ line on bills, the backup box in the New payday panel. */
+:root { --pot: #e0701b; --on-pot: #1f0e00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --pot: #f59a4a; } }
+:root[data-theme="dark"] { --pot: #f59a4a; }
+
+/* pots: ring slice, dot, key line, the "− Pots" line */
+.demo .dot.pot { background: var(--pot); }
+#ring .seg-pot { stroke: var(--pot); }
+.k-pot { color: var(--pot); font-weight: 800; }
+.st-rows .labels { font-size: 13px; }
+.labels .dot { width: 8px; height: 8px; margin: 0 4px 0 0; }
+
+/* Monthly pots card */
+.demo [data-card="pots"] h2 { color: var(--pot); }
+div.pot { padding: 12px 0; border-top: 1px solid var(--border); }
+div.pot:first-of-type { border-top: 0; padding-top: 4px; }
+.potrow { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.potrow > b { min-width: 0; overflow-wrap: anywhere; }
+.potside { display: flex; align-items: center; gap: 6px; flex: none; font-weight: 700; }
+.potmore { position: relative; }
+.potmore .more { width: 32px; height: 32px; padding: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; }
+.potmore .more:hover, .potmore .more:focus-visible { background: var(--row); color: var(--text); }
+.potbar { height: 8px; border-radius: 99px; background: var(--row); margin: 6px 0 4px; overflow: hidden; }
+.potbar i { display: block; height: 100%; border-radius: 99px; background: var(--pot); }
+.potbar i.over { background: var(--bad); }
+.demo button.potset { font-weight: 600; font-size: 14px; }
+.demo [data-card="pots"] form.inline button[type=submit] { background: var(--pot); color: var(--on-pot); }
+
+/* bills: Paid ⓘ ☐ after the due day, Stopped ⓘ */
+.bsub .bpaid { color: var(--good); font-weight: 700; white-space: nowrap; }
+.bsub .bpaid .paidbox { width: 20px; height: 20px; margin: 0 0 0 2px; vertical-align: -5px; accent-color: var(--good); }
+.demo button.info { background: none; color: var(--muted); border: 0; padding: 2px 4px; margin: 0; font-size: 15px; line-height: 1; font-weight: 600; }
+.demo button.info:hover, .demo button.info:focus-visible { color: var(--text); }
+.infotip { position: absolute; z-index: 60; width: max-content; max-width: min(260px, calc(100vw - 16px)); padding: 8px 10px; border-radius: 10px;
+           background: var(--card); border: 1px solid var(--border); box-shadow: 0 10px 30px rgba(0,0,0,.35);
+           color: var(--text); font-size: 13px; font-weight: 500; line-height: 1.4; }
+body.demo [data-card="bills"] table.dbills .bsub { overflow-wrap: anywhere; }
+
+/* New payday panel: the hint under Left, and the backup box (like mock-up 3) */
+#lefthint { margin: 2px 0 4px; font-size: 13px; }
+#lefthint span { display: block; }
+/* mock B: the payday pill next to the title, the Payday box, the big backup button with a line above it */
+.q-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+.q-head .q-title { margin: 0; }
+.q-pill { font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 99px; background: var(--row); border: 1px solid var(--border); white-space: nowrap; }
+.q-pill[hidden] { display: none; }
+.q-fields label.q-dayl { flex: 0 0 96px; }
+input.badval { border-color: var(--bad); }
+.q-drop { flex-direction: column; justify-content: center; gap: 6px; text-align: center; }
+.demo .q-big { width: 100%; padding: 14px; font-size: 17px; font-weight: 800; background: var(--row); color: var(--text); border: 1px solid var(--border); border-radius: 12px; }
+.q-last { font-size: 12px; color: var(--muted); }
+@media (max-width: 700px) { .q-drop { border-top: 1px solid var(--border); padding-top: 14px; } }
+
+/* pots as rows in Bills (not tr.bill) */
+tr.potbill td:first-child .bbase { color: var(--pot); }
+@media (max-width: 640px) { [data-card] table tr.potbill td:empty { display: none; } }
+
+/* top card: Starting spare */
+.st-rows .r.start { font-weight: 700; }
+.st-rows .r.start > span:first-child { color: var(--text); }
+/* 22 Oct: Starting spare sits under the line, just above Actual spare */
+.st-rows .r.start { border-top: 2px solid var(--text); }
+.st-rows .r.start + .r.tot { border-top: 0; }
+
+/* Settings: ⬅️ Back first; the 🔔 bell left of Settings, and its list */
+.setrow { display: flex; gap: 6px; align-items: center; }
+.demo .setmenu #setback { display: block; width: 100%; text-align: left; margin-bottom: 8px; }
+/* the bell sits under Settings, beside the version: the header has no room beside the name on a phone */
+#bellbtn { white-space: nowrap; flex: none; position: relative; padding: 2px 8px; font-size: 13px; }
+#bellcount { display: inline-block; min-width: 16px; margin-left: 3px; padding: 0 4px; border-radius: 99px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; line-height: 16px; text-align: center; }
+#bellcount[hidden] { display: none; }
+.bellmenu { position: absolute; right: 0; top: calc(100% + 40px); z-index: 30; width: min(320px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.35); display: grid; gap: 8px;
+            max-height: calc(100vh - 190px); overflow-y: auto; }
+#bellclear { position: sticky; bottom: 0; justify-self: end; }
+.bellmenu[hidden] { display: none; }
+.remind { display: flex; align-items: center; gap: 6px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.remind:last-child { border-bottom: 0; }
+.remind .remtext { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.remempty { font-size: 14px; color: var(--muted); padding: 4px 2px; }
+
+/* Last month's spending has no diff: no empty grey pills */
+body.demo [data-card="lastmonth"] td.diff:empty { display: none; }
+
+/* several credit cards: extra top tiles look like the first (look.css only styles #zring), Free colour, the ⋯ line */
+.zring { width: 96px; height: 96px; flex: none; align-self: flex-start; }
+.zring circle { fill: none; stroke-width: 6; }
+.zring .z-free { stroke: var(--zfree); } .zring .z-used { stroke: var(--zused); }
+.zring .z-pc { fill: var(--text); font: 800 20px "Manrope", system-ui, sans-serif; }
+.zring .z-sub { fill: var(--muted); font: 600 10px "Manrope", system-ui, sans-serif; }
+@media (max-width: 420px) { .zring { width: 80px; height: 80px; } }
+.demo [data-card="card"] .ccfree2 { color: var(--zfreetext); }
+.cardfoot { display: flex; justify-content: flex-end; margin-top: 6px; }
+
+/* the lock screen (Go B step 6): live's sign-in box, as a full-screen cover; the app is hidden while it shows */
+html.lockon .wrap { display: none; }
+#wmmlock { position: fixed; inset: 0; z-index: 1000; background: var(--ps-bg, var(--bg)); color: var(--ps-text, var(--text)); overflow-y: auto;
+        display: flex; box-sizing: border-box; }
+#wmmlock[hidden] { display: none; }
+/* v0.61 🛂 Passport draws the lock (passport/passport.css + theme.json); WMM's own button look must not leak in */
+#wmmlock .passport { width: 100%; display: flex; }
+#wmmlock .ps-screen { margin: auto; }
+#wmmlock .ps-screen button { font-family: inherit; border-radius: 14px; }
+#wmmlock .ps-screen .ps-btn { background: var(--ps-accent); color: var(--ps-accentText); }
+#wmmlock .ps-screen .ps-ghost { background: transparent; color: var(--ps-text); border: 1px solid var(--ps-fieldBorder); }
+#wmmlock .ps-screen .ps-google { background: #FFFFFF; color: #1F1F1F; border: 1px solid #DADCE0; }
+#wmmlock .ps-screen .ps-link { background: none; color: var(--ps-link); border: none; font-weight: 400; border-radius: 0; }
+#wmmlock .ps-screen .ps-tile { background: transparent; }
+#wmmlock .ps-logoimg { width: 100%; height: 100%; border-radius: inherit; display: block; }
+#wmmlock .ps-screen .ps-home { background: none; border: none; color: var(--ps-accent); border-radius: 8px; }
+#wmmlock .ps-screen .ps-switch { border-radius: 99px; background: var(--ps-bg, transparent); border: 1px solid var(--ps-fieldBorder); }
+#wmmlock .ps-screen .ps-switch[aria-checked="true"] { background: var(--ps-accent); border-color: var(--ps-accent); }
+#wmmlock .ps-screen .ps-ghost.ps-out { color: var(--ps-error); }
+.box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
+       width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; margin: auto; }
+.box img { width: 64px; height: 64px; border-radius: 16px; }
+.box h1 { font-size: 22px; margin: 12px 0 4px; }
+.box .tag { color: var(--muted); margin: 0 0 20px; }
+.box form { display: flex; flex-direction: column; gap: 10px; text-align: left; margin: 0; }
+.box label { font-weight: 600; display: flex; flex-direction: column; gap: 6px; }
+.box input { font: inherit; font-size: 18px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px;
+             background: var(--bg); color: var(--text); width: 100%; box-sizing: border-box; }
+.box input.code { letter-spacing: 6px; text-align: center; font-size: 24px; }
+.box button { font: inherit; font-weight: 700; font-size: 17px; padding: 12px; border: 0; border-radius: 10px;
+              background: var(--accent); color: var(--on-accent); cursor: pointer; }
+.box section > button { width: 100%; }
+.box .note { color: var(--accent); font-weight: 600; margin: 0 0 14px; }
+.box .err { color: var(--bad); font-weight: 600; margin: 0 0 14px; }
+.box .links { margin-top: 18px; display: flex; flex-direction: column; gap: 8px; }
+.box .linkbtn { color: var(--muted); }
+.box button.linkbtn { background: none; border: 0; padding: 0; font-weight: 500; font-size: inherit; text-decoration: underline; }
+
+/* views (Go B step 7): ?view=ideas / ?view=invite replace the home page parts; the header stays */
+body[data-view] .st-grid, body[data-view] #cards, body[data-view] #quick, body[data-view] .footer, body[data-view] #quicktab { display: none; }
+#ideas[hidden], #invite[hidden], #drive[hidden], #drive [hidden], #account[hidden], #account [hidden], #installbtn[hidden] { display: none; }
+
+/* 💡 Ideas & feedback: live's ideas.html styles, all under #ideas so the home page is not touched */
+#ideas { margin-bottom: 18px; }
+#ideas .back, #invite .back { color: var(--accent); font-weight: 700; text-decoration: none; }
+#ideas h1 { font-size: 24px; font-weight: 800; margin: 12px 0 4px; }
+#ideas h2 { font-size: 15px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+#ideas .hint { color: var(--muted); font-size: 16px; margin: 0 0 16px; }
+#ideas .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px 20px; margin-bottom: 0; }
+#ideas form.new { display: grid; gap: 12px; }
+#ideas textarea { font: inherit; font-size: 16px; color: var(--text); background: var(--bg); border: 1px solid var(--border);
+                  border-radius: 10px; padding: 10px 12px; min-height: 90px; resize: vertical; width: 100%; box-sizing: border-box; }
+#ideas .tags { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+#ideas .tags input { position: absolute; opacity: 0; pointer-events: none; }
+#ideas .tags label { text-align: center; padding: 8px 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+                     font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+#ideas .tags input:checked + label { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+#ideas .tags input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.demo #ideas button.go { justify-self: start; padding: 10px 24px; border: 0; font-size: 15px; cursor: pointer; }
+#ideas .note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 0; border-top: 1px solid var(--border); }
+#ideas .note:first-child { border-top: 0; }
+#ideas .note .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#ideas .note .sub { display: block; color: var(--muted); font-size: 13px; margin: 2px 0 0; }
+#ideas .note form { margin: 0; }
+.demo #ideas .note button { padding: 4px 10px; font-size: 13px; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; }
+#ideas .note.done .txt { color: var(--muted); text-decoration: line-through; }
+#ideas .empty { color: var(--muted); margin: 0; }
+#ideas #copytext { position: absolute; left: -9999px; }
+#ideas .copied { color: var(--good); font-weight: 700; margin-left: 8px; }
+#ideas details { border-bottom: 0; }
+#ideas details summary { cursor: pointer; color: var(--muted); font-weight: 700; margin: 24px 0 8px; padding: 0; display: list-item; }
+#ideas details summary::before { content: none; }
+
+/* 📱 Invite: the lock's .box, with a QR code on a white rounded square */
+#invite { margin: 8px auto 18px; }
+#invite .back { display: block; text-align: left; }
+#invite .qr { display: block; width: 240px; height: 240px; max-width: 100%; margin: 4px auto 14px; border-radius: 16px; background: #fff; padding: 10px; box-sizing: content-box; }
+#invite .invlink { margin: 0 0 16px; font-weight: 700; overflow-wrap: anywhere; user-select: all; }
+#invite .invbtns { display: flex; gap: 10px; }
+#invite .invbtns button { flex: 1; }
+#invite .invmsg { color: var(--good); font-weight: 700; margin: 12px 0 0; }
+
+/* ☁️ Google Drive: the same box as Invite */
+#drive { margin: 8px auto 18px; }
+#drive .back { display: block; text-align: left; color: var(--accent); font-weight: 700; text-decoration: none; }
+#drive button { display: block; width: 100%; margin: 0 0 10px; }
+#drive .driveok { color: var(--good); font-weight: 700; margin: 12px 0 0; }
+#drive .err { margin: 12px 0 0; }
+
+/* Show (bell) makes the item pulse so you can see where it is (v0.18) */
+@keyframes litepulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent); background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+  70%  { box-shadow: 0 0 0 8px transparent; background-color: color-mix(in srgb, var(--accent) 12%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; background-color: transparent; }
+}
+@keyframes litepulse-box {
+  0%, 100% { background-color: transparent; border-color: transparent; }
+  30% { background-color: color-mix(in srgb, var(--accent) 35%, transparent); border-color: var(--accent); }
+}
+@keyframes litepulse-mark { from { opacity: 1; } to { opacity: 1; } }
+@keyframes litepulse-calm {
+  0%, 100% { background-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+}
+.pulse { animation: litepulse 0.9s ease-out 3; border-radius: 10px; }
+/* a row's glow = a rounded box over it, 10px outside so the words have room (Darren, 21 Oct) */
+tr.pulse { animation: litepulse-mark 2.7s linear 1; }
+.pulsebox { position: absolute; z-index: 5; pointer-events: none; box-sizing: border-box; border: 2px solid transparent;
+            border-radius: 14px; animation: litepulse-box 0.9s ease-out 3; }
+@media (prefers-reduced-motion: reduce) {
+  .pulse, .pulsebox { animation: litepulse-calm 2.5s linear 1; }
+  tr.pulse { animation: litepulse-mark 2.5s linear 1; }
+}
+
+/* 22 Oct (Darren): 521-640 px (a phone zoomed out) got boxed rows with a gap on the right. Use the phone rows there too
+   (same rules look.css has for 520 px and under). */
+@media (min-width: 521px) and (max-width: 640px) {
+  body.demo [data-card="bills"] table.dbills tr { grid-template-columns: minmax(0, 1fr) auto 32px; row-gap: 4px; }
+  body.demo [data-card="bills"] table.dbills td.diff { grid-column: 2; grid-row: 2; }
+  body.demo [data-card="bills"] table.dbills td:first-child { grid-column: 1; font-weight: inherit; }
+  body.demo [data-card="bills"] table.dbills tr { margin: 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; padding: 12px 0; }
+  body.demo [data-card="bills"] table.dbills tr.total { border-top: 2px solid var(--text); }
+  body.demo [data-card="bills"] table.dbills td.n::before { content: none; }
+  body.demo [data-card="bills"] table.dbills td.bamt { text-align: right; }
+  body.demo [data-card="bills"] table.dbills td.bmore { grid-column: 3; grid-row: 1; }
+  body.demo [data-card="lastmonth"] table.dlast tr:not(.item) { grid-template-columns: minmax(0, 1fr) auto 48px; row-gap: 4px; }
+  body.demo [data-card="lastmonth"] table.dlast tr:not(.item) td.diff { grid-column: 2; grid-row: 2; }
+  body.demo [data-card="lastmonth"] table.dlast tr:not(.item) td.lchev { grid-column: 3; grid-row: 1; }
+  .demo .card .tiles { grid-template-columns: 1fr; }
+}
+
+/* "Start a new month?" sheet: slides up from the bottom (mock B, Darren 22 Oct) */
+.sheetback { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-end; background: rgba(0,0,0,.6);
+             animation: sheetfade .2s ease-out; }
+.sheetback .sheet { width: 100%; max-width: 560px; margin: 0 auto; box-sizing: border-box; padding: 14px 20px calc(24px + env(safe-area-inset-bottom));
+             background: var(--card); color: var(--text); border: 1px solid var(--border); border-bottom: 0; border-radius: 18px 18px 0 0;
+             box-shadow: 0 -10px 40px rgba(0,0,0,.35); animation: sheetup .25s ease-out; }
+.sheetback .grab { width: 40px; height: 4px; border-radius: 9px; background: var(--border); margin: 0 auto 14px; }
+.sheetback h3 { margin: 0 0 12px; font-size: 19px; font-weight: 800; }
+.sheetback .sheetsum { display: block; background: var(--row); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px; }
+.sheetback .sheetsum > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.sheetback .sheetsum b { font-weight: 800; }
+.sheetback p { margin: 0 0 14px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.demo .sheetback button { display: block; width: 100%; border: 0; border-radius: 12px; padding: 13px; margin: 8px 0 0; font: inherit; font-weight: 800; font-size: 15px; }
+.demo .sheetback button.pri { background: var(--accent); color: var(--on-accent); }
+.demo .sheetback button.sec { background: var(--row); color: var(--text); border: 1px solid var(--border); }
+.demo .sheetback button.ter { background: none; color: var(--muted); font-weight: 700; }
+@keyframes sheetup { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheetfade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheetback, .sheetback .sheet { animation: none; } }
+
+/* Bills: name · due day on one line; due day gone = green name + ✓ and a slightly smaller green date (mock B, Darren 22 Oct) */
+body.demo [data-card="bills"] table.dbills .bline { display: block; }
+body.demo [data-card="bills"] table.dbills .bline .bbase { display: inline; }
+body.demo.editing [data-card="bills"] table.dbills .bline .bbase { display: none; }
+.bline .bdate { margin-left: 4px; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.bline.paid .bbase, .bline.paid .bdate { color: var(--good); }
+.bline.paid .bbase::before { content: "✓ "; font-weight: 800; }
+.bline button.info { font-size: 13px; vertical-align: 1px; }
+
+/* 🔄 Update under the app icon (Darren, 22 Oct): tap = the icon spins and the page reloads */
+@keyframes litespin { to { transform: rotate(360deg); } }
+.demo .brand.spinning img { animation: litespin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .demo .brand.spinning img { animation: none; opacity: .6; } }
+
+/* ✨ Update band (v0.27, mock C2): fixed to the bottom edge, only when a new version is out */
+.updband { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60; display: flex; align-items: center; gap: 10px; white-space: nowrap;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-radius: 18px 18px 0 0; font-size: 13px; font-weight: 600; color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-bottom: 0;
+  box-shadow: 0 -6px 24px rgba(0,0,0,.25); animation: sheetup .3s ease-out; }
+.updband[hidden] { display: none; }
+.updband b { color: var(--accent); }
+.updband button { margin-left: auto; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 999px; padding: 6px 14px;
+  font: inherit; font-size: 12px; font-weight: 800; cursor: pointer; }
+body.hasupd { padding-bottom: 72px; }
+@media (prefers-reduced-motion: reduce) { .updband { animation: none; } }
+
+/* Sheets instead of the browser's OK / Cancel boxes (v0.28, mock 2a/2b/2c): docs/sheet.js */
+.demo .sheetback button.bad { background: var(--bad); color: #fff; }
+.sheetback.litesheet { z-index: 1100; }                         /* above the lock screen (fingerprint off) */
+.sheetback .sheetlbl { margin: 0 0 6px; color: var(--muted); font-size: 13px; font-weight: 700; }
+.sheetback .sheetin { display: block; width: 100%; box-sizing: border-box; margin: 0 0 6px; padding: 12px 14px; border-radius: 12px;
+  border: 2px solid var(--accent); background: var(--row); color: var(--text); font: inherit; font-size: 20px; font-weight: 800; }
+.sheetback .sheetin:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.sheetback form.sheetform { margin: 0; }
+/* v0.33: the privacy link under the Drive buttons */
+.drivepp { text-align: center; font-size: 14px; margin: 14px 0 0; }
+.drivepp a { color: var(--muted); }
+
+/* v0.36 (mock A3): a missing due day / category = a green '+ date' / '+ category' link; set = plain text */
+.demo button.addlink { background: none; border: 0; border-radius: 0; padding: 0; margin: 0; font: inherit; font-weight: 700; color: var(--accent);
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent); cursor: pointer; }
+.demo button.addlink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* mock D: the bill you just added glows once */
+@keyframes newglow { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+body.demo [data-card="bills"] table.dbills tr.bill.newglow { animation: newglow 3s ease-out; border-radius: 12px; }
+@media (prefers-reduced-motion: reduce) { body.demo [data-card="bills"] table.dbills tr.bill.newglow { animation: none; background: color-mix(in srgb, var(--accent) 12%, transparent); } }
+/* the day grid + category list sheets */
+.sheetback .daygrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 0 0 10px; }
+.sheetback .picklist { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.demo .sheetback .daygrid button, .demo .sheetback .picklist button { background: var(--row); color: var(--text); border: 0; padding: 10px 0; border-radius: 10px; font-weight: 700; }
+.demo .sheetback .picklist button { padding: 8px 12px; }
+.demo .sheetback .picklist button[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+
+/* v0.36 (mock H2): Paid / Upcoming spends */
+.spendseg { display: inline-flex; gap: 2px; padding: 3px; margin: 0 0 10px; border-radius: 999px; background: var(--row); border: 1px solid var(--border); }
+.demo .spendseg button { background: none; color: var(--muted); border: 0; padding: 5px 14px; border-radius: 999px; font-size: 13px; }
+.demo .spendseg button[aria-pressed="true"] { background: var(--spend); color: #1d1500; }
+.spenddate { flex-basis: 100%; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.spenddate[hidden] { display: none; }
+.spenddate input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--row); color: var(--text); font: inherit; }
+body.demo [data-card] table tr.sgrp td { padding: 12px 0 2px; border: 0; font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+body.demo [data-card="spend"] table tr.drow.upcoming td.n { color: var(--muted); }
+body.demo [data-card="spend"] table tr.drow.paid td b { color: var(--good); }
+body.demo [data-card="spend"] table tr.drow.paid td b::before { content: "✓ "; font-weight: 800; }
+body.demo [data-card="spend"] table tr.drow td.smore { position: relative; }
+body.demo [data-card="spend"] table tr.drow .more { width: 32px; height: 32px; padding: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; border: 0; }
+body.demo [data-card="spend"] table tr.drow .labels button.info { font-size: 13px; vertical-align: 1px; }
+
+/* v0.37: bell = one line per day (mock B) */
+.remind .remtext small { display: block; color: var(--muted); font-size: 12.5px; }
+.demo .remind .remchev { background: none; border: 0; color: var(--muted); padding: 2px 4px; margin: 0; font-size: 15px; line-height: 1; transition: transform .2s; }
+.demo .remind .remchev { transform: rotate(-90deg); }
+.demo .remind .remchev[aria-expanded="true"] { transform: none; }
+.remkids { display: grid; gap: 2px; margin: -4px 0 4px 22px; }
+.remkids[hidden] { display: none; }
+.demo .remkids .remsub { display: flex; justify-content: space-between; gap: 10px; background: none; border: 0; border-radius: 8px; padding: 6px 6px; margin: 0;
+  color: var(--text); font-size: 13.5px; font-weight: 600; text-align: left; }
+.demo .remkids .remsub:hover { background: var(--row); }
+.remkids .remsub .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* v0.37: paused bills folded into one line at the bottom of Bills */
+body.demo [data-card] table.dbills tbody.paused td { border: 0; }
+body.demo [data-card] table.dbills tr.pausedrow td { padding: 10px 0 4px; }
+.demo .pausedfold { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; background: none; border: 0; padding: 4px 0; margin: 0;
+  color: var(--muted); font-size: 14px; font-weight: 700; text-align: left; }
+.pausedfold .pch { display: inline-block; margin-right: 4px; vertical-align: 1px; transform: rotate(-90deg); transition: transform .2s; }
+.pausedfold[aria-expanded="true"] .pch { transform: none; }
+body.demo [data-card] table.dbills tr.pbill td { color: var(--muted); padding: 8px 0; border-top: 1px solid var(--border); font-size: 14px; }
+.demo tr.pbill .resume { border: 1px solid var(--good); color: var(--good); background: none; border-radius: 999px; padding: 3px 10px; font-weight: 800; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .remchev, .pausedfold .pch { transition: none; } }
+body.demo [data-card] table.dbills tr.pbill[hidden] { display: none; }
+.pbill .pline { display: flex; align-items: center; gap: 10px; }
+.pbill .pline .pname { flex: 1; min-width: 0; }
+.pbill .pline form { margin: 0; }
+.demo .remind .remchev { color: var(--accent); font-size: 18px; padding: 4px 6px; }
+body.demo [data-card] table.dbills tbody.paused tr { display: block; }
+body.demo [data-card] table.dbills tbody.paused tr[hidden] { display: none; }
+body.demo [data-card] table.dbills tbody.paused td { display: block; width: auto; }
+.demo .remind .remchev svg { display: block; }
+.demo .remind .remchev { width: 28px; height: 28px; min-width: 28px; display: grid; place-items: center; overflow: visible; padding: 0; }
+body.demo [data-card] table.dbills tr.pausedrow + tr.pbill td { border-top: 0; }
+
+/* v0.40 the save sign after 'Lite' (mock A): saved = tick (draws in + tiny pop), saving = arrow up, wait = amber dot */
+.demo .tagline .savesign { display: inline-block; width: 20px; height: 16px; vertical-align: -3px; margin-left: 2px; }
+.demo .tagline .savesign[hidden] { display: none; }
+.savesign { cursor: pointer; -webkit-tap-highlight-color: transparent; }   /* v0.48 tap = save now */
+.savesign:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 4px; }
+.savesign svg { width: 20px; height: 16px; display: block; overflow: visible; }
+.savesign .arr, .savesign .tick, .savesign .dot { opacity: 0; transition: opacity .25s; }
+:root { --saveamber: #c98a00; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --saveamber: #f5b731; } }
+:root[data-theme="dark"] { --saveamber: #f5b731; }
+.savesign .dot circle { fill: var(--saveamber); }
+.savesign.saving .arr { opacity: 1; animation: savesign-up 1s ease-in-out infinite; }
+.savesign.saved .tick, .savesign.wait .dot { opacity: 1; }
+.savesign.saved.pop .tick path { stroke-dasharray: 12; stroke-dashoffset: 12; animation: savesign-draw .45s ease forwards; }
+.savesign.saved.pop svg { animation: savesign-pop .45s ease; }
+@keyframes savesign-up { 0% { transform: translateY(3px); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-3px); opacity: 0; } }
+@keyframes savesign-draw { to { stroke-dashoffset: 0; } }
+@keyframes savesign-pop { 0% { transform: scale(1); } 40% { transform: scale(1.25); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .savesign .arr, .savesign .tick, .savesign .dot { transition: none; }
+  .savesign.saving .arr, .savesign.saved.pop svg { animation: none; }
+  .savesign.saved.pop .tick path { animation: none; stroke-dashoffset: 0; }
+}
+/* v0.42 Settings (mock B + A's grey lines): headings, a grey line under each, a group with nothing shown goes */
+.setmenu .sethead { margin: 2px 2px 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.setmenu .small .sub { display: block; margin: 2px 0 0; font-size: 12px; font-weight: 500; color: var(--muted); white-space: normal; }
+.setmenu .grp:not(:has(> .small:not([hidden]))) { display: none; }
+.setmenu .sub .on { color: var(--good); font-weight: 700; }
+/* v0.43 lock: your first name (Lock 1 mock) */
+.box label[hidden] { display: none; }
+.box label .hint { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+#namebox { margin-bottom: 6px; }
+/* v0.43 👤 Account page (mock B): your first name + which Google account */
+#account { margin: 8px auto 18px; text-align: left; }
+#account h1 { text-align: center; }
+#account .back { display: block; color: var(--accent); font-weight: 700; text-decoration: none; }
+#account .acccard { display: flex; flex-direction: column; gap: 10px; padding: 14px; margin: 0 0 14px; border: 1px solid var(--border); border-radius: 14px; }
+#account .hint { font-size: 12.5px; font-weight: 500; color: var(--muted); margin: 0; }
+#account .acchead { font-weight: 700; margin: 0; }
+#account #accstate { margin: 0; font-size: 15px; word-break: break-word; }
+#account .on { color: var(--good); font-weight: 700; }
+#account .accbtns { display: flex; gap: 8px; flex-wrap: wrap; }
+#account .accbtns button { flex: 1 1 auto; font-size: 14px; padding: 10px 12px; background: transparent; color: var(--text); border: 1px solid var(--border); }
+#account .accconnect { display: block; text-align: center; padding: 11px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-weight: 700; text-decoration: none; }
+#account .driveok { color: var(--good); font-weight: 700; margin: 0; }
+#account .err { margin: 0; }
+#account .accconnect[hidden], #account .accbtns[hidden] { display: none; }
+
+/* v0.45 🔁 keep my devices in step (TEST, only after ?beta=sync) */
+.synctoast { position: fixed; left: 50%; bottom: 72px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 12px;
+             max-width: calc(100% - 32px); box-sizing: border-box; padding: 10px 14px; border-radius: 12px; background: var(--text); color: var(--bg);
+             font-weight: 600; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+/* v0.60 Orbit inbox: several lines */
+.jobtoast { flex-direction: column; align-items: flex-start; gap: 4px; }
+.synctoast .syncundo { font: inherit; font-weight: 800; background: none; border: 0; color: inherit; text-decoration: underline; cursor: pointer; padding: 4px; white-space: nowrap; }
+
+/* v0.46 the Settings menu scrolls inside when it is taller than the screen */
+.setmenu { max-height: calc(100vh - 96px); max-height: calc(100dvh - 96px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* v0.46 editing (mock C): the menu closes, a small pill at the bottom holds Reset + Done */
+body.editing .setmenu[hidden] { display: none; }
+.editpill { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 60;
+  display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 16px; white-space: nowrap;
+  background: var(--card); border: 1px solid var(--accent); border-radius: 999px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+.editpill[hidden] { display: none; }
+.editpill span { font-size: 13px; font-weight: 700; color: var(--text); }
+.editpill button { height: 40px; padding: 0 14px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  background: transparent; color: var(--text); border: 1px solid var(--border); }
+.editpill #editdone { background: var(--accent); color: #06251a; border-color: var(--accent); font-weight: 800; padding: 0 18px; }
+
+/* v0.49: a long sheet (the category list) scrolls inside and its top stays on screen */
+.sheetback .sheet { max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+
+/* v0.50 bill ⋯ = mock B: two big buttons on top (Amount + Mark paid) and at the bottom (Pause + Delete) */
+.bmenu .brow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 2px 0 6px; }
+.bmenu .brow:last-child { margin: 6px 0 2px; padding-top: 8px; border-top: 1px solid var(--border); }
+.bmenu .brow:first-child:last-child { border-top: 0; padding-top: 0; }
+.demo .bmenu .brow button { text-align: center; font-weight: 800; padding: 11px 6px; border-radius: 10px; border: 1px solid var(--border); background: var(--row); }
+.demo .bmenu .brow button.pri { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.demo .bmenu .brow button.stop { background: none; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.demo .bmenu { min-width: 240px; }
+/* v0.50: the bill's category dropdown scrolls too when the list is long */
+.bmenu.catmenu { max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+/* v0.51 (mock https://claude.ai/artifact/BgPMi2sR3uP4WiKXXzmnd7): All | Categories in Add a spend and Bills */
+.catbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 12px 0 0; }
+.catbar .labels { font-weight: 700; }
+.catseg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--row); border: 1px solid var(--border); }
+.demo .catseg button { background: none; color: var(--muted); border: 0; padding: 5px 14px; border-radius: 999px; font-size: 13px; min-height: 0; }
+.demo [data-card="spend"] .catseg button[aria-pressed="true"] { background: var(--spend); color: #1d1500; }
+.demo [data-card="bills"] .catseg button[aria-pressed="true"] { background: var(--bill); color: var(--card); }
+.card.bycat .catbar ~ table { display: none; }
+.catview { margin-top: 8px; }
+.catgrp { border-top: 1px solid var(--border); }
+.demo .catview button.catrow { display: flex; flex-direction: column; gap: 6px; width: 100%; background: none; border: 0; color: var(--text);
+  padding: 10px 2px 8px; text-align: left; font: inherit; border-radius: 0; min-height: 0; cursor: pointer; }
+.catline { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; }
+.catname { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.catname .labels { font-size: 12px; }
+.catch { color: var(--muted); flex: none; transition: transform .2s; }
+.catrow[aria-expanded="true"] .catch { transform: rotate(90deg); }
+.catamt { font-weight: 800; white-space: nowrap; }
+[data-card="spend"] .catamt { color: var(--spend); }
+[data-card="bills"] .catamt { color: var(--bill); }
+.catbarbg { display: block; height: 4px; border-radius: 4px; background: var(--row); margin-left: 20px; }
+.catbarbg span { display: block; height: 4px; border-radius: 4px; opacity: .75; }
+[data-card="spend"] .catbarbg span { background: var(--spend); }
+[data-card="bills"] .catbarbg span { background: var(--bill); }
+.catkids { padding: 0 2px 8px 22px; }
+.catkid { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; padding: 4px 0; }
+.cattotal { display: flex; justify-content: space-between; align-items: center; padding: 10px 2px 2px; border-top: 1px solid var(--border); }
+@media (prefers-reduced-motion: reduce) { .catch { transition: none; } }
+.catkid .labels, .catname .labels, .catbar .labels { display: inline; margin: 0; }
+/* v0.52 (mock https://claude.ai/artifact/1zmePagXQfUQeVn8QTFX5S) */
+/* pots in Bills count down: spent / amount, blue under, red over, a thin bar */
+tr.potbill .potbar { display: block; height: 5px; margin-top: 6px; border-radius: 5px; background: var(--row); max-width: 220px; }
+tr.potbill .potbar i { display: block; height: 5px; border-radius: 5px; background: var(--bill); }
+tr.potbill .potspent { color: var(--bill); font-weight: 800; }
+tr.potbill .potof { color: var(--muted); font-weight: 700; }
+.demo [data-card="bills"] tr.potbill td.bamt button.link { color: var(--muted); font-weight: 700; }
+tr.potbill.over .potspent, tr.potbill.over .bsub { color: var(--bad); }
+tr.potbill.over .bsub { font-weight: 700; }
+tr.potbill.over .potbar i { background: var(--bad); }
+/* Settings + bell squared up: one block, bell under Settings on the left, version on the right */
+.demohead .settings { display: grid; grid-template-columns: max-content; gap: 12px; }
+.demo #setbtn { display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 10px; font-weight: 700; }
+#setbtn svg, #bellbtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.setrow { justify-content: space-between; padding: 0 6px; }
+.demo #bellbtn { display: grid; place-items: center; width: 38px; height: 30px; padding: 0; border-radius: 10px; color: var(--spend); }
+#bellcount { position: absolute; top: -6px; right: -7px; margin: 0; }
+.setrow .appver { align-self: auto; text-align: right; font-size: 12px; font-weight: 600; }
+/* the menu: a thin grey scroll bar, no arrows, no side scroll */
+.setmenu, .bellmenu { overflow-x: hidden; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.setmenu::-webkit-scrollbar, .bellmenu::-webkit-scrollbar { width: 6px; height: 0; }
+.setmenu::-webkit-scrollbar-track, .bellmenu::-webkit-scrollbar-track { background: transparent; }
+.setmenu::-webkit-scrollbar-thumb, .bellmenu::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
+.setmenu::-webkit-scrollbar-button, .bellmenu::-webkit-scrollbar-button { display: none; height: 0; width: 0; }
+.setmenu .v3links { min-width: 0; }
+/* Google Drive: email on its own line, ⓘ = 'no Google account?' */
+.setmenu .grp { position: relative; }
+.setmenu #drivelink { padding-right: 48px; }
+.setmenu #drivelink .sub .mail { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.demo .setmenu #driveinfo { position: absolute; right: 8px; top: 30px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border-radius: 50%;
+  background: none; border: 1px solid var(--border); color: var(--muted); min-height: 0; }
+.setmenu #driveinfo svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+#drivelink[hidden] ~ #driveinfo, #drivelink[hidden] ~ .drivenote { display: none; }
+.drivenote { margin: 0; padding: 10px; border-radius: 10px; background: var(--row); font-size: 13px; line-height: 1.5; color: var(--text); }
+.drivenote[hidden] { display: none; }
+.drivenote a { display: block; margin-top: 6px; font-weight: 700; color: var(--accent); }
+.setmenu { max-height: calc(100vh - 120px); max-height: calc(100dvh - 120px); }   /* the Settings block is taller now */
+
+/* v0.53: Spare cash ⓘ (floats like every ⓘ); Pots over in red with a minus, dot stays orange, one line */
+.st-head .label button.info { font-size: 14px; letter-spacing: 0; vertical-align: 0; }
+.st-rows .r.pots > span:first-child { white-space: nowrap; }
+.st-rows .r.pots .potnote { display: inline; color: var(--bad); font-weight: 700; margin-left: 2px; }
+.st-rows .r.pots.over .potword, .st-rows .r.pots.over .k-pot { color: var(--bad); font-weight: 800; }
+
+/* v0.55 the Drive tab holds it all: ⬇️ Download from Drive + 🔗 Paired devices (mock XvEVsgGDZzfsVTLCdSFroq) */
+#drive .sub { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+#drive .pairbox, #drive .pairjoin { margin: 14px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#drive .pairbox h2, #drive .pairjoin h2, #drive .pairscreen h2 { font-size: 18px; margin: 0; }
+#drive .pairhead { display: flex; align-items: center; gap: 8px; }
+#drive .pairbox .beta { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+#drive .hint { color: var(--muted); font-size: 14px; margin: 6px 0 10px; }
+#drive .pairrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px dashed var(--border); }
+#drive .pairrow > span { flex: 1; min-width: 0; }
+#drive .pairrow button.unpair { width: auto; margin: 0; }
+#drive .pairlist { margin: 0 0 10px; }
+#drive .pairbox.locked #pairgo { opacity: .5; cursor: not-allowed; }
+#drive .pairbox.locked .pairsoon { text-align: center; font-size: 13px; }
+#drive .paircodeform label { display: block; font-size: 14px; color: var(--muted); margin: 6px 0; }
+#drive .pairrow2 { display: flex; gap: 8px; }
+#drive .pairrow2 input { flex: 1; min-width: 0; font-size: 18px; letter-spacing: .1em; }
+#drive .pairrow2 button { width: auto; margin: 0; }
+#drive.pairing #driveset > :not(#pairscreen), #drive.pairing > .tag, #drive.pairing > h1, #drive.pairing > .drivepp { display: none; }
+#drive button .sub { color: inherit; opacity: .75; }
+#drive .pairscreen { text-align: center; }
+#drive .pairqr { display: inline-block; background: #fff; padding: 10px; border-radius: 14px; margin: 4px auto 10px; line-height: 0; }
+#drive .pairqr svg { width: 220px; height: 220px; max-width: 100%; }
+#drive .pairor { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: var(--muted); margin: 6px 0 0; }
+#drive .pairnum { font-size: 34px; font-weight: 800; letter-spacing: .14em; color: var(--accent); margin: 2px 0; }
+#drive .pairwait { border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: left; font-size: 14px; }
+
+/* v0.56 daily safety copies + Save/Load tucked under 'More options' */
+#drive .safebox { margin: 14px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#drive .safebox h2 { font-size: 18px; margin: 0; }
+#drive .saferow { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--border); }
+#drive .saferow > span { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+#drive .saferow .sub { font-size: 12px; color: var(--muted); }
+#drive .saferow button { width: auto; margin: 0; }
+#drive #safeall { margin-top: 8px; }
+#drive .drivemore { margin: 14px 0 0; text-align: left; }
+#drive .drivemore summary { cursor: pointer; color: var(--muted); font-size: 14px; font-weight: 700; padding: 8px 0; display: flex; align-items: center; justify-content: flex-start; gap: 6px; list-style: none; }
+#drive .drivemore summary::-webkit-details-marker { display: none; }
+#drive .drivemore summary::before { content: '▸'; transition: transform .15s; }
+#drive .drivemore[open] summary::before { transform: rotate(90deg); }
+/* v0.58 the Drive step after the first passcode */
+
+/* v0.59 (mock https://claude.ai/artifact/XbW57xUDPGfMqHwbKiLnSa): Upcoming = No date yet | Pick a date to the right; still to come = slanted;
+   Paid? button; bottom box Paid so far / Still to come; bill due day Set day | Varies on one line */
+.spendtop { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 6px; margin: 0 0 10px; }
+.demo .spendtop .spendseg button { padding: 5px 8px; }
+.spendtop .spendseg { margin: 0; }
+.spendseg[hidden], .dueday[hidden], .duevar[hidden] { display: none; }
+@keyframes litefadein { from { opacity: 0; } to { opacity: 1; } }
+.whenseg, .dueday, .duevar, .spenddate { animation: litefadein .35s ease-out both; }
+body.demo [data-card="spend"] table tr.drow.upcoming td b, body.demo [data-card="spend"] table tr.drow.upcoming .labels,
+body.demo [data-card="spend"] table tr.drow.upcoming td.n:not(.smore) { font-style: italic; }
+body.demo [data-card="spend"] table tr.drow.upcoming td b { color: var(--muted); }
+body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: var(--spend); border: 1.5px solid var(--spend); border-radius: 999px;
+  padding: 3px 10px; margin: 4px 0 0; display: block; margin-left: auto; font-size: 12.5px; font-weight: 700; font-style: normal; }
+[data-card="spend"] .sum .tocome { font-style: italic; }
+.duesheet .dueline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.duesheet .dueseg { margin: 0; }
+.duesheet .dueday { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.duesheet .dueday .sheetin { width: 64px; text-align: center; margin: 0; }
+.duesheet .duevar { font-size: 14px; color: var(--text); }
+.duesheet .dueday[hidden], .duesheet .duevar[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .whenseg, .dueday, .duevar, .spenddate { animation: none; } }
+.demo .sheetback .dueseg button { width: auto; margin: 0; padding: 6px 14px; font-size: 13px; }
+.demo .sheetback .dueseg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+
+/* v0.64 (mock 1): This month = Pay / Left from last month (locked) / Left so far, then 'Start a new month' opens the form */
+.nmrows { display: flex; flex-direction: column; }
+.nmrow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 15px; }
+.nmrow > span { display: flex; flex-direction: column; min-width: 0; }
+.nmrow small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.nmrow > b { font-size: 17px; font-weight: 800; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+.nmrow > b svg { width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2; }
+.nmrow.sofar { margin-top: 10px; padding: 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 12px;
+               background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.nmrow.sofar > span { color: var(--accent); font-weight: 800; }
+.nmrow.sofar > b { color: var(--accent); font-size: 20px; }
+.nmrow.sofar > b.neg { color: var(--bad); }
+.nmrow.nmday { border-bottom: 0; }
+.nmedit { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; border-radius: 8px; }
+.nmedit b { font-size: 17px; font-weight: 800; white-space: nowrap; }
+.nmedit svg { width: 16px; height: 16px; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.nmedit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nmrow.nmday input { width: 96px; flex: 0 0 96px; text-align: center; }
+.demo .q-new { display: block; width: 100%; margin: 12px 0 0; padding: 14px; border: 0; border-radius: 12px; background: var(--accent); color: var(--on-accent);
+               font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+.q-new[hidden], .nmnote[hidden] { display: none; }
+.nmnote { margin: 6px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+.nmform { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* v0.64 📱 Your devices (mock 2-4): one Main, linked devices, their changes wait for a yes */
+#devices .sub { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+#devices h2 { font-size: 18px; margin: 0; }
+#devices .hint { color: var(--muted); font-size: 14px; margin: 6px 0 10px; }
+#devices .devlist { margin: 0 0 14px; }
+#devices .devrow { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin: 0 0 8px; border: 1px solid var(--border); border-radius: 12px; text-align: left; }
+#devices .devrow.main { border-color: color-mix(in srgb, var(--accent) 50%, transparent); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+#devices .devrow > span:first-child { flex: 1; min-width: 0; }
+#devices .devtag { font-size: 11px; font-weight: 800; letter-spacing: .06em; background: var(--accent); color: var(--on-accent); border-radius: 99px; padding: 3px 9px; }
+#devices .devrow button.devremove { width: auto; margin: 0; font-size: 14px; padding: 8px 12px; }
+#devices .devcode { margin: 0 0 14px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; text-align: center; }
+#devices .pairnum { font-size: 34px; font-weight: 800; letter-spacing: .14em; color: var(--accent); margin: 2px 0 8px; }
+#devices .pairqr { display: inline-block; background: #fff; padding: 10px; border-radius: 14px; margin: 0 auto 8px; line-height: 0; }
+#devices .pairqr svg { width: 180px; height: 180px; max-width: 100%; }
+#devices .pairqr:empty { display: none; }
+#devices .pairwait { border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: left; font-size: 14px; }
+#devices .devjoinform { margin: 6px 0 14px; text-align: left; }
+#devices .devjoinform[hidden], #devices [hidden] { display: none; }
+#devices .devjoinform label { display: block; font-size: 14px; color: var(--muted); margin: 6px 0; }
+#devices .pairrow2 { display: flex; gap: 8px; }
+#devices .pairrow2 input { flex: 1; min-width: 0; font-size: 18px; letter-spacing: .1em; }
+#devices .pairrow2 button { width: auto; margin: 0; }
+.devwait.tapme { cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.devwait { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; font-size: 14px; font-weight: 700;
+           border: 1px solid color-mix(in srgb, var(--spend, #f5b83d) 55%, transparent); background: color-mix(in srgb, var(--spend, #f5b83d) 12%, transparent); }
+.sheetback .aplist { display: flex; flex-direction: column; gap: 8px; margin: 0 0 6px; max-height: 45vh; overflow-y: auto; }
+.sheetback .aprow { display: flex; gap: 12px; align-items: center; padding: 12px 14px; min-height: 44px; box-sizing: border-box;
+                    background: var(--row); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; cursor: pointer; }
+.sheetback .aprow input { width: 20px; height: 20px; flex: 0 0 20px; margin: 0; accent-color: var(--accent); }
+.sheetback .aprow small { display: block; color: var(--muted); font-size: 12px; }
+#devices[hidden] { display: none; }
+#devices { margin: 8px auto 18px; }
+#devices .back { display: block; color: var(--accent); font-weight: 700; text-decoration: none; text-align: left; }
+#devices button.sec { background: transparent; color: var(--text); border: 1px solid var(--border); }
+#devices #devleave:not([hidden]) { display: block; margin: 10px auto 0; width: auto; }
+#devices > #devset > button:not(.small):not([hidden]) { display: block; width: 100%; margin: 0 0 10px; }
+#devices .driveok { color: var(--good); font-weight: 700; margin: 12px 0 0; }
+#devices .err { margin: 12px 0 0; }

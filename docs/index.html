@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>
+// Step 1 (look only): no server, nothing is saved yet.
+(function () {
+  const realFetch = window.fetch.bind(window);
+  window.fetch = function (url, opts) {
+    const u = new URL(typeof url === 'string' ? url : url.url, location.href);
+    if (u.origin !== location.origin || /\/(look\.css|(?:icon|lite)-\d+\.png|manifest\.json|version\.json|passport\/theme\.json)$|\.svg$/.test(u.pathname)) return realFetch(url, opts);
+    // /stamp must answer with JSON, or the page's own check would throw; the same stamp each time = no reload.
+    if (u.pathname === '/stamp') return Promise.resolve(new Response('{"stamp":"static"}', {status: 200}));
+    return Promise.resolve(new Response(null, {status: 204}));
+  };
+  document.addEventListener('submit', e => e.preventDefault(), true);
+})();
+</script>
+<script src="config.js?v=0.67"></script>
+<script src="money.js?v=0.67"></script>
+<script src="render.js?v=0.67"></script>
+<script src="sheet.js?v=0.67"></script>
+<script src="lite.js?v=0.67"></script>
+<script src="lock.js?v=0.67"></script>
+<script src="wmmkey.js?v=0.67"></script>
+<!-- v0.61 🛂 Passport ID = the lock (passport/ = a copy of DF-AI-Lab/Passport-ID, never edited here) -->
+<script src="passport/config.js?v=0.67"></script>
+<script>
+// the demo copy: ?lock=1 = pretend Passport (no Google, nothing real touched); ?lock=google = the real one
+if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_demo_lock') !== 'google') PASSPORT_CONFIG.googleClientId = ''; } catch (e) { PASSPORT_CONFIG.googleClientId = ''; } }
+</script>
+<script src="passport/google.js?v=0.67"></script>
+<script src="passport/passport.js?v=0.67"></script>
+<script src="passport/ui.js?v=0.67"></script>
+<script src="passport-lock.js?v=0.67"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where&#39;s My Money?</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="My Money">
+<link rel="icon" href="lite-192.png"><link rel="apple-touch-icon" href="lite-192.png">
+<meta name="theme-color" content="#0f6e5c">
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1a1a1a; --muted: #666; --border: #e2e4e8;
+    --row: #f6f7f9; --accent: #0b63ce; --good: #1f8a3b; --bad: #c62828; --warn-bg: #fff3cd; --warn: #7a5a00;
+    --hero: #0b63ce; --hero-text: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --card: #1f2226; --text: #f2f2f2; --muted: #a8abb0; --border: #33373d;
+      --row: #262a2f; --accent: #5aa2ff; --good: #5fd27a; --bad: #ff7a7a; --warn-bg: #3a3420; --warn: #ffcf5a;
+      --hero: #1d4f8f; --hero-text: #ffffff;
+    }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; overflow-x: hidden; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 16px; width: 100%; box-sizing: border-box; overflow: hidden; }
+  h1 { font-size: 22px; margin: 8px 0 2px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 18px; }
+  .card h2 { font-size: 17px; margin: 0 0 12px; }
+  .hero { background: var(--hero); color: var(--hero-text); border-radius: 14px; padding: 22px; margin-bottom: 14px; text-align: center; }
+  .hero .label { font-size: 14px; letter-spacing: .6px; text-transform: uppercase; opacity: .9; }
+  .hero .big { font-size: 48px; font-weight: 800; line-height: 1.1; margin: 6px 0; }
+  .hero .how { font-size: 14px; opacity: .9; }
+  .tiles.toprow { grid-template-columns: 1.4fr 1fr 1fr; }
+  .paybox { justify-content: center; margin-top: 6px; flex-wrap: nowrap; }
+  .paybox form { flex-wrap: nowrap; }
+  .paybox button[type=submit]:not(.small) { width: 110px; }          /* 'Work it out' and 'Add/Change' the same width */
+  .leftrow { position: relative; display: flex; justify-content: center; }
+  .leftrow .leftx { position: absolute; top: 50%; transform: translateY(-50%); left: calc(50% + 120px); margin: 0; } /* x to the right, boxes stay in line */
+  @media (max-width: 640px) { .tiles.toprow { grid-template-columns: 1fr; } }
+  /* Credit card (5 Oct 2026): the pay box spans 2 rows, 4 half-height tiles fill the right (2 x 2) */
+  .tiles.toprow .paytile { grid-row: span 2; }
+  .tiles.toprow .half { padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; }
+  .tiles.toprow .half .num { font-size: 21px; line-height: 1.2; }
+  tr.crossed td { text-decoration: line-through; opacity: .55; }
+  .cardsum .inline { justify-content: flex-end; flex-wrap: nowrap; }
+  .cardsum input.amount { width: 100px; padding: 5px 8px; text-align: right; }
+  @media (max-width: 640px) { .tiles.toprow { grid-template-columns: 1fr 1fr; } .tiles.toprow .paytile { grid-row: auto; grid-column: 1 / -1; } }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+  .tile .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .tile .num { font-size: 26px; font-weight: 700; }
+  .good { color: var(--good); } .bad { color: var(--bad); } .muted { color: var(--muted); }
+  form.inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  input[type=text] { padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 16px; min-width: 0; }
+  input.amount { width: 110px; } input.name { flex: 1; min-width: 140px; }
+  button { padding: 9px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font-size: 15px; cursor: pointer; }
+  button.small { padding: 4px 10px; font-size: 13px; background: var(--row); color: var(--text); border: 1px solid var(--border); }
+  .error, .warn { padding: 10px 14px; border-radius: 8px; margin-bottom: 14px; font-size: 15px; }
+  .error { background: var(--bad); color: #fff; }
+  .warn { background: var(--warn-bg); color: var(--warn); }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+  td { padding: 8px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  tr.total td { font-weight: 700; border-bottom: 0; }
+  .labels { display: block; font-size: 13px; color: var(--muted); }
+  details { border-bottom: 1px solid var(--border); }
+  details:last-of-type { border-bottom: 0; }
+  summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; padding: 10px 2px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸"; color: var(--muted); margin-right: 6px; }
+  details[open] summary::before { content: "▾"; }
+  summary .what { flex: 1; } summary .note { display: block; font-size: 13px; color: var(--muted); }
+  summary .val { font-weight: 700; white-space: nowrap; }
+  .inside { padding: 0 2px 10px 22px; font-size: 14px; }
+  .inside div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; color: var(--muted); }
+  .sum { display: grid; grid-template-columns: 1fr auto; gap: 2px 16px; font-size: 15px; }
+  .sum .n { text-align: right; white-space: nowrap; }
+  .sum .eq { font-weight: 700; border-top: 1px solid var(--border); padding-top: 4px; }
+  .against { display: flex; justify-content: space-between; gap: 10px; padding: 6px 2px; color: var(--muted); font-size: 14px; }
+  .addsup { display: flex; justify-content: space-between; font-weight: 700; padding-top: 8px; }
+  .scroll { overflow-x: auto; }
+  @media (max-width: 520px) { table.periods { font-size: 13px; } table.periods th, table.periods td { padding: 6px 3px; } }
+  .card.folded > :not(h2) { display: none; }
+  .card h2 .fold { float: right; background: none; border: 0; color: var(--muted); font-size: 18px; padding: 0 4px; line-height: 1; }
+  [data-card] table tr.item { border: 0; padding: 2px 14px; margin: 0; }
+  [data-card] table tr.item td { border: 0; padding: 2px 0; }
+  @media (max-width: 640px) {
+    /* Card mode on narrow screens (user, 4 Oct 2026): each row is a card, the name on top, the numbers side by side
+       with their column name above them (data-label, copied from the header by the script at the bottom). */
+    [data-card]:not([data-card="spend"]) table thead,
+    [data-card]:not([data-card="spend"]) table tr:has(th) { display: none; }
+    [data-card]:not([data-card="spend"]) table tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px;
+      padding: 10px 14px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; }
+    [data-card]:not([data-card="spend"]) table tr.total { border-width: 2px; }
+    [data-card]:not([data-card="spend"]) table tr.item { display: flex; justify-content: space-between; align-items: center;
+      gap: 10px; border: 0; padding: 3px 14px 3px 26px; margin: 0 0 2px; }
+    [data-card]:not([data-card="spend"]) table tr.item[hidden] { display: none; }
+    [data-card]:not([data-card="spend"]) table tr.item td:first-child { font-weight: 400; }
+    [data-card]:not([data-card="spend"]) table tr.item td.n:empty { display: none; }
+    [data-card]:not([data-card="spend"]) table tr.item td.n::before { content: none; }
+    [data-card]:not([data-card="spend"]) table td { display: block; border: 0; padding: 0; min-width: 0; text-align: left; white-space: normal; }
+    [data-card]:not([data-card="spend"]) table td:first-child { grid-column: 1 / -1; font-weight: 700; }
+    [data-card]:not([data-card="spend"]) table td .x { margin-left: 4px; padding: 2px 7px; }
+    [data-card]:not([data-card="spend"]) table td.n::before { content: attr(data-label); display: block; font-size: 11px;
+      color: var(--muted); text-transform: uppercase; font-weight: 600; white-space: normal; }
+  }
+
+  button.link { background: none; border: 0; padding: 0; color: inherit; font: inherit; cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+  button.link.muted { color: var(--muted); }
+  input.billbox { width: 90px; padding: 4px 6px; text-align: right; }
+  input.billbox.badval { border-color: var(--bad); }
+  td button.small.x { padding: 0 6px; margin-left: 4px; }
+  tr.bill.stopped td { opacity: .55; }
+  form.stopform { float: right; margin-left: 8px; }
+  button.stopbtn { padding: 1px 8px; font-size: 12px; color: var(--muted); }
+  .handle, .onlyedit { display: none; }
+  body.editing .handle { display: inline-block; cursor: grab; color: var(--muted); margin-right: 6px; user-select: none; }
+  body.editing .onlyedit { display: inline-block; }
+  body.editing div.onlyedit { display: block; }
+  .editbar { display: flex; justify-content: flex-end; gap: 8px; margin: -12px 0 12px; }
+  .hint { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+  body.editing .rname { outline: 1px dashed var(--border); border-radius: 4px; padding: 0 3px; cursor: text; }
+  body.editing .card { outline: 1px dashed var(--border); }
+  .dragging { opacity: .4; }
+  .picked { outline: 2px solid var(--accent) !important; background: var(--row); }
+  .dropbar { display: block; border: 2px dashed var(--border); border-radius: 12px; padding: 14px; text-align: center;
+             color: var(--muted); cursor: pointer; margin-bottom: 14px; }
+  .dropbar:hover, body.dragover .dropbar { border-color: var(--accent); color: var(--text); background: var(--row); }
+  .dropresult { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; font-size: 15px; }
+  .sortcard { border-color: var(--accent); }
+  .sortbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { background: var(--bg); color: var(--text); border: 0; border-right: 1px solid var(--border); border-radius: 0; padding: 6px 10px; font-size: 14px; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  input.sname { width: calc(100% - 34px); padding: 4px 6px; font-size: 15px; }
+  .sortrow td:first-child b { display: inline-block; width: 28px; }
+  input.scat { width: 150px; padding: 4px 6px; font-size: 15px; }
+  textarea { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: 14px/1.4 system-ui, sans-serif; }
+  tr.filled td { background: var(--row); }
+  .ask { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ask:last-child { border-bottom: 0; }
+  .askbtns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  input.asklabel { width: 140px; padding: 4px 6px; }
+  .phonebar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin-bottom: 14px; font-size: 14px; color: var(--muted); }
+  .phonebar button { font-size: 16px; }
+  .state { display: block; font-size: 13px; color: var(--warn); }
+  #spendlist td:first-child { white-space: nowrap; }
+  .gone td { text-decoration: line-through; color: var(--muted); }
+  .phonebox label { display: flex; gap: 10px; align-items: center; padding: 6px 0; font-family: ui-monospace, monospace; font-size: 14px; }
+  .footer { color: var(--muted); font-size: 13px; text-align: center; margin: 20px 0 30px; }
+</style>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
+<link rel="stylesheet" href="look.css?v=0.67">
+<link rel="stylesheet" href="passport/passport.css?v=0.67">
+<link rel="stylesheet" href="lite.css?v=0.67">
+</head>
+<body class="demo">
+
+<!-- v0.61 🛂 Passport draws the lock in here (passport-lock.js) -->
+<div id="wmmlock" hidden><div id="passport" class="passport"></div></div>
+
+<div class="wrap">
+  
+  
+  <header class="demohead">
+    <a class="brand" href="./" title="Back to the top"><img src="lite-192.png" alt=""><div><h1>Where's My Money?</h1><div class="tagline">Payday to payday · Lite <span class="savesign" role="button" tabindex="0" hidden><svg viewBox="0 0 20 16" fill="none" aria-hidden="true">
+      <path d="M5.5 14h9a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 4.4 7.1 3.5 3.5 0 0 0 5.5 14z" fill="currentColor" fill-opacity=".22" stroke="currentColor" stroke-width="1.4"/>
+      <g class="arr"><path d="M10 12V7M7.8 9.2 10 7l2.2 2.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g class="tick"><path d="M7.3 10l1.9 1.8 3.6-3.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></g>
+      <g class="dot"><circle cx="10" cy="10" r="1.8"/></g></svg></span></div></div></a>
+    <div class="settings"><button type="button" class="small" id="setbtn" aria-expanded="false" aria-controls="setmenu"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>Settings</button>
+      <div class="bellmenu" id="bellmenu" hidden></div>
+      <div class="setmenu" id="setmenu" hidden>
+        <button type="button" class="small" id="setback">⬅️ Back</button>
+        <div class="v3links">
+          <div class="grp"><a class="small" href="?view=ideas" data-view="ideas">💡 Ideas &amp; feedback</a><a class="small" href="?view=invite" data-view="invite">📱 Invite</a><div class="maxopen"><span>Cards open at once</span><span class="step"><button type="button" class="small" id="maxless" aria-label="Fewer">−</button><b id="maxopen">2</b><button type="button" class="small" id="maxmore" aria-label="More">+</button></span></div></div>
+          <div class="grp"><p class="sethead">Account</p>
+          <a class="small" id="acclink" href="?view=account" data-view="account">👤 Account<span class="sub">Add your name</span></a></div>
+          <div class="grp"><p class="sethead">On this phone</p>
+          <button type="button" class="small" id="savebackup">💾 Save backup<span class="sub">Download a file to this phone</span></button>
+          <button type="button" class="small" id="loadbackup">📂 Load backup<span class="sub">Open a backup file from this phone</span></button>
+          <input type="file" id="loadfile" accept=".json,application/json" hidden></div>
+          <div class="grp"><p class="sethead">Cloud</p>
+          <a class="small" id="drivelink" href="?view=drive" data-view="drive">☁️ Google Drive backup<span class="sub">Off · tap to connect</span></a>
+          <button type="button" id="driveinfo" class="infobtn" aria-expanded="false" aria-controls="drivenote" aria-label="No Google account?"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></button>
+          <a class="small" id="devlink" href="?view=devices" data-view="devices">📱 Your devices<span class="sub">One Main, the others follow</span></a>
+          <p class="drivenote" id="drivenote" hidden>No Google account? It's free and takes 2 minutes.<a href="https://accounts.google.com/signup" target="_blank" rel="noopener">Make a Google account →</a></p></div>
+          <div class="grp"><p class="sethead">Lock</p>
+          <button type="button" class="small" id="passportbtn">🛂 Passport<span class="sub">Passcode, fingerprint, sign out</span></button>
+          <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
+          <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
+        </div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.67</div></div></div>
+    <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
+  </header>
+  <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
+  <script>
+    // Settings (14 Oct 2026, order 15 Oct): the Update and Move & rename buttons live in this menu on the demo page
+    document.addEventListener('DOMContentLoaded', () => {
+      // Home button: glide back to the top (no reload), with a little spin of the icon
+      const home = document.querySelector('.demohead .brand');
+      if (home) home.addEventListener('click', e => {
+        e.preventDefault();
+        const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({top: 0, behavior: calm ? 'auto' : 'smooth'});
+        if (!calm) { home.classList.remove('spin'); void home.offsetWidth; home.classList.add('spin'); }
+      });
+      const btn = document.getElementById('setbtn'), menu = document.getElementById('setmenu');
+      if (!btn) return;
+      const bar = document.querySelector('.editbar');
+      if (bar) menu.prepend(bar); else btn.hidden = true;     // Update + Move & rename first, Sign out last
+      const back = document.getElementById('setback');
+      menu.prepend(back);                                      // ⬅️ Back is the very first thing
+      const show = on => { menu.hidden = !on; btn.setAttribute('aria-expanded', on); };
+      back.addEventListener('click', () => {
+        if (document.body.classList.contains('editing')) document.getElementById('editbtn').click();   // leave Move & rename
+        show(false);
+      });
+      btn.addEventListener('click', e => { e.stopPropagation(); show(menu.hidden); });
+      document.addEventListener('click', e => { if (!menu.contains(e.target) && !document.body.classList.contains('editing')) show(false); });
+      document.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.body.classList.contains('editing')) show(false); });
+      // v0.52: ⓘ by Google Drive = 'no Google account? make one' (opens a note, not the Drive page)
+      const info = document.getElementById('driveinfo'), note = document.getElementById('drivenote');
+      if (info) info.addEventListener('click', () => { note.hidden = !note.hidden; info.setAttribute('aria-expanded', !note.hidden); });
+    });
+  </script>
+  
+  
+  
+
+  
+
+  
+  <div class="editbar">
+    <button type="button" class="small" id="editbtn">✏️ Move &amp; rename</button>
+    <form method="post" action="/layout/reset" class="onlyedit"><button class="small" type="submit">↺ Put the order back</button></form>
+  </div>
+  <div class="editpill" id="editpill" hidden><span>✏️ Editing</span><button type="button" id="editreset">↺ Reset</button><button type="button" id="editdone">✓ Done</button></div>
+  <div class="onlyedit hint">Click ⠿ on a card or row, then use the ⬆️ ⬇️ arrow keys to move it (or drag it). Click a name to rename it (empty = the normal name). Press <b>Done</b> when finished.</div>
+  
+
+  
+
+  
+
+<div id="ideas" hidden></div>
+<div id="invite" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>📱 Invite a friend</h1>
+  <p class="tag">Let a friend scan this with their phone camera. They get their own copy of the app, with their own money. It holds the link only, never any of your data.</p>
+  <img class="qr" src="invite-qr.svg" alt="QR code for the Lite link" width="240" height="240">
+  <p class="invlink">https://df-ai-lab.github.io/wheres-my-money-lite/</p>
+  <div class="invbtns"><button type="button" id="sharebtn">📤 Share</button><button type="button" id="copylink">📋 Copy link</button></div>
+  <p class="invmsg" id="sharemsg" role="status" hidden>✅ Link copied</p>
+</div>
+
+<div id="account" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>👤 Account</h1>
+  <form id="nameform" class="acccard" novalidate>
+    <label>Your first name
+      <input id="accname" name="accname" autocomplete="given-name" maxlength="20" autocapitalize="words">
+      <span class="hint">Shown in the app. Stays on this phone.</span></label>
+    <button type="submit">Save name</button>
+    <p class="driveok" id="nameok" hidden role="status">✅ Name saved</p>
+  </form>
+  <div class="acccard" id="accdrive">
+    <p class="acchead">☁️ Google Drive</p>
+    <p id="accstate"></p>
+    <p class="hint" id="acchint">Backups go to this Google account.</p>
+    <div class="accbtns" id="accon">
+      <button type="button" class="small" id="accswitch">🔄 Use another Google account</button>
+      <button type="button" class="small" id="accoff">Turn off</button>
+    </div>
+    <a class="small accconnect" id="accconnect" href="?view=drive" data-view="drive">Connect Google Drive</a>
+    <p class="err" id="accerr" hidden role="alert"></p>
+  </div>
+</div>
+
+<div id="drive" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>☁️ Google Drive</h1>
+  <p class="tag">Keep a copy of your backup in your own Google Drive. It is scrambled with your passcode, so only you can open it. The app can only see the files it made.</p>
+  <p id="drivenone" hidden>Google Drive is not set up for this app yet.</p>
+  <div id="driveset" hidden>
+    <button type="button" id="driveconnect">Connect Google Drive</button>
+    <p class="driveauto" id="driveauto" hidden>☁️ Auto-save is on · <span id="drivelast"></span></p>
+    <button type="button" id="drivedl" hidden>⬇️ Download from Drive<span class="sub">Newest Drive copy as a file on this device</span></button>
+    <div class="safebox" id="safebox" hidden>
+      <h2>🕘 Daily safety copies</h2>
+      <p class="hint">One copy a day, kept for 30 days. Once a day is over, its copy is never written over.</p>
+      <div class="safelist" id="safelist"><p class="hint">Looking in your Drive…</p></div>
+      <button type="button" class="small" id="safeall" hidden>⬇️ Download all</button>
+    </div>
+    <div class="pairjoin" id="pairjoin" hidden>
+      <h2>🔗 Pair with your other device</h2>
+      <p class="hint">Use the same Google account as your other device.</p>
+      <button type="button" id="pairjoingo">Pair this device</button>
+    </div>
+    <div class="pairbox" id="pairbox" hidden>
+      <div class="pairhead"><h2>🔗 Paired devices</h2><span class="beta">TEST</span></div>
+      <p class="hint">Paired devices show the same money. A change on one shows on the other.</p>
+      <div class="pairlist" id="pairlist"></div>
+      <button type="button" id="pairgo">🔗 Pair a device</button>
+      <p class="hint pairsoon" id="pairsoon" hidden>Coming soon. We're still testing this.</p>
+      <form class="paircodeform" id="paircodeform">
+        <label for="paircode">Got a code from your other device?</label>
+        <span class="pairrow2"><input type="text" id="paircode" inputmode="numeric" autocomplete="one-time-code" placeholder="123 456" maxlength="7"><button type="submit">Pair</button></span>
+      </form>
+    </div>
+    <div class="pairscreen" id="pairscreen" hidden>
+      <h2>Pair a device</h2>
+      <p class="hint">On your other device, scan this with the camera. Or open the app there and type the code.</p>
+      <div class="pairqr" id="pairqr"></div>
+      <p class="pairor">OR TYPE THIS CODE</p>
+      <p class="pairnum" id="pairnum"></p>
+      <p class="hint">Code works for 10 minutes · Only you can see it</p>
+      <p class="pairwait" id="pairwait" role="status">⏳ Waiting for your other device…<span class="sub" id="pairmail"></span></p>
+      <button type="button" id="paircancel">Cancel</button>
+    </div>
+    <details class="drivemore" id="drivemore" hidden>
+      <summary>More options</summary>
+      <button type="button" id="drivesave" hidden>☁️ Save a copy now</button>
+      <button type="button" id="driveload" hidden>📥 Load the newest copy from Drive</button>
+      <button type="button" class="small" id="driveoff" hidden>Turn off auto-save</button>
+    </details>
+    <p class="driveok" id="driveok" hidden role="status">✅ Saved to your Drive.</p>
+    <p class="err" id="driveerr" hidden role="alert"></p>
+  </div>
+  <p class="drivepp"><a href="privacy.html">🔒 Privacy: what the app can see</a></p>
+</div>
+
+<div id="devices" class="box" hidden>
+  <a class="back" href="./">‹ Home</a>
+  <h1>📱 Your devices</h1>
+  <p class="tag">One Main holds the real money. Your other devices copy it. A change made on another device waits for the Main to say yes, so nothing is ever written over.</p>
+  <p id="devnodrive" hidden>Turn on Google Drive backup first. <a data-view="drive" href="?view=drive">☁️ Google Drive backup →</a></p>
+  <div id="devset" hidden>
+    <div class="devlist" id="devlist"></div>
+    <button type="button" id="devinvite" hidden>＋ Invite a device</button>
+    <div class="devcode" id="devcode" hidden>
+      <h2>On your other device</h2>
+      <p class="hint">Open the app there, go to Settings → 📱 Your devices and type this code. Or scan it with the camera.</p>
+      <p class="pairnum" id="devnum"></p>
+      <div class="pairqr" id="devqr"></div>
+      <p class="hint">Works for 10 minutes · use the same Google account</p>
+      <p class="pairwait" id="devwaiting" role="status">⏳ Waiting for your other device…</p>
+      <button type="button" id="devcancel">Cancel</button>
+    </div>
+    <form class="devjoinform" id="devjoinform">
+      <label for="devjoin">Got a code from your Main?</label>
+      <span class="pairrow2"><input type="text" id="devjoin" inputmode="numeric" autocomplete="one-time-code" placeholder="123 456" maxlength="7"><button type="submit">Join</button></span>
+    </form>
+    <button type="button" class="sec" id="devmain" hidden>⭐ Make this device the Main</button>
+    <button type="button" class="small" id="devleave" hidden>Unlink this device</button>
+    <p class="driveok" id="devok" hidden role="status"></p>
+    <p class="err" id="deverr" hidden role="alert"></p>
+  </div>
+</div>
+
+<div class="card quick" id="quick" hidden>
+  <div class="q-pay">
+    <div class="q-head"><div class="q-title">This month</div><span class="q-pill" id="paypill" hidden></span></div>
+    <div class="nmrows" id="nmrows">
+      <div class="nmrow"><span>Pay<small>This month's wage</small></span><button type="button" class="nmedit" id="nmpayedit" title="Change this month's pay"><b id="nm-pay">£0.00</b><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button></div>
+      <div class="nmrow"><span>Left from last month<small>Set on payday · fix it here if it's off</small></span><button type="button" class="nmedit" id="nmleftedit" title="Change what was left from last month"><b id="nm-left"><span>£0.00</span></b><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg></button></div>
+      <div class="nmrow sofar"><span>Left so far<small>This month, live · carries over on payday</small></span><b id="nm-sofar">£0.00</b></div>
+      <label class="nmrow nmday"><span>Payday<small>Day of the month you get paid</small></span><input class="amount" type="text" id="qday" inputmode="numeric" placeholder="25th" value="" autocomplete="off" aria-label="Payday, the day of the month"></label>
+    </div>
+    <button type="button" class="q-new" id="nmstart" aria-expanded="false" aria-controls="nmform">📅 Start a new month</button>
+    <p class="nmnote" id="nmnote">Only on payday. Nothing changes until you tap it.</p>
+    <div class="nmform" id="nmform" hidden>
+    <form method="post" action="/pay" id="payform" data-pay="0.00" data-left="">
+      <div class="q-fields">
+        <label>New pay<input class="amount" type="text" name="pay" id="qpay" inputmode="decimal" value="0.00" autocomplete="off"></label>
+        <label>Really left in your bank<span class="lx"><input class="amount" type="text" name="left" id="qleft" inputmode="decimal" placeholder="0.00" value="" autocomplete="off">
+          <button type="button" class="small" id="qleftx" title="Remove what was left">✖</button></span></label>
+      </div>
+      <div class="labels" id="lefthint">💡 The app thinks <b id="lhval"></b> is left. Not right? Type what's really left.
+        <button type="button" class="info" aria-label="What is this?" data-tip="Check your bank app for what is really left.">ⓘ</button>
+        <span>Please check this each month.</span></div>
+      <button type="submit" class="q-go">Start new month</button>
+    </form>
+    </div>
+  </div>
+  <div class="q-drop" id="qdrop">
+    <button type="button" class="q-big" id="qsave">💾 Save a backup</button>
+    <div class="q-last" id="lastsaved"></div>
+  </div>
+</div>
+<div class="st-grid">
+  <div class="card st-sum">
+    <div class="st-head">
+      <div>
+        <div class="label">Spare cash left <button type="button" class="info" aria-label="What is this?" data-tip="This is a guide. Check your bank app to confirm what's really left. Don't rely on this app alone.">ⓘ</button></div>
+        <div class="big" id="spare-big">£1,269.57</div>
+        <div class="st-key" id="st-key"></div>
+      </div>
+      <svg id="ring" viewBox="0 0 100 100" role="img" aria-label="Where the money went">
+        <circle cx="50" cy="50" r="40" class="ring-bg"/>
+        <circle cx="50" cy="50" r="40" class="seg-bill" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="40" class="seg-pot" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="40" class="seg-spend" transform="rotate(-90 50 50)"/>
+        <circle cx="50" cy="50" r="40" class="seg-spare" transform="rotate(-90 50 50)"/>
+        <text x="50" y="57" text-anchor="middle" id="ring-pc"></text>
+      </svg>
+    </div>
+    <div class="st-rows">
+      <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">£2,500.00</button></div>
+      <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">Add</button></div>
+      <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">£1,183.73</span></div>
+      <div class="r spends"><span><i class="dot spend"></i>− Spends</span><span class="k-spend" id="st-spends">£46.70</span></div>
+      <div class="r pots"><span><i class="dot pot"></i>Pots left</span><span class="k-pot" id="st-potleft">£0.00</span></div>
+      <div class="r start"><span>Starting spare</span><span id="st-start">£1,316.27</span></div>
+      <div class="r tot"><span>Actual spare</span><span id="st-spare">£1,269.57</span></div>
+    </div>
+    <div id="spare-how" hidden></div>
+  </div>
+  <div class="st-side">
+    
+    
+    <div class="tile wide zcard"><div class="zl">
+        <div class="label">Zopa credit card</div>
+        <div class="zrow"><i class="dot zused"></i><span>Used</span><b id="ccused">£45.00</b></div>
+        <div class="zrow"><i class="dot zfree"></i><span>Free</span><b class="zfreeval" id="ccfree">£455.00</b></div>
+        <div class="zlimit">Limit £500.00</div></div>
+      <svg id="zring" viewBox="0 0 100 100" role="img" aria-label="9% of the limit used">
+        <circle cx="50" cy="50" r="40" class="z-free"/>
+        <circle cx="50" cy="50" r="40" class="z-used" transform="rotate(-90 50 50)"
+          stroke-dasharray="21.1 251.3"/>
+        <text x="50" y="52" text-anchor="middle" class="z-pc">9%</text>
+        <text x="50" y="67" text-anchor="middle" class="z-sub">used</text>
+      </svg>
+    </div>
+  </div>
+</div>
+<script>
+  // Ring: all money in (pay + left) split into bills, pots, spends and spare. Tap Pay or Left to change them.
+  window.demoTop = function (bills) {
+    if (typeof PAGE === 'undefined' || PAGE.wage === undefined) return;
+    if (bills === undefined) bills = PAGE.bills;
+    const total = PAGE.wage + PAGE.left, pots = PAGE.pots, spends = PAGE.typed, spare = Math.max(total - bills - pots - spends, 0);
+    const C = 2 * Math.PI * 40, f = x => total > 0 ? Math.max(x, 0) / total : 0;
+    let start = 0;
+    [['seg-bill', f(bills)], ['seg-pot', f(pots)], ['seg-spend', f(spends)], ['seg-spare', f(spare)]].forEach(([cls, part]) => {
+      const el = document.querySelector('#ring .' + cls), len = Math.min(part, 1 - start) * C;
+      el.setAttribute('stroke-dasharray', (len > 2 ? len - 1.5 : len) + ' ' + C);
+      el.setAttribute('stroke-dashoffset', -start * C);
+      start += part;
+    });
+    const pc = x => Math.round(100 * f(x)) + '%';
+    document.getElementById('ring-pc').textContent = pc(spare);
+    // each dot stays with its word when the line wraps (15 Oct 2026)
+    document.getElementById('st-key').innerHTML = '<span><i class="dot bill"></i>Bills ' + pc(bills) + '</span> · <span><i class="dot pot"></i>Pots ' + pc(pots) + '</span> · <span><i class="dot spend"></i>Spends ' +
+      pc(spends) + '</span> · <span><i class="dot spare"></i>Spare ' + pc(spare) + '</span>';
+    const set = (id, x) => { const el = document.getElementById(id); if (el) el.textContent = money(x); };
+    set('st-bills', bills); set('st-start', total - bills - PAGE.potsSet); set('st-spare', total - bills - pots - spends);
+  };
+  document.addEventListener('DOMContentLoaded', () => {
+    demoTop();
+    // The arrow tab on the header line opens / hides the New payday panel (up = hidden, down = open). Starts hidden.
+    const quick = document.getElementById('quick'), tab = document.getElementById('quicktab');
+    // Slides open / shut: height, padding and fade animate together (none if the computer asks for less motion)
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let anim = null;
+    const openQuick = on => {
+      if (on === !quick.hidden && !anim) return;
+      if (tab) tab.setAttribute('aria-expanded', on);                  // the chevron flips by CSS
+      if (anim) anim.cancel();
+      quick.hidden = false;
+      const cs = getComputedStyle(quick);
+      // margin and border slide too, so nothing jumps when the panel is hidden at the end (15 Oct 2026)
+      const full = {height: quick.offsetHeight + 'px', paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom, marginTop: cs.marginTop,
+                    marginBottom: cs.marginBottom, borderTopWidth: cs.borderTopWidth, borderBottomWidth: cs.borderBottomWidth, opacity: 1, transform: 'none'};
+      const shut = {height: '0px', paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px',
+                    borderTopWidth: '0px', borderBottomWidth: '0px', opacity: 0, transform: 'translateY(-8px)'};
+      if (on) window.scrollTo({top: 0, behavior: calm ? 'auto' : 'smooth'});
+      if (calm) { quick.hidden = !on; return; }
+      quick.style.overflow = 'hidden';
+      anim = quick.animate(on ? [shut, full] : [full, shut], {duration: on ? 320 : 240, easing: 'cubic-bezier(.22,.8,.24,1)'});
+      anim.onfinish = () => { quick.style.overflow = ''; quick.hidden = !on; anim = null; };
+    };
+    if (tab) tab.addEventListener('click', () => openQuick(quick.hidden));
+    // v0.64 (mock 1): the box shows Pay / Left from last month / Left so far; the form opens only on 'Start a new month'
+    const nmBtn = document.getElementById('nmstart'), nmForm = document.getElementById('nmform');
+    const showForm = on => { nmForm.hidden = !on; nmBtn.hidden = on; document.getElementById('nmnote').hidden = on; nmBtn.setAttribute('aria-expanded', on); };
+    nmBtn.addEventListener('click', () => { showForm(true); const i = document.getElementById('qpay'); i.focus(); });
+    // v0.66: Left from last month can be fixed any time too (POST /left)
+    document.getElementById('nmleftedit').addEventListener('click', () => {
+      Sheet.ask('✏️ Left from last month', 'What was really left', Number(Lite.state().left || 0).toFixed(2), 'decimal').then(v => {
+        if (v === null) return;
+        const f = document.createElement('form'); f.method = 'post'; f.action = '/left';
+        const i = document.createElement('input'); i.type = 'hidden'; i.name = 'amount'; i.value = String(v).trim() || '0'; f.appendChild(i);
+        document.body.appendChild(f); f.submit();
+      });
+    });
+    // v0.65: Pay can be changed any time (POST /pay), no new month needed
+    document.getElementById('nmpayedit').addEventListener('click', () => {
+      Sheet.ask('✏️ Change this month\'s pay', 'Pay', Number(Lite.state().pay).toFixed(2), 'decimal').then(v => {
+        if (v === null || !String(v).trim()) return;
+        const f = document.createElement('form'); f.method = 'post'; f.action = '/pay';
+        const i = document.createElement('input'); i.type = 'hidden'; i.name = 'pay'; i.value = v; f.appendChild(i);
+        document.body.appendChild(f); f.submit();
+      });
+    });
+    document.querySelectorAll('.tap').forEach(b => b.addEventListener('click', () => {
+      openQuick(true); showForm(true); const i = document.getElementById(b.dataset.edit); i.focus(); i.select();
+    }));
+    // Payday box: saved quietly when it changes; the pill shows the next payday. A bad day is marked and not saved.
+    const dayBox = document.getElementById('qday'), pill = document.getElementById('paypill');
+    dayBox.addEventListener('change', async () => {
+      let ok = false;
+      try { ok = (await fetch('/payday/day', {method: 'POST', headers: {'X-Requested-With': 'fetch', 'Content-Type': 'application/x-www-form-urlencoded'},
+                                              body: new URLSearchParams({day: dayBox.value})})).ok; } catch (e) { /* offline: not saved */ }
+      dayBox.classList.toggle('badval', !ok);
+      if (!ok) return;
+      const d = Lite.state().payDay, next = Money.nextPayday(d, Lite.today());
+      dayBox.value = d ? Money.ordinal(d) : '';
+      pill.hidden = !next;
+      if (next) pill.textContent = '📅 ' + Money.paydayText(next, Lite.today());
+      if (window.refreshBell) refreshBell();
+    });
+    document.getElementById('qleftx').addEventListener('click', () => { document.getElementById('qleft').value = ''; });
+    // Work it out: a new month (save this one, start the next) or just a change to this month's pay
+    const payForm = document.getElementById('payform');
+    const justPay = left => {
+      if (left !== payForm.dataset.left) {                              // Left was changed by hand: keep it too
+        const r = Lite.run('/left', new URLSearchParams({amount: left}));
+        if (r && r.error) { Lite.leave(r.error); return; }
+      }
+      payForm.action = '/pay'; payForm.submit();
+    };
+    // "Start a new month?" = a sheet that slides up (mock B, Darren 22 Oct), not the browser's OK / Cancel box
+    payForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const left = document.getElementById('qleft').value.trim(), num = v => Money.fmt.money(parseFloat(v) || 0);
+      document.getElementById('newmonth')?.remove();
+      const back = document.createElement('div');
+      back.id = 'newmonth'; back.className = 'sheetback';
+      back.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="nmtitle"><div class="grab"></div>
+        <h3 id="nmtitle">📅 Start a new month?</h3>
+        <div class="sheetsum"><div><span>New pay</span><b>${num(document.getElementById('qpay').value)}</b></div>
+          <div><span>Left from last month</span><b>${num(left)}</b></div></div>
+        <p>Yes = this month is saved and a fresh one starts.</p>
+        <button type="button" class="pri">✅ Yes, start a new month</button>
+        <button type="button" class="sec">✏️ No, just change this month's pay</button>
+        <button type="button" class="ter">Cancel</button></div>`;
+      const close = () => { document.removeEventListener('keydown', esc); back.remove(); };
+      const esc = ev => { if (ev.key === 'Escape') close(); };
+      back.addEventListener('click', ev => { if (ev.target === back) close(); });
+      back.querySelector('.pri').addEventListener('click', () => { close(); payForm.action = '/payday'; payForm.submit(); });
+      back.querySelector('.sec').addEventListener('click', () => { close(); justPay(left); });
+      back.querySelector('.ter').addEventListener('click', close);
+      document.addEventListener('keydown', esc);
+      document.body.appendChild(back);
+      back.querySelector('.pri').focus();
+    });
+  });
+</script>
+
+  
+  <!-- Cards and rows in the user's own order, rows renamed (fintrack/layout.py, 3 Oct 2026) -->
+  <div id="cards" data-sort="cards">
+  <!-- Lite.start() draws every card here (docs/render.js): spend, pots, credit card, bills, then the history cards -->
+  <div class="card" data-id="spend" data-card="spend"></div>
+  <div class="card" data-id="pots" data-card="pots"></div>
+  <div class="card" data-id="card" data-card="card"></div>
+  <div class="card" data-id="bills" data-card="bills"></div>
+  <div class="card" data-id="lastmonth" data-card="lastmonth"></div>
+  <div class="card" data-id="cats" data-card="cats"></div>
+  <div class="card" data-id="periods" data-card="periods"></div>
+  </div>
+<script>
+  // Go A: the ⋯ menus (bills and pots), the ⓘ help bubbles and the Paid tick boxes. Every change goes to the same
+  // routes as the forms (docs/lite.js), so the page reloads with the new numbers like live's redirect after a POST.
+  document.addEventListener('DOMContentLoaded', () => {
+    const close = () => document.querySelectorAll('.bmenu, .infotip').forEach(m => m.remove());
+    const send = (action, fields) => {                       // a quiet form post
+      const f = document.createElement('form'); f.method = 'post'; f.action = action;
+      Object.entries(fields).forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
+      document.body.appendChild(f); f.submit();
+    };
+    // a ⋯ button opens a menu of [text, class, action] items under it
+    const menu = (btn, items, extra) => {
+      const open = btn.parentElement.querySelector('.bmenu'); close(); if (open) return;
+      const m = document.createElement('div'); m.className = 'bmenu' + (extra ? ' ' + extra : ''); m.setAttribute('role', 'menu');
+      const add = (to, [text, cls, fn]) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (cls) b.className = cls;
+        b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); to.appendChild(b);
+      };
+      items.forEach(it => {                                  // v0.50 (mock B): {row: [...]} = big buttons side by side
+        if (!it.row) return add(m, it);
+        const r = document.createElement('div'); r.className = 'brow'; it.row.forEach(x => add(r, x)); m.appendChild(r);
+      });
+      btn.parentElement.appendChild(m); m.querySelector('button').focus();
+    };
+
+    // bills
+    document.querySelectorAll('.dbills tr.bill .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      // v0.50 mock B: Amount + Mark paid on top, the details, then Pause + Delete side by side
+      const row = btn.closest('tr'), key = row.dataset.key, stopped = row.dataset.stopped === '1', items = [];
+      if (!stopped) items.push({row: [['Amount', 'quick', () => row.querySelector('button.link').click()],
+        row.dataset.paid === '1'                                                         // paid by hand (Darren, 22 Oct)
+          ? ['Not paid yet', 'quick', () => send('/bill/paid', {key, paid: '0'})]
+          : ['Mark paid', 'quick pri', () => send('/bill/paid', {key, paid: '1'})]]});
+      if (row.dataset.changed === '1') items.push(['Put back the amount', '', () => row.querySelector('button.x').click()]);
+      items.push(['Change name', '', () => {
+        Sheet.ask('✏️ Name of the bill', 'Name', row.dataset.name).then(name => { if (name !== null) send('/bill/name', {key, name}); }); }]);
+      items.push(['Due day', '', () => {
+        Sheet.due('📅 ' + row.dataset.name + ': due day', row.dataset.due).then(day => { if (day !== null) send('/bill/due', {key, day}); }); }]);
+      items.push(['Category', '', () => {                   // a pick list of the categories, then ＋ New category
+        const pick = Money.categories(Lite.state()).map(c => [(c === row.dataset.cat ? '✓ ' : '') + c, '', () => send('/bill/cat', {key, cat: c})]);
+        pick.push(['＋ New category', '', () => Sheet.ask('🏷 New category', 'Name of the new category', '').then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); })]);
+        menu(btn, pick, 'catmenu'); }]);
+      items.push(['Pays a credit card', '', () => {
+        const names = (window.LITE_PAGE && window.LITE_PAGE.cards) || [];
+        Sheet.ask('💳 Which credit card does this bill pay?', names.join(', ') + ' (empty = none)', row.dataset.card).then(card => {
+          if (card !== null) send('/bill/card', {key, card}); }); }]);
+      items.push({row: [[stopped ? 'Resume' : 'Pause', 'quick', () => row.querySelector('form.stopform').submit()],   // v0.39: paused = folded away
+        ['Delete', 'quick stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
+          .then(yes => { if (yes) send('/bill/delete', {key}); })]]});
+      menu(btn, items);
+    }));
+
+    // v0.36 (mock A3): '+ date' / '+ category' on a bill that is missing them
+    document.querySelectorAll('.dbills tr.bill .addlink').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = btn.closest('tr'), key = row.dataset.key;
+      if (btn.dataset.add === 'due') Sheet.day('📅 ' + row.dataset.name + ': which day does it come out?').then(day => { if (day !== null) send('/bill/due', {key, day}); });
+      else Sheet.pick('🏷 ' + row.dataset.name + ': category', Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), row.dataset.cat)
+        .then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); });
+    }));
+    // mock D: the bill just added glows once
+    try {
+      const glow = sessionStorage.getItem('lite_glow');
+      if (glow) { sessionStorage.removeItem('lite_glow'); const r = document.querySelector('.dbills tr.bill[data-key="' + CSS.escape(glow) + '"]'); if (r) r.classList.add('newglow'); }
+    } catch (e) { /* no storage */ }
+
+    // v0.36 (mock H2): spends. Paid / Upcoming switch (Upcoming shows the expected date box); ⋯ = Change date / Paid / Remove
+    // v0.59: Upcoming shows 'No date yet | Pick a date' to the right (fades in); the date box only for Pick a date
+    document.querySelectorAll('[data-card="spend"] .spendtop').forEach(top => {
+      const seg = top.querySelector('.spendseg:not(.whenseg)'), when = top.querySelector('.whenseg');
+      const form = top.parentElement.querySelector('form[action="/add"]'), box = form.querySelector('.spenddate');
+      const press = (group, b) => group.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      const show = () => {
+        const up = form.elements.upcoming.value === '1', pick = form.elements.nodate.value === '0';
+        when.hidden = !up;
+        box.hidden = !(up && pick);
+      };
+      seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        press(seg, b);
+        form.elements.upcoming.value = b.dataset.up === '1' ? '1' : '0';
+        show();
+      }));
+      when.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        press(when, b);
+        form.elements.nodate.value = b.dataset.when === 'none' ? '1' : '0';
+        if (b.dataset.when === 'none') form.elements.date.value = '';
+        show();
+        if (!box.hidden) form.elements.date.focus();
+      }));
+    });
+    // v0.59: Paid? on a spend still to come = it went out today
+    document.querySelectorAll('[data-card="spend"] tr.drow .paidq').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation(); send('/spend/paid', {id: btn.closest('tr').dataset.id}); }));
+    // v0.51: All | Categories in Add a spend and Bills (remembered on this phone); tap a category to see what is in it
+    const catViews = (() => { try { return JSON.parse(localStorage.getItem('lite_catview') || '{}') || {}; } catch (e) { return {}; } })();
+    document.querySelectorAll('.card .catseg').forEach(seg => {
+      const card = seg.closest('.card'), view = card.querySelector('.catview'), name = card.dataset.card;
+      const show = cats => {
+        card.classList.toggle('bycat', cats);
+        if (view) view.hidden = !cats;
+        seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', (b.dataset.view === 'cats') === cats ? 'true' : 'false'));
+      };
+      show(!!catViews[name]);
+      seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+        const cats = b.dataset.view === 'cats';
+        show(cats);
+        catViews[name] = cats ? 1 : 0;
+        try { localStorage.setItem('lite_catview', JSON.stringify(catViews)); } catch (e) { /* no storage */ }
+      }));
+    });
+    document.querySelectorAll('.catview button.catrow').forEach(btn => btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open);
+      btn.nextElementSibling.hidden = !open;
+    }));
+    // v0.39: a spend's category, the same pick list as bills ('+ category' on an Unsorted one, or ⋯ → 🏷 Category)
+    const spendCat = row => Sheet.pick('🏷 ' + row.dataset.name + ': category', Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), row.dataset.cat)
+      .then(cat => { if (cat !== null) send('/spend/cat', {id: row.dataset.id, cat}); });
+    document.querySelectorAll('[data-card="spend"] tr.drow .addlink').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); spendCat(btn.closest('tr')); }));
+    // v0.39: the folded line of paused bills opens / closes
+    document.querySelectorAll('.dbills .pausedfold').forEach(btn => btn.addEventListener('click', () => {
+      const open = btn.getAttribute('aria-expanded') !== 'true';
+      btn.setAttribute('aria-expanded', open);
+      btn.closest('tbody').querySelectorAll('tr.pbill').forEach(r => { r.hidden = !open; });
+    }));
+    document.querySelectorAll('[data-card="spend"] tr.drow .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = btn.closest('tr'), id = row.dataset.id, items = [];
+      items.push(['✏️ Change amount', '', () => Sheet.ask('💷 ' + row.dataset.name + ': amount', 'Amount', row.dataset.amount, 'decimal')
+        .then(amount => { if (amount !== null) send('/spend/amount', {id, amount}); })]);   // v0.49
+      items.push(['✏️ Change name', '', () => Sheet.ask('✏️ Name of the spend', 'Name', row.dataset.name)
+        .then(name => { if (name !== null) send('/spend/name', {id, name}); })]);
+      items.push(['📅 Change date', '', () => Sheet.ask('📅 ' + row.dataset.name + ': date', 'The day it went out (or will)', row.dataset.date, 'date')
+        .then(date => { if (date !== null) send('/spend/date', {id, date}); })]);
+      if (row.dataset.up === '1') items.push(['✅ Paid (it went out today)', '', () => send('/spend/paid', {id})]);
+      items.push(['🏷 Category', '', () => spendCat(row)]);
+      items.push(['🗑 Remove', 'stop', () => row.querySelector('form[action="/remove"]').submit()]);
+      menu(btn, items);
+    }));
+
+    // pots: the amount in a Bills pot row changes the pot
+    document.querySelectorAll('tr.potbill button.link').forEach(btn => btn.addEventListener('click', () => {
+      const row = btn.closest('tr');
+      Sheet.ask('💷 ' + row.dataset.name + ': monthly amount', 'Amount (empty = none)', row.dataset.amount, 'decimal').then(v => {
+        if (v !== null) send('/pot/amount', {key: row.dataset.pot, amount: v}); });
+    }));
+
+    // pots
+    const askPot = (pot, what) => {
+      if (what === 'amount') Sheet.ask('💷 ' + pot.dataset.name + ': monthly amount', 'Amount (empty = none)', pot.dataset.amount, 'decimal')
+        .then(v => { if (v !== null) send('/pot/amount', {key: pot.dataset.key, amount: v}); });
+      else Sheet.ask('✏️ Name of the pot', 'Name', pot.dataset.name).then(v => { if (v !== null) send('/pot/name', {key: pot.dataset.key, name: v}); });
+    };
+    document.querySelectorAll('.pot .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const pot = btn.closest('.pot');
+      menu(btn, [['✏️ Change amount', '', () => askPot(pot, 'amount')], ['✏️ Change name', '', () => askPot(pot, 'name')],
+                 ['🏷 Category it takes', '', () => Sheet.pick('🏷 ' + pot.dataset.name + ': which spends come out of this pot?',   // v0.50
+                    Money.categories(Lite.state()).filter(c => c !== 'Unsorted'), pot.dataset.cat)
+                    .then(cat => { if (cat !== null) send('/pot/cat', {key: pot.dataset.key, cat}); })],
+                 ['🗑 Delete', 'stop', () => Sheet.confirm('🗑 Delete the ' + pot.dataset.name + ' pot?', "This can't be undone.", 'Delete', true)
+                    .then(yes => { if (yes) send('/pot/delete', {key: pot.dataset.key}); })]]);
+    }));
+    document.querySelectorAll('.pot .potset').forEach(btn => btn.addEventListener('click', () => askPot(btn.closest('.pot'), 'amount')));
+
+    // credit cards: ⋯ = change name / add another card / remove this one; "Other amount" in the question
+    document.querySelectorAll('.cardmore .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const box = btn.closest('[data-card="card"]'), card = box.dataset.key, name = box.dataset.name;
+      menu(btn, [['✏️ Change name', '', () => {
+                    Sheet.ask('✏️ Name of the card', 'Name', name).then(v => { if (v !== null) send('/card/name', {card, name: v}); }); }],
+                 ['＋ Add another card', '', () => {
+                    Sheet.ask('💳 New card', 'Name of the new card', '').then(n => { if (n === null) return;
+                      Sheet.ask('💳 ' + n + ': limit', 'Its limit, e.g. 500', '', 'decimal').then(limit => { if (limit !== null) send('/card/new', {name: n, limit}); }); }); }],
+                 ['🗑 Remove card', 'stop', () => Sheet.confirm('🗑 Remove the ' + name + ' card?', "Its lines go too. This can't be undone.", 'Remove', true)
+                    .then(yes => { if (yes) send('/card/delete', {card}); })]]);
+    }));
+    document.querySelectorAll('.cardask .askother').forEach(btn => btn.addEventListener('click', () => {
+      const bill = btn.closest('.cardask').dataset.bill;
+      Sheet.ask('💳 How much did you pay off the card?', 'Amount', '', 'decimal').then(amount => { if (amount !== null) send('/card/ask', {bill, answer: 'other', amount}); });
+    }));
+
+    // ⓘ: a bubble that floats under the button (takes no space); any tap anywhere closes it
+    document.addEventListener('click', e => {
+      const btn = e.target.closest && e.target.closest('button.info'), had = btn && btn.classList.contains('tipon');
+      close();
+      document.querySelectorAll('.tipon').forEach(x => x.classList.remove('tipon'));
+      if (!btn || had) return;
+      btn.classList.add('tipon');
+      const tip = document.createElement('div'); tip.className = 'infotip'; tip.setAttribute('role', 'note'); tip.textContent = btn.dataset.tip;
+      document.body.appendChild(tip);
+      const r = btn.getBoundingClientRect(), w = document.documentElement.clientWidth;
+      tip.style.top = (r.bottom + window.scrollY + 6) + 'px';
+      tip.style.left = Math.max(8, Math.min(r.left + window.scrollX - 8, w - tip.offsetWidth - 8)) + 'px';
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+
+    // History: the arrow button opens / shuts a category's shops
+    document.querySelectorAll('.dlast .chev').forEach(btn => btn.addEventListener('click', e => {
+      e.preventDefault(); e.stopPropagation();
+      const id = btn.closest('tr').dataset.id, open = btn.getAttribute('aria-expanded') !== 'true';
+      document.querySelectorAll('.dlast tr.item[data-cat="' + id + '"]').forEach(r => r.hidden = !open);
+      btn.setAttribute('aria-expanded', open);
+    }));
+    // → Bill: a shop from last month becomes a bill at that amount
+    document.querySelectorAll('.dlast .tobill').forEach(btn => btn.addEventListener('click', () => {
+      const r = btn.closest('tr'); send('/bill/add', {amount: r.dataset.amount, name: r.dataset.name});
+    }));
+  });
+</script>
+
+  <div class="footer">Everything is kept in this phone's browser, nowhere else. Save a backup now and then (Settings).</div>
+  
+</div>
+
+<script>Lite.start();</script>
+<script>
+  // Step 8: works with no internet (service worker) + the 📲 Install button (Android offers it through beforeinstallprompt)
+  (function () {
+    const btn = document.getElementById('installbtn');
+    let offer = null;
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); offer = e; if (btn) btn.hidden = false; });
+    window.addEventListener('appinstalled', () => { offer = null; if (btn) btn.hidden = true; });
+    if (btn) btn.addEventListener('click', () => {
+      const e = offer; offer = null; btn.hidden = true;     // asked once, whatever the answer
+      if (e) e.prompt();
+    });
+    if (!('serviceWorker' in navigator)) return;
+    const hadWorker = !!navigator.serviceWorker.controller;   // a first visit gets no surprise reload
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadWorker || reloaded) return;
+      reloaded = true; location.reload();
+    });
+    navigator.serviceWorker.register('sw.js').catch(() => { /* no worker: the app still works online */ });
+  })();
+</script>
+<script>
+  // Fold cards: toggle folded class and save/load from localStorage (user, 5 Oct 2026)
+  var folded = [];
+  try {
+    var stored = localStorage.getItem('ft_folded');
+    if (stored) folded = JSON.parse(stored);
+  } catch (e) {}
+
+  function saveFolded() {
+    try {
+      var ids = [];
+      document.querySelectorAll('.card.folded').forEach(function (c) {
+        if (c.dataset.id) ids.push(c.dataset.id);
+      });
+      localStorage.setItem('ft_folded', JSON.stringify(ids));
+    } catch (e) {}
+  }
+
+  // Restore folded state
+  folded.forEach(function (id) {
+    var card = document.querySelector('.card[data-id="' + id + '"]');
+    if (card) {
+      card.classList.add('folded');
+      var btn = card.querySelector('h2 .fold');
+      if (btn) btn.textContent = '▸';
+    }
+  });
+
+  // Fold cards (5 Oct 2026). 15 Oct: they slide open / shut, and only N can be open at once (Settings → Cards open
+  // at once, default 2, per device): opening one more folds the one opened longest ago.
+  var openOrder = [], maxOpen = 2;
+  try { openOrder = JSON.parse(localStorage.getItem('ft_openorder') || '[]'); maxOpen = parseInt(localStorage.getItem('ft_maxopen'), 10) || 2; } catch (e) {}
+  var calmFold = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function foldable() { return Array.prototype.slice.call(document.querySelectorAll('.card[data-id]')).filter(function (c) { return c.querySelector('h2 .fold'); }); }
+  function saveOrder() { try { localStorage.setItem('ft_openorder', JSON.stringify(openOrder)); } catch (e) {} }
+  function slideFold(card, fold, keep) {
+    var btn = card.querySelector('h2 .fold');
+    if (btn) btn.textContent = fold ? '▸' : '▾';
+    if (card.classList.contains('folded') === fold) return;
+    if (card.getAnimations) card.getAnimations().forEach(function (a) { a.cancel(); });
+    var r = card.getBoundingClientRect();
+    if (calmFold || !card.animate || r.bottom < 0) {           // off the top of the screen: fold at once and keep the view still
+      var before = card.offsetHeight;
+      card.classList.toggle('folded', fold);
+      if (r.bottom < 0) window.scrollBy(0, card.offsetHeight - before);
+      return;
+    }
+    var from = card.offsetHeight;
+    card.classList.toggle('folded', fold);
+    var to = card.offsetHeight;
+    card.style.overflow = 'hidden';
+    var a = card.animate([{height: from + 'px'}, {height: to + 'px'}], {duration: fold ? 300 : 340, easing: 'cubic-bezier(.2,.75,.25,1)'});
+    if (!fold) Array.prototype.slice.call(card.children).forEach(function (el) {
+      if (el.tagName !== 'H2' && el.animate) el.animate([{opacity: 0, transform: 'translateY(-6px)'}, {opacity: 1, transform: 'none'}], {duration: 340, easing: 'ease-out'});
+    });
+    a.onfinish = a.oncancel = function () { card.style.overflow = ''; };
+  }
+  function keepToMax(justOpened) {
+    var open = foldable().filter(function (c) { return !c.classList.contains('folded'); }).map(function (c) { return c.dataset.id; });
+    openOrder = openOrder.filter(function (id) { return open.indexOf(id) >= 0 && id !== justOpened; });
+    open.forEach(function (id) { if (openOrder.indexOf(id) < 0 && id !== justOpened) openOrder.unshift(id); });   // never-touched cards count as oldest
+    if (justOpened) openOrder.push(justOpened);
+    var anchor = justOpened && document.querySelector('.card[data-id="' + justOpened + '"]');
+    var top = anchor && anchor.getBoundingClientRect().top;
+    while (openOrder.length > maxOpen) {
+      var old = document.querySelector('.card[data-id="' + openOrder.shift() + '"]');
+      if (old) slideFold(old, true);
+    }
+    if (anchor) holdStill(anchor, top);
+    saveOrder(); saveFolded();
+  }
+  // The card you opened stays where it is on the screen while a card above it folds (15 Oct 2026)
+  function holdStill(card, top) {
+    var until = Date.now() + 450;
+    (function step() {
+      var drift = card.getBoundingClientRect().top - top;
+      if (Math.abs(drift) >= 0.5) window.scrollBy(0, drift);
+      if (Date.now() < until) requestAnimationFrame(step);
+    })();
+  }
+
+  // Fold or open a card (the arrow, or a tap anywhere on its top row)
+  function toggleCard(card) {
+    var fold = !card.classList.contains('folded');
+    slideFold(card, fold);
+    keepToMax(fold ? null : card.dataset.id);
+  }
+  document.querySelectorAll('.card h2 .fold').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      var card = btn.closest('.card');
+      if (card) toggleCard(card);
+    });
+  });
+  document.querySelectorAll('.card h2').forEach(function (h) {
+    h.addEventListener('click', function (e) {
+      var card = h.closest('.card');
+      if (!card || !h.querySelector('.fold') || document.body.classList.contains('editing') || (e.target.closest && e.target.closest('.handle'))) return;
+      toggleCard(card);
+    });
+  });
+
+  // Settings → Cards open at once (1 to 9)
+  (function () {
+    var shown = document.getElementById('maxopen');
+    if (!shown) return;
+    shown.textContent = maxOpen;
+    function setMax(n) {
+      maxOpen = Math.min(9, Math.max(1, n)); shown.textContent = maxOpen;
+      try { localStorage.setItem('ft_maxopen', maxOpen); } catch (e) {}
+      keepToMax(null);
+    }
+    document.getElementById('maxless').addEventListener('click', function (e) { e.stopPropagation(); setMax(maxOpen - 1); });
+    document.getElementById('maxmore').addEventListener('click', function (e) { e.stopPropagation(); setMax(maxOpen + 1); });
+  })();
+
+  // Error messages go after 5 seconds (15 Oct 2026); the ?error= is taken off the address so a refresh does not bring it back
+  document.querySelectorAll('.error.fade').forEach(function (box) {
+    setTimeout(function () {
+      if (calmFold || !box.animate) { box.remove(); return; }
+      var cs = getComputedStyle(box);
+      box.style.overflow = 'hidden';
+      box.animate([{opacity: 1, height: box.offsetHeight + 'px', marginBottom: cs.marginBottom, paddingTop: cs.paddingTop, paddingBottom: cs.paddingBottom},
+                   {opacity: 0, height: '0px', marginBottom: '0px', paddingTop: '0px', paddingBottom: '0px'}],
+                  {duration: 400, easing: 'ease-in-out'}).onfinish = function () { box.remove(); };
+    }, 5000);
+  });
+  if (location.search.indexOf('error=') >= 0 && history.replaceState) {
+    var q = new URLSearchParams(location.search); q.delete('error');
+    history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+  }
+
+  // Set up data-label attributes for responsive tables (runs on all pages before other scripts)
+  document.querySelectorAll('table').forEach(function (table) {
+    var headers = [];
+    table.querySelectorAll('th').forEach(function (th, i) {
+      headers[i] = (th.childNodes[0] ? th.childNodes[0].textContent : th.textContent).trim();
+    });
+    table.querySelectorAll('tbody td').forEach(function (td) {
+      var row = td.parentElement;
+      var idx = [...row.children].indexOf(td);
+      if (headers[idx] && !td.dataset.label) {
+        td.dataset.label = headers[idx];
+      }
+    });
+  });
+</script>
+
+
+<script>
+  // Change a bill for this pay cycle only (3 Oct 2026): spare cash, Diff and Total update as you type,
+  // and each change is saved quietly (POST /bill) as a temp note until the next payday. Bills are never changed.
+  const PAGE = window.LITE_PAGE;
+  const money = x => (x < 0 ? '-£' : '£') + Math.abs(x).toLocaleString('en-GB', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const diff = x => Math.abs(x) < 0.005 ? '£0.00' : (x > 0 ? '+' : '') + money(x);
+  const tone = (el, x) => { el.classList.remove('good', 'bad', 'muted'); if (x === null) el.classList.add('muted');
+    else if (x < -0.005) el.classList.add('good'); else if (x > 0.005) el.classList.add('bad'); else el.classList.add('muted'); };
+  const readMoney = t => { t = t.replace(/[£,\s]/g, ''); return /^\d+(\.\d+)?$/.test(t) ? parseFloat(t) : NaN; };
+
+  function save(row, amount) {
+    fetch('/bill', {method: 'POST', headers: {'X-Requested-With': 'fetch', 'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: new URLSearchParams({key: row.dataset.key, amount: amount})});
+  }
+
+  function showRow(row) {
+    const used = parseFloat(row.dataset.used), changed = row.dataset.changed === '1', est = row.dataset.estimated === '1' && !changed;
+    const link = row.querySelector('button.link');
+    link.textContent = est ? 'Add' : money(used);
+    link.classList.toggle('muted', est);
+    row.querySelector('button.x').hidden = !changed;
+    const d = est ? null : used - parseFloat(row.dataset.avg);
+    const cell = row.querySelector('td.diff');
+    cell.textContent = d === null ? '' : diff(d); tone(cell, d);
+  }
+
+  function recalc() {
+    let bills = 0, avg = 0;
+    document.querySelectorAll('tr.bill:not([data-inpot="1"])').forEach(r => { bills += parseFloat(r.dataset.used); avg += parseFloat(r.dataset.avg); });
+    const spare = PAGE.wage + PAGE.left - bills - PAGE.potsSet, leftNow = PAGE.wage + PAGE.left - bills - PAGE.pots - PAGE.typed;
+    document.getElementById('btotal').textContent = money(bills + PAGE.potsSet);
+    const bd = document.getElementById('bdiff'); bd.textContent = diff(bills - avg); tone(bd, bills - avg); bd.classList.remove('muted');
+    document.getElementById('spare-big').textContent = money(leftNow);
+    document.getElementById('spare-how').textContent = 'Pay ' + money(PAGE.wage) + (PAGE.left ? ' + left ' + money(PAGE.left) : '') +
+      ' − bills ' + money(bills) + (PAGE.potsSet ? ' − pots ' + money(PAGE.potsSet) : '') + ' = ' + money(spare) +
+      ' + pots not spent, − over, − spends = ' + money(leftNow);
+    document.getElementById('mfs').textContent = money(PAGE.wage + PAGE.left - bills - (PAGE.potBills || 0));
+    document.getElementById('leftnow').textContent = money(leftNow);
+    if (window.demoTop) demoTop(bills);
+  }
+
+  document.querySelectorAll('tr.bill').forEach(row => {
+    const link = row.querySelector('button.link'), box = row.querySelector('input.billbox'), x = row.querySelector('button.x');
+    let timer = null;
+    link.addEventListener('click', () => { link.hidden = true; box.hidden = false; box.focus(); box.select(); });
+    box.addEventListener('input', () => {
+      const v = readMoney(box.value);
+      box.classList.toggle('badval', isNaN(v) && box.value.trim() !== '');
+      if (isNaN(v)) return;
+      row.dataset.used = v; row.dataset.estimated = '0';
+      row.dataset.changed = row.dataset.saved !== '' ? '1' : '0';      // only a bill with a saved month can be put back
+      showRow(row); recalc();
+      clearTimeout(timer); timer = setTimeout(() => save(row, v), 500);
+    });
+    box.addEventListener('keydown', e => { if (e.key === 'Enter') box.blur(); });
+    box.addEventListener('blur', () => { box.hidden = true; link.hidden = false; box.value = parseFloat(row.dataset.used).toFixed(2); box.classList.remove('badval'); });
+    x.addEventListener('click', () => {
+      clearTimeout(timer);
+      row.dataset.used = row.dataset.default; row.dataset.changed = '0'; row.dataset.estimated = row.dataset.blank;
+      box.value = parseFloat(row.dataset.default).toFixed(2);
+      showRow(row); recalc(); save(row, '');
+    });
+  });
+
+  // Move & rename (3 Oct 2026): drag cards and rows by the handle, click a name to rename it. Saved for good.
+  const post = (url, data) => fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)});
+  const editBtn = document.getElementById('editbtn');
+  if (editBtn) editBtn.addEventListener('click', () => {
+    const on = document.body.classList.toggle('editing');
+    editBtn.textContent = on ? '✅ Done' : '✏️ Move & rename';
+    // v0.46 the menu closes while editing; a small pill at the bottom holds Reset + Done (mock C)
+    const menu = document.getElementById('setmenu'), pill = document.getElementById('editpill');
+    if (menu && on) { menu.hidden = true; document.getElementById('setbtn').setAttribute('aria-expanded', 'false'); }
+    if (pill) pill.hidden = !on;
+    document.querySelectorAll('.rname').forEach(n => n.contentEditable = on ? 'plaintext-only' : 'false');
+  });
+  const editDone = document.getElementById('editdone'), editReset = document.getElementById('editreset');
+  if (editDone) editDone.addEventListener('click', () => editBtn.click());
+  if (editReset) editReset.addEventListener('click', async () => {
+    if (!await window.Sheet.confirm('↺ Put the order back?', 'Cards and rows go back to the normal order and names.', 'Put it back')) return;
+    const f = document.querySelector('form[action="/layout/reset"]');
+    if (f) f.requestSubmit();
+  });
+  document.querySelectorAll('summary').forEach(sm => sm.addEventListener('click', e => {
+    if (document.body.classList.contains('editing')) e.preventDefault();      // no opening while editing
+  }));
+  document.querySelectorAll('.rname').forEach(n => {
+    n.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); n.blur(); } });
+    n.addEventListener('blur', () => {
+      const name = n.textContent.trim();
+      if (name === '') n.textContent = n.dataset.orig;
+      post('/name', {id: n.dataset.id, name: name === n.dataset.orig ? '' : name});
+    });
+  });
+
+  // Click a handle to pick a card or row, then arrow up / down to move it (user, 3 Oct 2026). Esc or Done to stop.
+  let picked = null;
+  const unpick = () => { if (picked) picked.classList.remove('picked'); picked = null; };
+  document.querySelectorAll('.handle').forEach(h => h.addEventListener('click', e => {
+    e.preventDefault(); e.stopPropagation();
+    const el = h.closest('[data-id]');
+    if (picked === el) { unpick(); return; }
+    unpick(); picked = el; el.classList.add('picked');
+  }));
+  document.addEventListener('keydown', e => {
+    if (!picked) return;
+    if (e.key === 'Escape') { unpick(); return; }
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const box = picked.parentElement;
+    let next = e.key === 'ArrowUp' ? picked.previousElementSibling : picked.nextElementSibling;
+    while (next && !next.dataset.id) next = e.key === 'ArrowUp' ? next.previousElementSibling : next.nextElementSibling;
+    if (!next) return;
+    box.insertBefore(picked, e.key === 'ArrowUp' ? next : next.nextSibling);
+    LiteRender.regroup(box);
+    picked.scrollIntoView({block: picked.classList.contains('card') ? 'start' : 'center'});
+    post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
+  });
+  if (editBtn) editBtn.addEventListener('click', unpick);
+
+  // While dragging, the page scrolls by itself near the top or bottom of the window.
+  document.addEventListener('dragover', e => {
+    if (!dragEl) return;
+    if (e.clientY < 80) window.scrollBy(0, -20);
+    else if (e.clientY > window.innerHeight - 80) window.scrollBy(0, 20);
+  });
+
+  let dragEl = null;
+  const childOf = (box, node) => { while (node && node.parentElement !== box) node = node.parentElement; return node; };
+  document.querySelectorAll('.handle').forEach(h => h.addEventListener('mousedown', () => {
+    const el = h.closest('[data-id]'); if (el) el.draggable = true;
+  }));
+  document.querySelectorAll('[data-sort]').forEach(box => {
+    box.addEventListener('dragstart', e => {
+      const el = childOf(box, e.target);
+      if (!el || !el.dataset.id || dragEl) return;
+      dragEl = el; el.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', el.dataset.id);
+    });
+    box.addEventListener('dragover', e => {
+      if (!dragEl || dragEl.parentElement !== box) return;
+      e.preventDefault();
+      const over = childOf(box, e.target);
+      if (!over || over === dragEl || !over.dataset.id) return;
+      const r = over.getBoundingClientRect();
+      box.insertBefore(dragEl, e.clientY > r.top + r.height / 2 ? over.nextSibling : over);
+    });
+    box.addEventListener('drop', e => { if (dragEl && dragEl.parentElement === box) e.preventDefault(); });
+    box.addEventListener('dragend', () => {
+      if (!dragEl || dragEl.parentElement !== box) return;
+      dragEl.classList.remove('dragging'); dragEl.draggable = false; dragEl = null;
+      LiteRender.regroup(box);
+      post('/layout', {sort: box.dataset.sort, ids: [...box.children].filter(c => c.dataset.id).map(c => c.dataset.id)});
+    });
+  });
+
+  // ✨ Update band (Darren, 22 Oct, mock C2): only when version.json is newer; stuck to the bottom edge, header untouched
+  (function () {
+    const band = document.getElementById('updband'), go = document.getElementById('updgo');
+    if (!band) return;
+    async function check() {
+      try {
+        const r = await fetch('version.json?t=' + Date.now(), {cache: 'no-store'});
+        const v = r.ok && String((await r.json()).version);
+        if (v && parseFloat(v) > parseFloat(Money.VERSION)) {
+          document.getElementById('updver').textContent = 'v' + v;
+          band.hidden = false; document.body.classList.add('hasupd');
+        }
+      } catch (e) { /* offline: try again next time */ }
+    }
+    check();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden && band.hidden) check(); });
+    go.addEventListener('click', async () => {
+      document.querySelector('.demohead .brand').classList.add('spinning');
+      go.disabled = true; go.textContent = 'Updating...';
+      try {
+        const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          const w = reg.installing || reg.waiting;            // wait (max 5 s) until the new worker has taken over
+          if (w && w.state !== 'activated') await new Promise(done => {
+            const t = setTimeout(done, 5000);
+            w.addEventListener('statechange', () => { if (w.state === 'activated') { clearTimeout(t); done(); } });
+          });
+        }
+      } catch (e) { /* offline or no worker: a plain reload */ }
+      await new Promise(done => setTimeout(done, 600));       // let the spin show
+      location.reload();
+    });
+  })();
+
+  // 📱 Invite: share or copy the link of the Lite site (the QR code holds the link only)
+  (function () {
+    const LINK = 'https://df-ai-lab.github.io/wheres-my-money-lite/', msg = document.getElementById('sharemsg');
+    async function copyLink() {
+      try { await navigator.clipboard.writeText(LINK); }
+      catch (e) {
+        const i = document.createElement('input'); i.value = LINK; document.body.appendChild(i); i.select();
+        try { document.execCommand('copy'); } catch (e2) { /* nothing more to try */ }
+        i.remove();
+      }
+      if (msg) msg.hidden = false;
+    }
+    const share = document.getElementById('sharebtn'), copy = document.getElementById('copylink');
+    if (copy) copy.addEventListener('click', copyLink);
+    if (share) share.addEventListener('click', async () => {
+      if (navigator.share) {
+        try { await navigator.share({title: "Where's My Money? Lite", text: 'Payday to payday. Your own copy, on your phone.', url: LINK}); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      copyLink();
+    });
+  })();
+</script>
+
+
+<script>
+  // 🔔 Reminders: bills whose due day has gone, payday, a card question, an old backup. Tap one to jump to it.
+  (function () {
+    const bell = document.getElementById('bellbtn'), menu = document.getElementById('bellmenu'), count = document.getElementById('bellcount');
+    if (!bell) return;
+    const show = on => { menu.hidden = !on; bell.setAttribute('aria-expanded', on); };
+    const quick = document.getElementById('quick'), tab = document.getElementById('quicktab');
+    const openPanel = () => { if (quick.hidden) tab.click(); };
+    let pulseEl = null, pulseTimer = 0;
+    function pulse(el) {
+      if (pulseEl) { pulseEl.classList.remove('pulse'); clearTimeout(pulseTimer); }
+      pulseEl = el; el.classList.remove('pulse'); void el.offsetWidth;   // restart cleanly if Show is tapped twice
+      el.classList.add('pulse');
+      // a table row can't have round corners, so its glow is a rounded box laid over it (10px outside, words have room)
+      document.querySelectorAll('.pulsebox').forEach(b => b.remove());
+      let box = null;
+      if (el.tagName === 'TR') {
+        const r = el.getBoundingClientRect();
+        box = document.createElement('div'); box.className = 'pulsebox';
+        Object.assign(box.style, {top: (r.top + window.scrollY - 10) + 'px', left: (r.left + window.scrollX - 10) + 'px',
+                                  width: (r.width + 20) + 'px', height: (r.height + 20) + 'px'});
+        document.body.appendChild(box);
+      }
+      const stop = () => { el.classList.remove('pulse'); if (box) box.remove(); el.removeEventListener('animationend', onEnd); if (pulseEl === el) pulseEl = null; };
+      const onEnd = e => { if (e.target === el || e.target.parentNode === el) { clearTimeout(pulseTimer); pulseTimer = setTimeout(stop, 50); } };
+      el.addEventListener('animationend', onEnd);
+      clearTimeout(pulseTimer); pulseTimer = setTimeout(stop, 2800);
+    }
+    function jump(go) {
+      show(false);
+      if (go === '#quicktab') { openPanel(); pulse(quick); return; }
+      if (go === '#qsave') {
+        openPanel(); pulse(quick);
+        setTimeout(() => document.getElementById('qsave').scrollIntoView({behavior: 'smooth', block: 'center'}), 400);
+        return;
+      }
+      let el = null;
+      try { el = document.querySelector(go); } catch (e) { /* an odd name: stay put */ }
+      const card = el && el.closest('.card');
+      if (!el) return;
+      if (card && card.classList.contains('folded')) { slideFold(card, false); keepToMax(card.dataset.id); }   // open a folded card first
+      const wait = card && card.classList.contains('folded') ? 350 : 0;
+      setTimeout(() => { el.scrollIntoView({behavior: 'smooth', block: 'center'}); pulse(el); }, wait);
+    }
+    window.refreshBell = function () {
+      // v0.39 (mock B): bills due the same day = one line; ▸ opens one short line per bill (tap = jump + flash)
+      const list = Money.remindLines(Lite.state(), Lite.today());
+      // v0.58 no Drive = one clearing away from losing it all: the bell says so until it is on
+      if (window.LockUI && !LockUI.demo && window.LiteRestore && LiteRestore.ready() && !LiteRestore.isOn()) {
+        list.push({kind: 'drive', text: '☁️ Not backed up', sub: 'Clearing this browser loses your money. Connect Google Drive.', go: '?view=drive'});
+      }
+      count.textContent = list.length || ''; count.hidden = !list.length;
+      menu.innerHTML = '';
+      if (!list.length) { menu.innerHTML = '<div class="remempty">Nothing to check 👍</div>'; return; }
+      const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+      const postForm = (action, fields) => {
+        const f = document.createElement('form'); f.method = 'post'; f.action = action;
+        Object.entries(fields).forEach(([k, v]) => { const i = document.createElement('input'); i.type = 'hidden'; i.name = k; i.value = v; f.appendChild(i); });
+        document.body.appendChild(f); f.submit();
+      };
+      const clear = el('button', 'small', 'Clear all'); clear.type = 'button'; clear.id = 'bellclear';
+      clear.addEventListener('click', () => postForm('/reminders/clear', {}));
+      list.forEach(r => {
+        const row = el('div', 'remind'); row.dataset.kind = r.kind; row.dataset.key = r.key || '';
+        const group = r.kind === 'bills';
+        let kids = null;
+        if (group) {
+          const chev = el('button', 'remchev'); chev.type = 'button';
+          chev.innerHTML = '<svg viewBox="0 0 12 8" width="12" height="8" aria-hidden="true"><path d="M1.5 2 6 6.5 10.5 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; chev.setAttribute('aria-expanded', 'false');
+          chev.setAttribute('aria-label', 'Show the bills on the ' + r.items[0].dueText);
+          kids = el('div', 'remkids'); kids.hidden = true;
+          r.items.forEach(i => {
+            const sub = el('button', 'remsub'); sub.type = 'button'; sub.dataset.key = i.key;
+            sub.appendChild(el('span', '', i.name)); sub.appendChild(el('span', 'n', Money.fmt.money(i.amount)));
+            sub.addEventListener('click', () => jump(i.go));
+            kids.appendChild(sub);
+          });
+          chev.addEventListener('click', () => { const o = kids.hidden; kids.hidden = !o; chev.setAttribute('aria-expanded', o); });
+          row.appendChild(chev);
+        }
+        const text = el('span', 'remtext', r.text);
+        if (r.sub) text.appendChild(el('small', '', r.sub));
+        row.appendChild(text);
+        if (!group) {
+          const go = el('button', 'small remgo', r.kind === 'drive' ? 'Connect' : 'Show'); go.type = 'button';
+          go.addEventListener('click', () => r.kind === 'drive' ? location.assign(r.go) : jump(r.go)); row.appendChild(go);
+        }
+        if (r.kind === 'bill' || group) {
+          const done = el('button', 'small remdone', '✓'); done.type = 'button';
+          done.title = 'Checked in my bank app'; done.setAttribute('aria-label', 'Checked ' + (group ? 'the bills on the ' + r.items[0].dueText : r.key));
+          done.addEventListener('click', () => group ? postForm('/bills/paid', {keys: JSON.stringify(r.keys)}) : postForm('/bill/paid', {key: r.key, paid: '1'}));
+          row.appendChild(done);
+        }
+        menu.appendChild(row);
+        if (kids) menu.appendChild(kids);
+      });
+      menu.appendChild(clear);
+    };
+    refreshBell();
+    bell.addEventListener('click', () => show(menu.hidden));
+    document.getElementById('setbtn').addEventListener('click', () => show(false));
+    document.addEventListener('click', e => { if (!menu.contains(e.target) && !bell.contains(e.target)) show(false); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') show(false); });
+  })();
+</script>
+
+<script>
+  // v3 (15 Oct 2026): keep up to date with the other devices. Check when the page is opened or shown again and every
+  // 15 minutes; reload only when the data changed and nothing is being typed, opened or moved.
+  (function () {
+    let seen = null;
+    const busy = () => {
+      const a = document.activeElement;
+      return (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) || document.body.classList.contains('editing') ||
+             document.querySelector('.bmenu') || (document.getElementById('setmenu') && !document.getElementById('setmenu').hidden) ||
+             (document.getElementById('quick') && !document.getElementById('quick').hidden);
+    };
+    async function check() {
+      if (document.visibilityState !== 'visible') return;
+      let r;
+      try { r = await fetch('/stamp', {cache: 'no-store'}); } catch (e) { return; }     // offline: try again later
+      if (r.status === 401) { if (!busy()) location.reload(); return; }                // passcode time again
+      if (!r.ok) return;
+      const s = (await r.json()).stamp;
+      if (seen === null) { seen = s; return; }
+      if (s !== seen && !busy()) location.reload();
+    }
+    check();
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('pageshow', e => { if (e.persisted) check(); });
+    setInterval(check, 15 * 60 * 1000);
+  })();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,44 @@
+"""v0.39 (Darren, 24 Oct): he binned the old Drive files, then 'Saved to your Drive' put the copy INTO the bin
+(Drive lets you save over a binned file). A binned file or folder = gone: make a new one where he can see it."""
+from test_v038 import drive, connect, FOLDER
+
+
+def visible(d):
+    return [f for i, f in d["files"].items() if f["mimeType"] != FOLDER and not f.get("trashed")
+            and not f["name"].startswith("wmm-lite-safety")                    # v0.56: the daily safety copy is its own thing
+            and "summary.json" not in f["name"]                                 # v0.60: the plain totals file for Claude
+            and not any(d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))]
+
+
+def save(page):
+    page.locator("#driveok").evaluate("e => e.hidden = true")
+    page.locator("#drivesave").dispatch_event("click")
+    page.wait_for_selector("#driveok:not([hidden])")
+
+
+def test_a_binned_file_gets_a_new_one(page, base):
+    d = drive(page)
+    connect(page, base)
+    save(page)
+    for f in d["files"].values():
+        if f["mimeType"] != FOLDER:
+            f["trashed"] = True                                          # Darren bins the backup in Drive
+    save(page)
+    assert len(visible(d)) == 1
+
+
+def test_a_binned_folder_gets_a_new_one(page, base):
+    d = drive(page)
+    connect(page, base)
+    save(page)
+    for i in list(d["files"]):
+        d["files"][i]["trashed"] = True                                  # the folder and the file binned
+    save(page)
+    assert len(visible(d)) == 1
+    live = [f for f in d["files"].values() if f["mimeType"] == FOLDER and not f.get("trashed")
+            and f["name"] != "Safety copies"]                                 # v0.56: made again inside the new folder
+    # v0.61 (on purpose): the whole 🛂 Passport path is made again: App data - DON'T DELETE / DF123456 / WMM
+    assert sorted(f["name"] for f in live) == ["App data - DON'T DELETE", "DF123456", "WMM"] and visible(d)[0]["parents"] != []
+    safe = [i for i, f in d["files"].items() if f["name"] == "Safety copies" and not f.get("trashed") and not any(
+            d["files"].get(p, {}).get("trashed") for p in f.get("parents", []))]
+    assert len(safe) == 1                                              # v0.56: not left inside the binned folder

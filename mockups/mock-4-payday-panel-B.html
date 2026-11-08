@@ -1,0 +1,25 @@
+<!-- Mock 4 (agreed: B, 21 Oct): New payday panel. Fake data. Paste into #quick on the demo page; CSS below. -->
+<style>
+.mk-payday { display:flex; align-items:center; gap:6px; margin:10px 0 6px; font-size:14px; flex-wrap:wrap; }
+.mk-day { width:64px !important; padding:5px 8px !important; font-size:14px !important; }
+.mk-i { color: var(--muted); }
+.mk-back, .mk-back2 { display:grid; gap:6px; align-content:center; text-align:center; border-top:1px solid var(--border); padding-top:14px; }
+.demo .mk-big { width:100%; padding:14px; font-size:17px; font-weight:800; background: var(--row); color: var(--text); border:1px solid var(--border); border-radius:12px; }
+.mk-last { font-size:12px; color: var(--muted); }
+.mk-row { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.mk-pill { font-size:12px; font-weight:700; padding:4px 10px; border-radius:99px; background: var(--row); border:1px solid var(--border); white-space:nowrap; }
+</style>
+<div class="q-pay">
+  <div class="mk-row"><div class="q-title" style="margin:0">New payday?</div><span class="mk-pill">📅 25 Nov · in 17 days</span></div>
+  <div class="q-fields" style="margin-top:10px">
+    <label>Pay<input class="amount" type="text" value="2950.00"></label>
+    <label>Left from last month<span class="lx"><input class="amount" type="text" value="600.00"><button type="button" class="small">✖</button></span></label>
+    <label style="flex:0 0 84px">Payday<input class="amount" type="text" value="25th"></label>
+  </div>
+  <div class="labels" style="margin-top:6px">💡 Last month's spare was <b>£1,209.57</b>. Not right? Type what's really left. <span class="mk-i">ⓘ</span></div>
+  <button type="button" class="q-go">Work it out</button>
+</div>
+<div class="mk-back2">
+  <button type="button" class="mk-big">💾 Save a backup</button>
+  <div class="mk-last">Last saved 3 Nov · 5 days ago</div>
+</div>
