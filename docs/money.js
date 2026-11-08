@@ -386,7 +386,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.67';
+  const APP = 'wheres-my-money-lite', VERSION = '0.68';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -981,7 +981,12 @@
             card: {used: q(sum(r.cards.map(c => c.used))), free: q(sum(r.cards.map(c => c.free)))},
             // v0.60b: the bills too (paused ones left out), so Claude can answer 'has my phone been paid?'
             bills: r.bills.filter(b => !b.stopped).map(b => ({name: b.name, amount: b.blank ? null : q(b.amount),
-              day: b.varies ? 'varies' : b.due, paid: !!(b.paid || b.duePassed)}))};
+              day: b.varies ? 'varies' : b.due, paid: !!(b.paid || b.duePassed)})),
+            // v0.68: what Claude/Orbit added (has a job id), so Claude can take back its own things by id
+            added: [].concat(
+              (s.spends || []).filter(x => x.job).map(x => ({id: x.job, kind: 'spend', name: x.name, amount: q(x.amount)})),
+              (s.bills || []).filter(b => b.job).map(b => ({id: b.job, kind: 'bill', name: b.name, amount: b.amount == null ? null : q(b.amount)})),
+              cardsOf(s).flatMap(c => (c.items || []).filter(i => i.job).map(i => ({id: i.job, kind: 'card', name: i.name, amount: q(Math.abs(i.amount))}))))};
   }
 
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,

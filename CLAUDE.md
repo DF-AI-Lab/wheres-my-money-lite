@@ -365,3 +365,4 @@
   job). App change: M.summary gets `added` (lines with a job id) + privacy page line. Deploy: .github/workflows/deploy-worker.yml
   (push to this branch/main under worker/). Darren's steps: worker/SETUP.md. Tests 14 worker + 126 node + browser (known flakes only:
   test_v048 cloud tap error, v055 scan, v064 under -n 4).
+- **8 Nov v0.68 MOVED TO LIVE (Darren: "we go straight to live"): live = demo = v0.68.** Next: Darren sets up the Worker (worker/SETUP.md).
