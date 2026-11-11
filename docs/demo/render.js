@@ -144,14 +144,14 @@
   }
 
   // v0.70 (mock https://claude.ai/artifact/9TV6jdTmuRTFTF5KinGxnT): money that isn't pay, its own card under Add a spend.
-  // Folded while empty; the total sits in the heading so it shows folded too.
+  // Folded while empty. v0.72 (Darren): no total in the heading, so folded cards all look the same (the top card has it).
   function moneyInCard(r, err) {
     const rows = r.moneyIn.map(x => `
           <tr class="inrow" data-id="${x.id}" data-name="${esc(x.name)}"><td><b>${esc(x.name)}</b><span class="labels">${F.day(x.date)}${x.job ? ' · 🤖 Claude' : ''}</span></td><td class="n in">+${money(x.amount)}</td>
             <td class="n smore"><button type="button" class="more" aria-haspopup="true" aria-label="Remove ${esc(x.name)}">⋯</button></td></tr>`).join('');
     const shut = !r.moneyIn.length && err !== 'moneyin';            // an error shows open
     return `<div class="card${shut ? ' folded' : ''}" data-id="moneyin" data-card="moneyin">
-    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot in"></i> Money in<span class="intotal">${r.inTotal > 0 ? '+' + money(r.inTotal) : ''}</span><button type="button" class="fold" title="Fold">${shut ? '▸' : '▾'}</button></h2>
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot in"></i> Money in<button type="button" class="fold" title="Fold">${shut ? '▸' : '▾'}</button></h2>
     ${errorBox(err, 'moneyin')}
     <p class="labels inhint">Gifts, refunds, someone paying you back. It adds to your spare cash.</p>
     <form class="inline" method="post" action="/in/add">

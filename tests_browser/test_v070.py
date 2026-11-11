@@ -18,7 +18,7 @@ def test_money_in_card_sits_under_add_a_spend_folded_and_adds_to_spare(page, bas
     post(page, 'form[action="/in/add"]', {"amount": "40", "name": "Birthday money"})
     card = page.locator('[data-card="moneyin"]')
     assert "folded" not in card.get_attribute("class")
-    assert "+£40.00" in card.locator("h2 .intotal").text_content()
+    assert card.locator("h2 .intotal").count() == 0                       # v0.72: no total in the heading
     assert card.locator('tr.inrow:has-text("Birthday money")').count() == 1
     assert page.locator("#st-in").text_content() == "£40.00"
     to_n = lambda t: float(t.replace("£", "").replace(",", ""))
