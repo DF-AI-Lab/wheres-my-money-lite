@@ -376,3 +376,12 @@
 - **🤖 CLAUDE MCP WISH LIST (Darren, 8 Nov: "add to a list"; build when he says):** 1) a CATEGORY on add_spend / add_bill / card_spend
   (Claude could only set name + amount, so it put "Xmas - Test spend" in the name). Needs: worker tools take `category`, job carries it,
   M.applyJob sets cat (applyJob has no category today), money_summary lists the categories so Claude picks an existing one.
+- **📋 FUTURE FEATURES (Darren, 11 Nov: "just record for now"; build only when he says):**
+  1) ADD MONEY IN: record money that isn't pay (gifts, refunds, someone paying back). An "Add money in" button next to Add a spend,
+     with a short note; adds to spare cash. Plus an MCP tool (add_money_in) so Claude can add it, removable like other Claude adds.
+  2) SKIP THIS MONTH: an option on each bill so it counts £0 this cycle and goes back to normal next cycle by itself (e.g. a new
+     insurance whose first payment is next month). Saves setting it to £0 and back.
+  3) PAID ON CARD: a third bill status (Not paid / Paid / Paid on card): not taken from bank cash, added to credit card used;
+     resets next month (maybe a setting 'always pay on card').
+  4) BANK NAME on each bill (what the bank statement calls it), so checking against the bank app is easier.
+  (Darren's real amounts/payee names stay OUT of this public repo.)
