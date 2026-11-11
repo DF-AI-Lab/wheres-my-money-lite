@@ -15,23 +15,23 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.71"></script>
-<script src="money.js?v=0.71"></script>
-<script src="render.js?v=0.71"></script>
-<script src="sheet.js?v=0.71"></script>
-<script src="lite.js?v=0.71"></script>
-<script src="lock.js?v=0.71"></script>
-<script src="wmmkey.js?v=0.71"></script>
+<script src="config.js?v=0.72"></script>
+<script src="money.js?v=0.72"></script>
+<script src="render.js?v=0.72"></script>
+<script src="sheet.js?v=0.72"></script>
+<script src="lite.js?v=0.72"></script>
+<script src="lock.js?v=0.72"></script>
+<script src="wmmkey.js?v=0.72"></script>
 <!-- v0.61 🛂 Passport ID = the lock (passport/ = a copy of DF-AI-Lab/Passport-ID, never edited here) -->
-<script src="passport/config.js?v=0.71"></script>
+<script src="passport/config.js?v=0.72"></script>
 <script>
 // the demo copy: ?lock=1 = pretend Passport (no Google, nothing real touched); ?lock=google = the real one
 if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_demo_lock') !== 'google') PASSPORT_CONFIG.googleClientId = ''; } catch (e) { PASSPORT_CONFIG.googleClientId = ''; } }
 </script>
-<script src="passport/google.js?v=0.71"></script>
-<script src="passport/passport.js?v=0.71"></script>
-<script src="passport/ui.js?v=0.71"></script>
-<script src="passport-lock.js?v=0.71"></script>
+<script src="passport/google.js?v=0.72"></script>
+<script src="passport/passport.js?v=0.72"></script>
+<script src="passport/ui.js?v=0.72"></script>
+<script src="passport-lock.js?v=0.72"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -188,9 +188,9 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.71">
-<link rel="stylesheet" href="passport/passport.css?v=0.71">
-<link rel="stylesheet" href="lite.css?v=0.71">
+<link rel="stylesheet" href="look.css?v=0.72">
+<link rel="stylesheet" href="passport/passport.css?v=0.72">
+<link rel="stylesheet" href="lite.css?v=0.72">
 </head>
 <body class="demo">
 
@@ -228,7 +228,7 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.71</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.72</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -647,14 +647,14 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
       if (!stopped) items.push({row: [['Amount', 'quick', () => row.querySelector('button.link').click()],
         paid ? ['Not paid yet', 'quick', () => send('/bill/paid', {key, paid: '0'})]               // paid by hand or on a card: undo
              : ['Mark paid', 'quick pri', () => send('/bill/paid', {key, paid: '1'})]]});
-      if (!stopped && cards.length && row.dataset.blank !== '1') items.push([oncard ? '💳 Paid on ' + ((cards.find(c => c.key === oncard) || {}).name || 'card') + ' · change card' : '💳 Paid on credit card', 'big oncardline', () => {
+      if (!stopped && cards.length && row.dataset.blank !== '1') items.push([oncard ? 'Paid on ' + ((cards.find(c => c.key === oncard) || {}).name || 'card') + ' · change card' : 'Paid on credit card', 'big oncardline', () => {
         if (cards.length === 1) return send('/bill/oncard', {key, card: cards[0].key});
         Sheet.card('💳 ' + row.dataset.name + ' ' + Money.fmt.money(amount) + ': which card?', "It comes off this month's bills and goes on the card.", cards, amount, oncard)
           .then(card => { if (card && card !== oncard) send('/bill/oncard', {key, card}); });
       }]);
       if (!stopped) items.push(row.dataset.skip === '1'                                  // v0.70: £0 this month, back at payday
-        ? ['↩️ Count it this month', 'big skipline', () => send('/bill/skip', {key, skip: '0'})]
-        : ['⏭ Skip this month', 'big skipline', () => send('/bill/skip', {key, skip: '1'})]);
+        ? ['Count it this month', 'big skipline', () => send('/bill/skip', {key, skip: '0'})]
+        : ['Skip this month', 'big skipline', () => send('/bill/skip', {key, skip: '1'})]);
       if (!stopped) items.push({sep: true});
       if (row.dataset.changed === '1') items.push(['Put back the amount', '', () => row.querySelector('button.x').click()]);
       items.push(['Change name', '', () => {

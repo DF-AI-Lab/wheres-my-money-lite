@@ -407,3 +407,6 @@
   reads 'Paid on Zopa · change card') and button.big.skipline '⏭ Skip this month', then .bsep, Change name / Due day / Category, Pause | Delete.
   'Pays a credit card' REMOVED from the menu (Darren); the /bill/card setting + card question still work. On card = bill amount crossed out
   (.bwas) + £0.00, like skip. LITE_PAGE.cardKeys has used/free. Tests 149 node + 289 browser (gob5/v050/v070 changed on purpose).
+- **11 Nov v0.72 (demo only; live still v0.69; mock C https://claude.ai/artifact/6FS7nUkmbho9QHuzdGwWRh):** the two coloured menu lines have no
+  emoji: 'Paid on credit card' / 'Skip this month' line up with Change name; a line icon on the right in the same colour (CSS ::after mask, --ic).
+  Money in card heading: no total (Darren: folded cards stay uniform; the top card has it). Tests 149 node + v050/v070 browser.

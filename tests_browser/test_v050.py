@@ -15,7 +15,7 @@ def test_bill_menu_layout(page, base):
     assert [t.strip() for t in top.all_inner_texts()] == ["Amount", "Mark paid"]
     assert "pri" in top.nth(1).get_attribute("class")
     mid = [t.strip() for t in m.locator(":scope > button").all_inner_texts()]
-    assert mid == ["💳 Paid on credit card", "⏭ Skip this month", "Change name", "Due day", "Category"]   # v0.71 menu B: no 'Pays a credit card'
+    assert mid == ["Paid on credit card", "Skip this month", "Change name", "Due day", "Category"]   # v0.71 menu B: no 'Pays a credit card'
     bottom = m.locator(".brow").last.locator("button")
     assert [t.strip() for t in bottom.all_inner_texts()] == ["Pause", "Delete"]
     assert "stop" in bottom.nth(1).get_attribute("class")
