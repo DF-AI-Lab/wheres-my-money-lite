@@ -410,3 +410,5 @@
 - **11 Nov v0.72 (demo only; live still v0.69; mock C https://claude.ai/artifact/6FS7nUkmbho9QHuzdGwWRh):** the two coloured menu lines have no
   emoji: 'Paid on credit card' / 'Skip this month' line up with Change name; a line icon on the right in the same colour (CSS ::after mask, --ic).
   Money in card heading: no total (Darren: folded cards stay uniform; the top card has it). Tests 149 node + v050/v070 browser.
+- **11 Nov v0.72 MOVED TO LIVE (Darren: "move to live perfect"): live = demo = v0.72** (v0.70-v0.72 live: Money in card, bill menu B with Paid on
+  credit card + Skip this month, mock C lines; Claude's add_money_in jobs now apply on the real app).

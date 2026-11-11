@@ -425,7 +425,7 @@ body.editing .setmenu[hidden] { display: none; }
 .demo .bmenu .brow button { text-align: center; font-weight: 800; padding: 11px 6px; border-radius: 10px; border: 1px solid var(--border); background: var(--row); }
 .demo .bmenu .brow button.pri { background: var(--accent); color: var(--on-accent); border-color: transparent; }
 .demo .bmenu .brow button.stop { background: none; color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
-.demo .bmenu { min-width: 240px; }
+.demo .bmenu { min-width: 290px; }   /* v0.70: wider, "Not paid yet" no longer wraps onto 3 lines */
 /* v0.50: the bill's category dropdown scrolls too when the list is long */
 .bmenu.catmenu { max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; }
 /* v0.51 (mock https://claude.ai/artifact/BgPMi2sR3uP4WiKXXzmnd7): All | Categories in Add a spend and Bills */
@@ -628,3 +628,40 @@ body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: va
 #devices > #devset > button:not(.small):not([hidden]) { display: block; width: 100%; margin: 0 0 10px; }
 #devices .driveok { color: var(--good); font-weight: 700; margin: 12px 0 0; }
 #devices .err { margin: 12px 0 0; }
+
+/* v0.70: Money in card (green), Skip this month + Paid on card on bills */
+.demo .dot.in { background: var(--good); }
+.demo [data-card="moneyin"] h2 { color: var(--good); }
+.demo [data-card="moneyin"] h2 .intotal { margin-left: auto; padding-right: 8px; font-size: 14px; font-weight: 800; color: var(--good); }
+.demo [data-card="moneyin"] .inhint { margin: 0 0 10px; }
+.demo [data-card="moneyin"] td.in, .st-rows .r.moneyin .k-in, .st-rows .r.moneyin span:first-child { color: var(--good); }
+.demo [data-card="moneyin"] table tr.total td { font-weight: 800; border-top: 1px solid var(--border); }
+.bchip { display: inline-block; font-size: 11.5px; font-weight: 800; padding: 0 7px; border-radius: 99px; background: var(--row); white-space: nowrap; }
+.bchip.skip { color: var(--spend); }
+.bchip.oncard { color: var(--zused); }
+.bwas { text-decoration: line-through; color: var(--muted); font-weight: 600; margin-right: 4px; }
+.demo .dbills td.bamt button.link.oncard { color: var(--zused); }
+.demo .bmenu .brow button { white-space: nowrap; }
+.demo .bmenu .brow button.paidcard { color: var(--zused); border-color: color-mix(in srgb, var(--zused) 45%, transparent); }
+
+/* v0.71: bill ⋯ menu B (Paid on credit card + Skip as coloured lines) and the Which card? sheet */
+.demo .bmenu button.big { font-weight: 800; }
+.demo .bmenu button.oncardline { color: var(--zused); }
+.demo .bmenu button.skipline { color: var(--spend); }
+.bmenu .bsep { height: 1px; background: var(--border); margin: 4px 2px; }
+.demo .dbills td.bamt button.link.oncard { color: inherit; }
+.litesheet .sheet > p { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; }
+.litesheet .cardlist { display: grid; gap: 8px; margin-bottom: 8px; }
+.demo .litesheet button.cardopt, .litesheet button.cardopt { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left;
+  background: none; color: var(--text); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; font-weight: 600; width: 100%; }
+.litesheet button.cardopt b { font-weight: 800; }
+.litesheet button.cardopt small { display: block; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.litesheet button.cardopt .after { color: var(--zused); font-weight: 800; font-size: 13px; white-space: nowrap; }
+.litesheet button.cardopt.on { border-color: var(--zused); }
+
+/* v0.72 (mock C): the two coloured lines start in line with the others; a small line icon on the right in the same colour */
+.demo .bmenu button.oncardline, .demo .bmenu button.skipline { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.demo .bmenu button.oncardline::after, .demo .bmenu button.skipline::after { content: ""; flex: none; width: 18px; height: 18px; background: currentColor;
+  -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
+.demo .bmenu button.oncardline { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='6' width='18' height='12' rx='2'/%3E%3Cpath d='M3 10h18'/%3E%3C/svg%3E"); }
+.demo .bmenu button.skipline { --ic: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 6l7 6-7 6V6zM13 6l7 6-7 6V6z'/%3E%3C/svg%3E"); }

@@ -17,8 +17,9 @@
     bill: 'Sorry, type a name for the bill (and an amount, e.g. 12.99).',
     pot: 'Sorry, type a name and a monthly amount for the pot, e.g. 400 and Shopping.',
     newcard: 'Sorry, type a name and a limit for the card, e.g. Zopa and 500.',
+    moneyin: 'Sorry, type an amount and where it came from, e.g. 40 and Mum.',
   };
-  const INLINE = ['spend', 'card', 'newcard', 'bill', 'pot'];                 // errors shown inside their own card
+  const INLINE = ['spend', 'card', 'newcard', 'bill', 'pot', 'moneyin'];                 // errors shown inside their own card
   const errorBox = (err, code) => err === code ? `<div class="error fade">${ERRORS[code]}</div>` : '';
 
   // ---------- the pieces ----------
@@ -27,6 +28,7 @@
     return `
       <div class="r"><span>Pay</span><button type="button" class="link tap" data-edit="qpay" title="Change this month's pay">${money(r.pay)}</button></div>
       <div class="r"><span>+ Left from last month</span><button type="button" class="link tap" data-edit="qleft" title="Change what was left from last month">${left}</button></div>
+      ${r.inTotal > 0 ? `<div class="r moneyin"><span><i class="dot in"></i>+ Money in</span><span class="k-in" id="st-in">${money(r.inTotal)}</span></div>` : ''}
       <div class="r"><span><i class="dot bill"></i>− Bills</span><span class="k-bill" id="st-bills">${money(r.billsTotal)}</span></div>
       <div class="r spends"><span><i class="dot spend"></i>− Spends ${infoBtn('Spends that are not in a pot. Pot spends come out of the pot, so they show in Pots left.')}</span><span class="k-spend" id="st-spends">${money(r.spendsTotal)}</span></div>
       ${potsLine(r)}
@@ -133,11 +135,32 @@
     ` : ''}
 
     <div class="sum" style="margin-top:12px">
-      <span>Money for spending</span><span class="n" id="mfs">${money(r.pay + r.left - r.billsAll)}</span>
+      <span>Money for spending</span><span class="n" id="mfs">${money(r.pay + r.left + r.inTotal - r.billsAll)}</span>
       <span>Paid so far</span><span class="n" id="typed">${money(r.spendsAll - upTotal)}</span>
       <span class="tocome">Still to come</span><span class="n tocome" id="tocome">${money(upTotal)}</span>
       <span class="eq">Left now</span><span class="n eq" id="leftnow">${money(r.leftNow)}</span>
     </div>
+  </div>`;
+  }
+
+  // v0.70 (mock https://claude.ai/artifact/9TV6jdTmuRTFTF5KinGxnT): money that isn't pay, its own card under Add a spend.
+  // Folded while empty. v0.72 (Darren): no total in the heading, so folded cards all look the same (the top card has it).
+  function moneyInCard(r, err) {
+    const rows = r.moneyIn.map(x => `
+          <tr class="inrow" data-id="${x.id}" data-name="${esc(x.name)}"><td><b>${esc(x.name)}</b><span class="labels">${F.day(x.date)}${x.job ? ' · 🤖 Claude' : ''}</span></td><td class="n in">+${money(x.amount)}</td>
+            <td class="n smore"><button type="button" class="more" aria-haspopup="true" aria-label="Remove ${esc(x.name)}">⋯</button></td></tr>`).join('');
+    const shut = !r.moneyIn.length && err !== 'moneyin';            // an error shows open
+    return `<div class="card${shut ? ' folded' : ''}" data-id="moneyin" data-card="moneyin">
+    <h2><span class="handle" title="Drag to move">⠿</span> <i class="dot in"></i> Money in<button type="button" class="fold" title="Fold">${shut ? '▸' : '▾'}</button></h2>
+    ${errorBox(err, 'moneyin')}
+    <p class="labels inhint">Gifts, refunds, someone paying you back. It adds to your spare cash.</p>
+    <form class="inline" method="post" action="/in/add">
+      <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="40.00" aria-label="Amount in">
+      <input class="name" type="text" name="name" placeholder="From Mum" aria-label="Where it came from">
+      <button type="submit">Add</button>
+    </form>
+    ${r.moneyIn.length ? `<table style="margin-top:12px">${rows}
+          <tr class="total"><td><b>Total in</b></td><td class="n in" id="intotal">+${money(r.inTotal)}</td><td></td></tr></table>` : ''}
   </div>`;
   }
 
@@ -207,6 +230,8 @@
     due: 'The due day has gone, so it should be paid. Check your bank app that it came out.',
     stopped: 'Not counted until you choose Count it again in ⋯.',
     marked: 'You marked this as paid (⋯ → Not paid yet to undo).',
+    oncard: 'Paid on your credit card, so it does not come out of the bank. It is on the card instead (⋯ to change).',
+    skip: 'Skipped this month, so it counts £0. It comes back by itself next month (⋯ → Count it this month to undo).',
     left: 'Check your bank app for what is really left. Please check this each month.',
   };
   const infoBtn = tip => `<button type="button" class="info" aria-label="What is this?" data-tip="${esc(tip)}">ⓘ</button>`;
@@ -221,14 +246,16 @@
     if (b.cardName) line += ` · pays ${esc(b.cardName)}`;
     if (b.pot) line += ` · from the ${esc(b.pot)} pot`;
     if (b.stopped) line += ` · <span class="bstop">Stopped ${infoBtn(INFO.stopped)}</span>`;
+    if (b.skip) line += ` · <span class="bchip skip">⏭ Skipped · back next month</span>`;
+    if (b.oncard) line += ` · <span class="bchip oncard">💳 Paid on ${esc(b.oncardName || 'card')}</span>`;
     return line;
   }
 
   // the name line: name · due day; once the due day has gone both go green with ✓ (CSS), then ⓘ (mock B, 22 Oct)
-  const paidNow = b => !b.stopped && (b.paid || b.duePassed);   // marked paid by hand (⋯), or the due day has gone
+  const paidNow = b => !b.stopped && !b.skip && (b.paid || b.duePassed);   // marked paid by hand (⋯), or the due day has gone
   function billLine(b, nm) {
     const date = b.dueText ? `<span class="bdate">· ${b.dueText}</span>` : (b.stopped ? '' : `<span class="bdate">· ${addLink('due', '+ date')}</span>`);
-    return `<span class="bline${paidNow(b) ? ' paid' : ''}"><b class="bbase">${esc(nm[0])}</b>${date}${paidNow(b) ? ` ${infoBtn(b.paid ? INFO.marked : INFO.due)}` : ''}</span>`;
+    return `<span class="bline${paidNow(b) ? ' paid' : ''}"><b class="bbase">${esc(nm[0])}</b>${date}${paidNow(b) ? ` ${infoBtn(b.oncard ? INFO.oncard : (b.paid ? INFO.marked : INFO.due))}` : (b.skip ? ` ${infoBtn(INFO.skip)}` : '')}</span>`;
   }
 
   function billRow(b) {
@@ -236,13 +263,14 @@
     return `
 
 
-      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.varies ? 'varies' : (b.due || '')}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}" data-paid="${b.paid ? 1 : 0}">
+      <tr class="bill${b.stopped ? ' stopped' : ''}" data-id="${esc(b.id)}" data-key="${esc(b.key)}" data-name="${esc(b.name)}" data-cat="${esc(b.cat || 'Unsorted')}" data-due="${b.varies ? 'varies' : (b.due || '')}" data-card="${esc(b.cardName || '')}" data-avg="${b.stopped ? 0 : F.pyfloat(b.avg)}" data-avg0="${F.pyfloat(b.avg)}" data-default="${b.stopped ? 0 : F.pyfloat(dflt)}" data-default0="${F.pyfloat(dflt)}" data-estimated="${b.blank ? 1 : 0}" data-blank="${b.blank ? 1 : 0}" data-saved="${b.saved !== null ? F.pyfloat(b.saved) : ''}" data-changed="${b.changed ? 1 : 0}" data-used="${F.pyfloat(b.used)}" data-inpot="${b.pot ? 1 : 0}" data-new="0" data-stopped="${b.stopped ? 1 : 0}" data-paid="${b.paid ? 1 : 0}" data-skip="${b.skip ? 1 : 0}" data-oncard="${esc(b.oncard || '')}">
         <td><span class="handle" title="Drag to move">⠿</span><span class="rname" data-id="${esc(b.id)}" data-orig="${esc(b.orig)}">${esc(b.name)}</span>${billLine(b, nm)}
           <span class="bsub">${billSub(b)}</span>
           <form method="post" action="/stopped" class="stopform" hidden><input type="hidden" name="key" value="${esc(b.key)}"><input type="hidden" name="stopped" value="${b.stopped ? '0' : '1'}"><button class="small stopbtn" type="submit">${b.stopped ? 'Undo' : 'Stop'}</button></form></td>
         <td class="n bavg">${money(b.avg)}</td>
         <td class="n bamt">
-          <button type="button" class="link ${b.blank ? 'muted' : ''}" title="Change the amount">${b.blank ? 'Add' : money(b.used)}</button>
+          <button type="button" class="link ${b.blank ? 'muted' : ''}${b.oncard ? ' oncard' : ''}" title="Change the amount">${b.blank ? 'Add'
+            : b.skip || b.oncard ? `<span class="bwas">${money(b.amount)}</span> ${money(0)}` : money(b.used)}</button>
           <input class="amount billbox" type="text" inputmode="decimal" value="${b.blank ? '' : f2(b.used)}" aria-label="New amount for ${esc(b.name)}" hidden>
           <button type="button" class="small x" title="Put it back" ${b.changed ? '' : 'hidden'}>✖</button>
         </td>
@@ -418,7 +446,9 @@
   }
   function applyLayout(state) {
     document.querySelectorAll('[data-sort]').forEach(box => {
-      const ids = state.layout && state.layout[box.dataset.sort];
+      let ids = state.layout && state.layout[box.dataset.sort];
+      // v0.70: a saved order from before Money in existed puts it right under Add a spend (not at the bottom)
+      if (Array.isArray(ids) && box.dataset.sort === 'cards' && !ids.includes('moneyin')) ids = ids.flatMap(i => (i === 'spend' ? ['spend', 'moneyin'] : [i]));
       if (Array.isArray(ids)) regroup(box, ids);
     });
   }
@@ -494,10 +524,10 @@
     const r = M.compute(state, today);
     const cardName = {};
     r.cards.forEach(c => { cardName[c.key] = c.name; });
-    r.bills.forEach(b => { b.cardName = b.card ? cardName[b.card] : ''; });
+    r.bills.forEach(b => { b.cardName = b.card ? cardName[b.card] : ''; b.oncardName = b.oncard ? cardName[b.oncard] : ''; });
     // PAGE: the numbers the page script starts from (live writes the same four into its script; Go A adds the pots)
-    root.LITE_PAGE = {bills: r.billsTotal, left: r.left, typed: r.spendsTotal, wage: r.pay,
-                      pots: r.potsSpent, potBills: r.potBills, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name)};
+    root.LITE_PAGE = {bills: r.billsTotal, left: r.left + r.inTotal, typed: r.spendsTotal, wage: r.pay,
+                      pots: r.potsSpent, potBills: r.potBills, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name), cardKeys: r.cards.map(c => ({key: c.key, name: c.name, used: c.used, free: c.free}))};
 
     // an error from the last form (live: /?error=CODE)
     if (err && ERRORS[err] && !INLINE.includes(err)) {
@@ -540,6 +570,7 @@
 
     // cards
     swap('#cards > [data-card="spend"]', spendCard(r, err));
+    swap('#cards > [data-card="moneyin"]', moneyInCard(r, err));
     swap('#cards > [data-card="pots"]', potsCard(r, err));
     swap('#cards > [data-card="card"]', cardCards(r, err));
     swap('#cards > [data-card="bills"]', billsCard(r, err));
@@ -551,5 +582,5 @@
     return r;
   }
 
-  root.LiteRender = {render, regroup, ERRORS, INFO, spendCard, potsCard, cardCards, billsCard, zopaTile, statementRows};
+  root.LiteRender = {render, regroup, ERRORS, INFO, spendCard, moneyInCard, potsCard, cardCards, billsCard, zopaTile, statementRows};
 })(window);

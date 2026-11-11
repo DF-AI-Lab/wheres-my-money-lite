@@ -15,23 +15,23 @@
   document.addEventListener('submit', e => e.preventDefault(), true);
 })();
 </script>
-<script src="config.js?v=0.69"></script>
-<script src="money.js?v=0.69"></script>
-<script src="render.js?v=0.69"></script>
-<script src="sheet.js?v=0.69"></script>
-<script src="lite.js?v=0.69"></script>
-<script src="lock.js?v=0.69"></script>
-<script src="wmmkey.js?v=0.69"></script>
+<script src="config.js?v=0.72"></script>
+<script src="money.js?v=0.72"></script>
+<script src="render.js?v=0.72"></script>
+<script src="sheet.js?v=0.72"></script>
+<script src="lite.js?v=0.72"></script>
+<script src="lock.js?v=0.72"></script>
+<script src="wmmkey.js?v=0.72"></script>
 <!-- v0.61 🛂 Passport ID = the lock (passport/ = a copy of DF-AI-Lab/Passport-ID, never edited here) -->
-<script src="passport/config.js?v=0.69"></script>
+<script src="passport/config.js?v=0.72"></script>
 <script>
 // the demo copy: ?lock=1 = pretend Passport (no Google, nothing real touched); ?lock=google = the real one
 if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_demo_lock') !== 'google') PASSPORT_CONFIG.googleClientId = ''; } catch (e) { PASSPORT_CONFIG.googleClientId = ''; } }
 </script>
-<script src="passport/google.js?v=0.69"></script>
-<script src="passport/passport.js?v=0.69"></script>
-<script src="passport/ui.js?v=0.69"></script>
-<script src="passport-lock.js?v=0.69"></script>
+<script src="passport/google.js?v=0.72"></script>
+<script src="passport/passport.js?v=0.72"></script>
+<script src="passport/ui.js?v=0.72"></script>
+<script src="passport-lock.js?v=0.72"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where&#39;s My Money?</title>
@@ -188,9 +188,9 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
 </style>
 
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap">
-<link rel="stylesheet" href="look.css?v=0.69">
-<link rel="stylesheet" href="passport/passport.css?v=0.69">
-<link rel="stylesheet" href="lite.css?v=0.69">
+<link rel="stylesheet" href="look.css?v=0.72">
+<link rel="stylesheet" href="passport/passport.css?v=0.72">
+<link rel="stylesheet" href="lite.css?v=0.72">
 </head>
 <body class="demo">
 
@@ -228,7 +228,7 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
           <button type="button" class="small" id="locknow">🔒 Lock now</button></div>
           <div class="grp"><button type="button" class="small" id="installbtn" hidden>📲 Install the app</button></div>
         </div></div>
-      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.69</div></div></div>
+      <div class="setrow"><button type="button" class="small" id="bellbtn" aria-expanded="false" aria-controls="bellmenu" aria-label="Reminders"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0"/></svg><span id="bellcount" hidden></span></button><div class="appver">v0.72</div></div></div>
     <button type="button" class="tab" id="quicktab" aria-expanded="false" aria-controls="quick" title="New payday"><svg viewBox="0 0 12 8" aria-hidden="true"><path d="M1.5 6.5 6 2l4.5 4.5"/></svg></button>
   </header>
   <div class="updband" id="updband" hidden><span>✨ New version <b id="updver"></b></span><button type="button" id="updgo">Update</button></div>
@@ -601,6 +601,7 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
   <div id="cards" data-sort="cards">
   <!-- Lite.start() draws every card here (docs/render.js): spend, pots, credit card, bills, then the history cards -->
   <div class="card" data-id="spend" data-card="spend"></div>
+  <div class="card" data-id="moneyin" data-card="moneyin"></div>
   <div class="card" data-id="pots" data-card="pots"></div>
   <div class="card" data-id="card" data-card="card"></div>
   <div class="card" data-id="bills" data-card="bills"></div>
@@ -627,6 +628,7 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
         b.setAttribute('role', 'menuitem'); b.addEventListener('click', ev => { ev.stopPropagation(); close(); fn(); }); to.appendChild(b);
       };
       items.forEach(it => {                                  // v0.50 (mock B): {row: [...]} = big buttons side by side
+        if (it.sep) { const d = document.createElement('div'); d.className = 'bsep'; return m.appendChild(d); }   // v0.71: a thin line
         if (!it.row) return add(m, it);
         const r = document.createElement('div'); r.className = 'brow'; it.row.forEach(x => add(r, x)); m.appendChild(r);
       });
@@ -638,10 +640,22 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
       e.stopPropagation();
       // v0.50 mock B: Amount + Mark paid on top, the details, then Pause + Delete side by side
       const row = btn.closest('tr'), key = row.dataset.key, stopped = row.dataset.stopped === '1', items = [];
+      // v0.71 (mock https://claude.ai/artifact/6FS7nUkmbho9QHuzdGwWRh, menu B): Amount | Mark paid on top (one tap), then
+      // 💳 Paid on credit card (2+ cards = which card?) and ⏭ Skip this month as their own coloured lines
+      const cards = (window.LITE_PAGE && window.LITE_PAGE.cardKeys) || [], oncard = row.dataset.oncard, paid = row.dataset.paid === '1';
+      const amount = parseFloat(row.dataset.default0) || 0;
       if (!stopped) items.push({row: [['Amount', 'quick', () => row.querySelector('button.link').click()],
-        row.dataset.paid === '1'                                                         // paid by hand (Darren, 22 Oct)
-          ? ['Not paid yet', 'quick', () => send('/bill/paid', {key, paid: '0'})]
-          : ['Mark paid', 'quick pri', () => send('/bill/paid', {key, paid: '1'})]]});
+        paid ? ['Not paid yet', 'quick', () => send('/bill/paid', {key, paid: '0'})]               // paid by hand or on a card: undo
+             : ['Mark paid', 'quick pri', () => send('/bill/paid', {key, paid: '1'})]]});
+      if (!stopped && cards.length && row.dataset.blank !== '1') items.push([oncard ? 'Paid on ' + ((cards.find(c => c.key === oncard) || {}).name || 'card') + ' · change card' : 'Paid on credit card', 'big oncardline', () => {
+        if (cards.length === 1) return send('/bill/oncard', {key, card: cards[0].key});
+        Sheet.card('💳 ' + row.dataset.name + ' ' + Money.fmt.money(amount) + ': which card?', "It comes off this month's bills and goes on the card.", cards, amount, oncard)
+          .then(card => { if (card && card !== oncard) send('/bill/oncard', {key, card}); });
+      }]);
+      if (!stopped) items.push(row.dataset.skip === '1'                                  // v0.70: £0 this month, back at payday
+        ? ['Count it this month', 'big skipline', () => send('/bill/skip', {key, skip: '0'})]
+        : ['Skip this month', 'big skipline', () => send('/bill/skip', {key, skip: '1'})]);
+      if (!stopped) items.push({sep: true});
       if (row.dataset.changed === '1') items.push(['Put back the amount', '', () => row.querySelector('button.x').click()]);
       items.push(['Change name', '', () => {
         Sheet.ask('✏️ Name of the bill', 'Name', row.dataset.name).then(name => { if (name !== null) send('/bill/name', {key, name}); }); }]);
@@ -651,10 +665,6 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
         const pick = Money.categories(Lite.state()).map(c => [(c === row.dataset.cat ? '✓ ' : '') + c, '', () => send('/bill/cat', {key, cat: c})]);
         pick.push(['＋ New category', '', () => Sheet.ask('🏷 New category', 'Name of the new category', '').then(cat => { if (cat !== null) send('/bill/cat', {key, cat}); })]);
         menu(btn, pick, 'catmenu'); }]);
-      items.push(['Pays a credit card', '', () => {
-        const names = (window.LITE_PAGE && window.LITE_PAGE.cards) || [];
-        Sheet.ask('💳 Which credit card does this bill pay?', names.join(', ') + ' (empty = none)', row.dataset.card).then(card => {
-          if (card !== null) send('/bill/card', {key, card}); }); }]);
       items.push({row: [[stopped ? 'Resume' : 'Pause', 'quick', () => row.querySelector('form.stopform').submit()],   // v0.39: paused = folded away
         ['Delete', 'quick stop', () => Sheet.confirm('🗑 Delete ' + row.dataset.name + '?', "It goes from your bills. This can't be undone.", 'Delete', true)
           .then(yes => { if (yes) send('/bill/delete', {key}); })]]});
@@ -733,6 +743,13 @@ if (window.Lite && Lite.Store.demo) { try { if (sessionStorage.getItem('lite_dem
       const open = btn.getAttribute('aria-expanded') !== 'true';
       btn.setAttribute('aria-expanded', open);
       btn.closest('tbody').querySelectorAll('tr.pbill').forEach(r => { r.hidden = !open; });
+    }));
+    // v0.70: Money in ⋯ = Remove
+    document.querySelectorAll('[data-card="moneyin"] tr.inrow .more').forEach(btn => btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const row = btn.closest('tr'), id = row.dataset.id;
+      menu(btn, [['🗑 Remove', 'stop', () => Sheet.confirm('🗑 Remove ' + row.dataset.name + '?', 'It comes off your money in.', 'Remove', true)
+        .then(yes => { if (yes) send('/in/remove', {id}); })]]);
     }));
     document.querySelectorAll('[data-card="spend"] tr.drow .more').forEach(btn => btn.addEventListener('click', e => {
       e.stopPropagation();
