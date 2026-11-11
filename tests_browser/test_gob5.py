@@ -132,6 +132,11 @@ def test_no_zopa_question_before_the_due_day(page, base):
 def test_a_bill_can_be_told_which_card_it_pays(page, base):
     zopa_setup(page, base, 20)
     post(page, 'form[action="/bill/add"]', {"amount": "30", "name": "Card DD"})
-    bill_menu(page, "Card DD", "Pays a credit card", "zopa")
+    # v0.71 (Darren): 'Pays a credit card' left the ⋯ menu (menu B); the setting still works, sent like the old item did
+    with page.expect_navigation():
+        page.evaluate("""() => { const f = document.createElement('form'); f.method = 'post'; f.action = '/bill/card';
+        for (const [k, v] of [['key', 'Card DD'], ['card', 'zopa']]) { const i = document.createElement('input'); i.type = 'hidden';
+          i.name = k; i.value = v; f.appendChild(i); } document.body.appendChild(f); setTimeout(() => f.submit(), 0); }""")
+    page.wait_for_load_state()
     assert stored(page)["bills"][-1]["card"] == "Credit card"            # the card's key
     assert "pays Zopa" in page.locator('tr.bill[data-key="Card DD"] .bsub').inner_text()

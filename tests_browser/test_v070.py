@@ -43,40 +43,59 @@ def test_money_in_bad_amount_shows_the_error_in_the_card(page, base):
     assert page.locator('[data-card="moneyin"] .error').is_visible()
 
 
-def test_bill_menu_is_wider_and_paid_on_card_goes_on_the_card(page, base):
+def test_bill_menu_b_one_card_goes_straight_on_and_bill_is_0_this_month(page, base):
+    """v0.71 menu B: Amount | Mark paid, then 💳 Paid on credit card + ⏭ Skip this month. 1 card = no question."""
     page.goto(base + DEMO)
+    total = page.locator("#btotal").text_content()
     page.click('tr.bill[data-key="Gym Club"] button.more')
     m = page.locator(".bmenu")
     assert m.bounding_box()["width"] >= 288
-    btn = m.locator('.brow button:has-text("Mark paid")')
-    assert btn.bounding_box()["height"] < 60                              # one line, not 'Not / paid / yet'
-    btn.click()
-    box = page.locator(".litesheet").last
-    box.wait_for(state="visible")
-    assert not box.locator(".picknew").count()                            # no '+ New category' here
-    names = box.locator(".picklist button").all_text_contents()
-    assert names == ["✅ Paid", "💳 Paid on Zopa"]
+    assert m.locator('.brow button:text-is("Mark paid")').bounding_box()["height"] < 60
+    assert m.locator(".bsep").count() == 1
     with page.expect_navigation():
-        box.locator('.picklist button:has-text("Paid on Zopa")').click()
+        m.locator('button:has-text("Paid on credit card")').click()
     page.wait_for_load_state()
     row = page.locator('tr.bill[data-key="Gym Club"]')
     assert row.get_attribute("data-oncard") == "Zopa"
     assert "Paid on Zopa" in row.locator(".bchip.oncard").text_content()
     assert "paid" in row.locator(".bline").get_attribute("class")
+    assert row.locator(".bwas").text_content() == "£50.00"               # crossed out, £0 this month
+    assert "£0.00" in row.locator("td.bamt button.link").text_content()
+    to_n = lambda t: float(t.replace("£", "").replace(",", ""))
+    assert abs(to_n(total) - to_n(page.locator("#btotal").text_content()) - 50) < 0.005
     card = [c for c in demo_state(page)["cards"] if c["key"] == "Zopa"][0]
     assert any(i["name"] == "Gym Club" and i["amount"] == 50 for i in card["items"])
-    # the button now says On card and offers Not paid yet
+    # undo: Not paid yet takes it off the card
     page.click('tr.bill[data-key="Gym Club"] button.more')
-    page.click('.bmenu .brow button:has-text("On card")')
-    box = page.locator(".litesheet").last
-    box.wait_for(state="visible")
     with page.expect_navigation():
-        box.locator('.picklist button:has-text("Not paid yet")').click()
+        page.click('.bmenu .brow button:text-is("Not paid yet")')
     page.wait_for_load_state()
-    row = page.locator('tr.bill[data-key="Gym Club"]')
-    assert row.get_attribute("data-oncard") == ""
+    assert page.locator('tr.bill[data-key="Gym Club"]').get_attribute("data-oncard") == ""
+    assert page.locator("#btotal").text_content() == total
     card = [c for c in demo_state(page)["cards"] if c["key"] == "Zopa"][0]
     assert not any(i["name"] == "Gym Club" for i in card["items"])
+    assert not page.errors
+
+
+def test_two_cards_asks_which_card_with_used_and_after(page, base):
+    page.goto(base + DEMO)
+    page.evaluate("""() => { const s = JSON.parse(sessionStorage.getItem('lite_demo_v1'));
+        Money.addCreditCard(s, 'Amex', '1000'); sessionStorage.setItem('lite_demo_v1', JSON.stringify(s)); }""")
+    page.reload()
+    page.click('tr.bill[data-key="Gym Club"] button.more')
+    page.click('.bmenu button:has-text("Paid on credit card")')
+    box = page.locator(".litesheet").last
+    box.wait_for(state="visible")
+    assert "which card?" in box.locator("h3").text_content()
+    opts = box.locator(".cardopt")
+    assert opts.count() == 2
+    amex = box.locator('.cardopt:has-text("Amex")')
+    assert "£0 used" in amex.text_content() and "→ £50 used" in amex.text_content()
+    with page.expect_navigation():
+        amex.click()
+    page.wait_for_load_state()
+    row = page.locator('tr.bill[data-key="Gym Club"]')
+    assert "Paid on Amex" in row.locator(".bchip.oncard").text_content()
     assert not page.errors
 
 

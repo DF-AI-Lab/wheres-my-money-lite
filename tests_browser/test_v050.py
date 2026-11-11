@@ -15,7 +15,7 @@ def test_bill_menu_layout(page, base):
     assert [t.strip() for t in top.all_inner_texts()] == ["Amount", "Mark paid"]
     assert "pri" in top.nth(1).get_attribute("class")
     mid = [t.strip() for t in m.locator(":scope > button").all_inner_texts()]
-    assert mid == ["Change name", "Due day", "Category", "Pays a credit card", "⏭ Skip this month"]   # v0.70: + Skip
+    assert mid == ["💳 Paid on credit card", "⏭ Skip this month", "Change name", "Due day", "Category"]   # v0.71 menu B: no 'Pays a credit card'
     bottom = m.locator(".brow").last.locator("button")
     assert [t.strip() for t in bottom.all_inner_texts()] == ["Pause", "Delete"]
     assert "stop" in bottom.nth(1).get_attribute("class")
@@ -33,13 +33,12 @@ def test_amount_opens_the_amount_box(page, base):
 
 def test_mark_paid_then_not_paid(page, base):
     m = open_menu(page, base)
-    m.locator('.brow button:text-is("Mark paid")').click()           # v0.70: a card = choose Paid / Paid on Zopa
-    with page.expect_navigation():
-        page.locator('.litesheet .picklist button:text-is("✅ Paid")').click()
+    with page.expect_navigation():                                    # v0.71: one tap again
+        m.locator('.brow button:text-is("Mark paid")').click()
     page.wait_for_load_state()
     page.click('tr.bill[data-key="Phone Co"] button.more')
     assert page.locator('.bmenu .brow button').first.inner_text().strip() == "Amount"
-    assert page.locator('.bmenu .brow button').nth(1).inner_text().strip() == "Paid ✓"
+    assert page.locator('.bmenu .brow button').nth(1).inner_text().strip() == "Not paid yet"
 
 
 def test_pot_category_link_and_takes_line(page, base):

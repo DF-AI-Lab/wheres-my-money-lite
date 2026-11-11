@@ -401,3 +401,9 @@
   Payday clears skip + oncard (card line stays: the card owes it); history bill skipped:true (monthBills/avg ignore it). Chips .bchip.
   3) Spend straight on a card: LATER idea (Darren: "not now").
   Tests 156 node + 288 browser (test_v070.py; bill_menu helper answers the paid sheet; v050/v060 changed on purpose).
+- **11 Nov v0.71 (demo only; live still v0.69; mock https://claude.ai/artifact/6FS7nUkmbho9QHuzdGwWRh, Darren: "B 1000000"): bill ⋯ = MENU B.**
+  Top .brow Amount | Mark paid (one tap again; paid or on card = 'Not paid yet' = undo), then button.big.oncardline '💳 Paid on credit card'
+  (only with a card + an amount; 1 card = straight on, 2+ = Sheet.card: .cardopt per card 'used · free' + '→ £X used'; when on a card the line
+  reads 'Paid on Zopa · change card') and button.big.skipline '⏭ Skip this month', then .bsep, Change name / Due day / Category, Pause | Delete.
+  'Pays a credit card' REMOVED from the menu (Darren); the /bill/card setting + card question still work. On card = bill amount crossed out
+  (.bwas) + £0.00, like skip. LITE_PAGE.cardKeys has used/free. Tests 149 node + 289 browser (gob5/v050/v070 changed on purpose).

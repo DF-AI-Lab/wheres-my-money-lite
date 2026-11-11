@@ -643,3 +643,18 @@ body.demo [data-card="spend"] table tr.drow .paidq { background: none; color: va
 .demo .dbills td.bamt button.link.oncard { color: var(--zused); }
 .demo .bmenu .brow button { white-space: nowrap; }
 .demo .bmenu .brow button.paidcard { color: var(--zused); border-color: color-mix(in srgb, var(--zused) 45%, transparent); }
+
+/* v0.71: bill ⋯ menu B (Paid on credit card + Skip as coloured lines) and the Which card? sheet */
+.demo .bmenu button.big { font-weight: 800; }
+.demo .bmenu button.oncardline { color: var(--zused); }
+.demo .bmenu button.skipline { color: var(--spend); }
+.bmenu .bsep { height: 1px; background: var(--border); margin: 4px 2px; }
+.demo .dbills td.bamt button.link.oncard { color: inherit; }
+.litesheet .sheet > p { margin: 0 0 10px; color: var(--muted); font-size: 13.5px; }
+.litesheet .cardlist { display: grid; gap: 8px; margin-bottom: 8px; }
+.demo .litesheet button.cardopt, .litesheet button.cardopt { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-align: left;
+  background: none; color: var(--text); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 14px; font-weight: 600; width: 100%; }
+.litesheet button.cardopt b { font-weight: 800; }
+.litesheet button.cardopt small { display: block; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.litesheet button.cardopt .after { color: var(--zused); font-weight: 800; font-size: 13px; white-space: nowrap; }
+.litesheet button.cardopt.on { border-color: var(--zused); }

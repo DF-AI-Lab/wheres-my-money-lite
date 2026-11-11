@@ -6,6 +6,7 @@
    Sheet.due(title, current)               -> Promise<'1'..'31'|''|'varies'|null> (Set day | Varies on one line, v0.59)
    Sheet.pick(title, names, current, plain) -> Promise<name|null>       (a list to tap; ＋ New category asks for the name; plain = no ＋)
    Sheet.choose(title, text, a, b)         -> Promise<'a'|'b'|null>      (two ways; Not now = null, v0.45)
+   Sheet.card(title, text, cards, amount, current) -> Promise<key|null> (v0.71: which credit card, each with used / free / after)
    Sheet.ask(..., 'date')                  -> a date box (YYYY-MM-DD)
    Escape or a tap outside = Cancel. Enter in the box = Save. */
 (function (root) {
@@ -110,5 +111,14 @@
   }
   const NEW = {};
 
-  root.Sheet = {confirm, ask, tell, day, due, pick, choose};
+  function card(title, text, cards, amount, current) {
+    const gbp = n => '£' + Number(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',').replace(/\.00$/, '');
+    const list = cards.map(c => `<button type="button" class="cardopt${c.key === current ? ' on' : ''}" data-v="${esc(c.key)}"><span><b>${esc(c.name)}</b>
+      <small>${gbp(c.used)} used · ${gbp(c.free)} free</small></span><span class="after">${c.key === current ? 'on it now' : '→ ' + gbp(c.used + amount) + ' used'}</span></button>`).join('');
+    return open(`<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="cardlist">${list}</div><button type="button" class="ter cancel">Cancel</button>`, null, (back, close) => {
+      back.querySelectorAll('.cardopt').forEach(b => b.addEventListener('click', () => close(b.dataset.v)));
+      back.querySelector('.cardopt').focus();
+    });
+  }
+  root.Sheet = {confirm, ask, tell, day, due, pick, choose, card};
 })(typeof window !== 'undefined' ? window : globalThis);

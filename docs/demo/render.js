@@ -270,7 +270,7 @@
         <td class="n bavg">${money(b.avg)}</td>
         <td class="n bamt">
           <button type="button" class="link ${b.blank ? 'muted' : ''}${b.oncard ? ' oncard' : ''}" title="Change the amount">${b.blank ? 'Add'
-            : b.skip ? `<span class="bwas">${money(b.amount)}</span> ${money(0)}` : money(b.oncard ? b.amount : b.used)}</button>
+            : b.skip || b.oncard ? `<span class="bwas">${money(b.amount)}</span> ${money(0)}` : money(b.used)}</button>
           <input class="amount billbox" type="text" inputmode="decimal" value="${b.blank ? '' : f2(b.used)}" aria-label="New amount for ${esc(b.name)}" hidden>
           <button type="button" class="small x" title="Put it back" ${b.changed ? '' : 'hidden'}>✖</button>
         </td>
@@ -527,7 +527,7 @@
     r.bills.forEach(b => { b.cardName = b.card ? cardName[b.card] : ''; b.oncardName = b.oncard ? cardName[b.oncard] : ''; });
     // PAGE: the numbers the page script starts from (live writes the same four into its script; Go A adds the pots)
     root.LITE_PAGE = {bills: r.billsTotal, left: r.left + r.inTotal, typed: r.spendsTotal, wage: r.pay,
-                      pots: r.potsSpent, potBills: r.potBills, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name), cardKeys: r.cards.map(c => ({key: c.key, name: c.name}))};
+                      pots: r.potsSpent, potBills: r.potBills, potsSet: r.potsSet, potsOver: r.potsOver, cards: r.cards.map(c => c.name), cardKeys: r.cards.map(c => ({key: c.key, name: c.name, used: c.used, free: c.free}))};
 
     // an error from the last form (live: /?error=CODE)
     if (err && ERRORS[err] && !INLINE.includes(err)) {
