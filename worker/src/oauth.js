@@ -78,7 +78,7 @@ export async function authorize(req, env) {
     access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true', state}).toString();
   return page(`<h1>Connect Claude to Where's My Money?</h1>
     <p>Sign in with the <b>same Google account your 🛂 passport uses</b>.</p>
-    <ul><li>Claude can read your totals and bills</li><li>Claude can add spends, bills and card lines</li><li>Claude can only remove what Claude added</li></ul>
+    <ul><li>Claude can read your totals and bills</li><li>Claude can add spends, bills, card lines and money in</li><li>Claude can only remove what Claude added</li></ul>
     <p>Changes show up the next time you open the app.</p>
     <a class="b" href="${esc(g.toString())}">Sign in with Google</a>`);
 }

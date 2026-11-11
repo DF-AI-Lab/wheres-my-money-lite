@@ -218,7 +218,7 @@
   const clone = x => JSON.parse(JSON.stringify(x));
   const byStart = h => h.slice().sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
   const billAmount = b => (typeof b.amount === 'number' ? b.amount : 0);
-  const monthBills = m => sum(m.bills.filter(b => !b.stopped).map(billAmount));
+  const monthBills = m => sum(m.bills.filter(b => !b.stopped && !b.skipped).map(billAmount));   // v0.70: a skipped month counts £0
   const monthSpends = m => sum(m.spends.map(x => x.amount));
   const isSet = p => typeof p.amount === 'number';
   const saved = (s, key) => {                                                 // the newest saved month's entry for a bill
@@ -243,21 +243,23 @@
     const bills = (s.bills || []).map(b => {
       const blank = typeof b.amount !== 'number', stopped = !!b.stopped;
       const amount = blank ? null : b.amount;
-      const used = stopped ? 0 : (amount || 0);
+      // v0.70: skip this month = £0 until payday; paid on a credit card = not from the bank (the card line holds it)
+      const skip = !stopped && !!b.skip, oncard = !stopped && !skip && b.oncard ? b.oncard : null;
+      const used = stopped || skip || oncard ? 0 : (amount || 0);
       const past = history.map(m => m.bills.find(x => x.key === b.key))
-        .filter(x => x && !x.stopped && typeof x.amount === 'number' && x.amount > 0).map(x => x.amount);
+        .filter(x => x && !x.stopped && !x.skipped && typeof x.amount === 'number' && x.amount > 0).map(x => x.amount);
       const avg = past.length ? sum(past) / past.length : (amount || 0);
       const was = saved(s, b.key);
       const varies = b.due === 'varies';                         // v0.59: no set date, a different day each month
       const due = varies ? null : (b.due || null), dueAt = due && start ? dueDate(start, due) : null;
       const name = b.name === undefined ? b.key : b.name;
-      const inPot = !stopped && potOf[catKey(b.cat)] ? potOf[catKey(b.cat)].name : null;   // a bill in a pot's category is paid from that pot
+      const inPot = !stopped && !skip && !oncard && potOf[catKey(b.cat)] ? potOf[catKey(b.cat)].name : null;   // a bill in a pot's category is paid from that pot
       return {key: b.key, id: 'bill:' + b.key, name, orig: name, cat: b.cat, amount, avg, pot: inPot, last: amount || 0, used, blank, stopped,
               saved: was && typeof was.amount === 'number' ? was.amount : null,
               changed: !!was && !stopped && !blank && was.amount !== amount, new: false, estimated: blank,
-              due, varies, dueAt, dueText: varies ? 'varies' : (due ? ordinal(due) : ''), duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid,
-              card: billCardKey(cardList, b), asked: b.asked === start,
-              diff: (blank || stopped) ? null : used - avg};
+              due, varies, dueAt, dueText: varies ? 'varies' : (due ? ordinal(due) : ''), duePassed: !!(dueAt && today && today >= dueAt), paid: !!b.paid || !!oncard,
+              card: billCardKey(cardList, b), asked: b.asked === start, skip, oncard: oncard ? oncard.card : null,
+              diff: (blank || stopped || skip || oncard) ? null : used - avg};
     });
     bills.forEach((b, i) => { b.i = i; });
     bills.sort((a, b) => (a.stopped - b.stopped) || (b.avg - a.avg) || (a.i - b.i));
@@ -286,13 +288,16 @@
       upcoming: !!x.upcoming && (!!x.nodate || (!!today && today < x.date)),   // v0.59: no date yet = upcoming until Paid
       autoPaid: !!x.upcoming && !x.nodate && !!today && today >= x.date}));
     const spendsTotal = sum(shown.filter(x => !x.pot).map(x => x.amount));
-    const moneyForSpending = pay + left - billsTotal - potsSet;
+    // v0.70: money in that isn't pay (gifts, refunds, paid back) adds to spare like 'left'
+    const moneyIn = (s.moneyIn || []).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+    const inTotal = sum(moneyIn.map(x => x.amount));
+    const moneyForSpending = pay + left + inTotal - billsTotal - potsSet;
     const startSpare = moneyForSpending;
     const spendsAll = sum(shown.map(x => x.amount));             // every spend, pot spends too
     // Actual spare = the real money left in the bank (21 Oct evening): pot spends and pot bills come off it
     const leftNow = startSpare + potsLeft - potsOver - spendsTotal;
 
-    const total = pay + left;                                    // the ring: pay + left split four ways
+    const total = pay + left + inTotal;                          // the ring: pay + left split four ways
     const f = x => total > 0 ? Math.max(x, 0) / total : 0;
     const spareRing = Math.max(leftNow, 0);
     const pct = {bills: r0(100 * f(billsTotal)), pots: r0(100 * f(potsSpent)), spends: r0(100 * f(spendsTotal)),
@@ -302,7 +307,7 @@
       const rows = allocate(c.items, c.carry).map(r => Object.assign(r, {removable: r.status !== 'paid'}));
       const used = cardUsed(c), pc = c.limit ? 100 * used / c.limit : 0;
       // the question: a bill that pays this card, due day gone (or no due day), not answered this pay month
-      const asks = bills.filter(b => b.card === c.key && !b.stopped && b.amount > 0 && (!b.due || b.duePassed) && !b.asked)
+      const asks = bills.filter(b => b.card === c.key && !b.stopped && !b.skip && !b.oncard && b.amount > 0 && (!b.due || b.duePassed) && !b.asked)
         .map(b => ({key: b.key, name: b.name, amount: b.amount, dueText: b.dueText}));
       return {key: c.key, name: c.name, label: cardLabel(c), limit: c.limit, carry: c.carry, used, free: r2(c.limit - used),
               pc, pctUsed: r0(pc), rows, asks};
@@ -340,7 +345,7 @@
     const periods = {six: sums(history.slice(-6)), twelve: sums(history.slice(-12)),
                      ytd: sums(history.filter(m => m.start.slice(0, 4) === year)), year};
 
-    return {pay, left, startSpare: moneyForSpending, bills, billsTotal, billsAll, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
+    return {pay, left, moneyIn, inTotal, startSpare: moneyForSpending, bills, billsTotal, billsAll, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
             pots, potsSet, potsOver, potsTotal, potsSpent, potsLeft, potBills, spendsAll, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
             spendCats: catTotals(shown),
             billCats: catTotals(own.map(b => ({name: b.name, cat: b.cat, amount: b.used, dueText: b.dueText}))
@@ -351,7 +356,7 @@
   // The money really left at the end of the month (unspent pot money goes back into spare).
   function monthEndSpare(s) {
     const r = compute(s);
-    return r.pay + r.left - r.billsAll - sum((s.spends || []).map(x => x.amount));
+    return r.pay + r.left + r.inTotal - r.billsAll - sum((s.spends || []).map(x => x.amount));
   }
 
   // ---------- state shape ----------
@@ -386,7 +391,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.69';
+  const APP = 'wheres-my-money-lite', VERSION = '0.70';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
@@ -477,6 +482,10 @@
     if (v === null && isZeroText(text)) v = 0;                   // 0 = not paying it this month
     if (v === null) return 'pay';
     b.amount = v;
+    if (b.oncard) {                                              // v0.70: paid on a card = the card line follows the new amount
+      const c = cardOf(s, b.oncard.card), i = c && c.items.find(y => y.id === b.oncard.item);
+      if (i && v > 0) { i.amount = r2(v); b.oncard.amount = v; }
+    }
     return null;
   }
   function setStopped(s, key, on) {                              // POST /stopped (a simple switch)
@@ -517,10 +526,54 @@
     b.due = Number(text);
     return null;
   }
-  function setPaid(s, key, on) {                                 // POST /bill/paid (only ever ticked by the person)
+  function setPaid(s, key, on, iso) {                            // POST /bill/paid (only ever ticked by the person)
     const b = findBill(s, key);
     if (!b) return 'unknown';
+    if (b.oncard) unCard(s, b, iso);
     b.paid = !!on;
+    if (on) delete b.skip;
+    return null;
+  }
+  // ---------- v0.70: a bill paid on a credit card (this month only): not from the bank, a line on that card ----------
+  function unCard(s, b, iso) {                                   // take the card line back off
+    const o = b.oncard; delete b.oncard;
+    const c = o && cardOf(s, o.card);
+    if (!c) return;
+    const i = c.items.find(y => y.id === o.item);
+    if (i) { c.items = c.items.filter(y => y !== i); tidy(c); }
+    else if (o.amount > 0) addCard(c, iso || c.items.map(y => y.date).sort().pop() || '2000-01-01', -o.amount, 'Undo ' + (b.name === undefined ? b.key : b.name), 'paid');
+  }
+  function payOnCard(s, key, cardKey, iso) {                     // POST /bill/oncard
+    const b = findBill(s, key), cards = cardsOf(s);
+    if (!b) return 'unknown';
+    const c = cards.find(x => x.key === cardKey) || (cards.length === 1 ? cards[0] : null);
+    if (!c) return 'unknown';
+    if (typeof b.amount !== 'number' || b.amount <= 0) return 'bill';
+    if (b.oncard) unCard(s, b, iso);
+    delete b.skip;
+    const n = c.next;
+    addCard(c, iso, b.amount, b.name === undefined ? b.key : b.name, 'spend');
+    b.oncard = {card: c.key, item: n, amount: b.amount};
+    b.paid = true;
+    return null;
+  }
+  function setSkip(s, key, on, iso) {                            // POST /bill/skip: £0 this month, back by itself at payday
+    const b = findBill(s, key);
+    if (!b) return 'unknown';
+    if (on) { if (b.oncard) unCard(s, b, iso); b.skip = true; b.paid = false; }
+    else delete b.skip;
+    return null;
+  }
+  // ---------- v0.70: money in (not pay): gifts, refunds, paid back ----------
+  function addMoneyIn(s, iso, amountText, nameText) {            // POST /in/add
+    const amount = parseMoney(amountText), name = String(nameText == null ? '' : nameText).trim().slice(0, 60);
+    if (amount === null || amount <= 0 || !name) return 'moneyin';
+    s.moneyIn = Array.isArray(s.moneyIn) ? s.moneyIn : [];
+    s.moneyIn.push({id: Math.max(0, ...s.moneyIn.map(x => x.id)) + 1, date: iso, amount, name});
+    return null;
+  }
+  function removeMoneyIn(s, idText) {                            // POST /in/remove (a bad id is ignored)
+    s.moneyIn = (s.moneyIn || []).filter(x => String(x.id) !== String(idText == null ? '' : idText).trim());
     return null;
   }
   // the fixed list, then the person's own new ones
@@ -629,13 +682,16 @@
     s.history = s.history || [];
     s.history.push({
       start: s.payday || first, end: dayBefore(day), pay: s.pay || 0, left: s.left || 0, spare: monthEndSpare(Object.assign({}, s, {spends})),
-      bills: (s.bills || []).map(b => ({key: b.key, name: b.name, cat: b.cat, amount: typeof b.amount === 'number' ? b.amount : null, stopped: !!b.stopped})),
+      in: sum((s.moneyIn || []).map(x => x.amount)), moneyIn: clone(s.moneyIn || []),
+      bills: (s.bills || []).map(b => Object.assign({key: b.key, name: b.name, cat: b.cat, amount: typeof b.amount === 'number' ? b.amount : null, stopped: !!b.stopped},
+        b.skip ? {skipped: true} : {}, b.oncard ? {oncard: b.oncard.card} : {})),
       spends: clone(spends),
       pots: pots.map(p => ({key: p.key, name: p.name, cat: p.cat, amount: isSet(p) ? p.amount : null,
                             spent: (compute(Object.assign({}, s, {spends})).pots.find(q => q.key === p.key) || {spent: 0}).spent})),
     });
     s.payday = day; s.pay = pay; s.left = left; s.spends = all.filter(next);
-    (s.bills || []).forEach(b => { b.paid = false; delete b.asked; });
+    (s.bills || []).forEach(b => { b.paid = false; delete b.asked; delete b.skip; delete b.oncard; });   // v0.70: skip / on card = this month only
+    s.moneyIn = [];
     return null;
   }
   // ---------- payday date: the same day each month, a weekend moves it to the Friday before ----------
@@ -685,7 +741,7 @@
   // ---------- reminders (the 🔔 bell): [{kind, key?, text, go}] ----------
   function reminders(s, todayIso) {
     const r = compute(s, todayIso), list = [];
-    r.bills.filter(b => !b.stopped && !b.paid && b.duePassed).forEach(b => list.push({kind: 'bill', key: b.key,
+    r.bills.filter(b => !b.stopped && !b.skip && !b.paid && b.duePassed).forEach(b => list.push({kind: 'bill', key: b.key,
       text: `${b.name} was due on the ${b.dueText}. Check your bank app.`, go: `tr.bill[data-key="${b.key}"]`}));
     if (s.snooze === todayIso) return list;
     if (paydayDue(s, todayIso)) list.push({kind: 'payday', text: 'Payday is here. Put in your new pay.', go: '#quicktab'});
@@ -923,7 +979,7 @@
     const re = demo ? DEMO_JOB_NAME : JOB_NAME;
     return (Array.isArray(files) ? files : []).filter(f => f && re.test(String(f.name))).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
-  const JOB_KINDS = ['add_spend', 'add_bill', 'card_spend', 'card_paid_off', 'remove_spend'];
+  const JOB_KINDS = ['add_spend', 'add_bill', 'card_spend', 'card_paid_off', 'remove_spend', 'add_money_in'];
   function applyJob(s, job, todayIso) {                          // {done, skip?, note?}; unknown jobs change nothing
     if (!job || typeof job !== 'object' || job.v !== 1 || !job.id || !JOB_KINDS.includes(job.kind)) return {done: false, skip: 'unknown'};
     const id = String(job.id);
@@ -939,7 +995,9 @@
       remember(id, target);
       let what = null;
       const x = (s.spends || []).find(y => y.job === target), b = (s.bills || []).find(y => y.job === target);
+      const mi = (s.moneyIn || []).find(y => y.job === target);
       if (x) { s.spends = s.spends.filter(y => y !== x); what = x; }
+      else if (mi) { s.moneyIn = s.moneyIn.filter(y => y !== mi); what = mi; }
       else if (b) { deleteBill(s, b.key); what = b; }
       else for (const c of cardsOf(s)) {
         const i = c.items.find(y => y.job === target);
@@ -955,6 +1013,11 @@
       if (!job.upcoming && date) x.date = date;
       x.job = id; remember(id);
       return {done: true, note: `Added by ${from}: ${money(amount)} ${nameText}`};
+    }
+    if (job.kind === 'add_money_in') {                           // v0.70
+      if (addMoneyIn(s, date || todayIso, job.amount, nameText)) return bad();
+      s.moneyIn[s.moneyIn.length - 1].job = id; remember(id);
+      return {done: true, note: `Added by ${from}: +${money(amount)} ${nameText} (money in)`};
     }
     if (job.kind === 'add_bill') {
       if (addBill(s, job.amount, nameText)) return bad();
@@ -974,17 +1037,19 @@
   }
   function summary(s, todayIso, nowIso) {                        // totals + the bills (no spends): for Claude to read
     const r = compute(s, todayIso), q = r2;
-    const comeOut = r.bills.filter(b => !b.stopped && typeof b.amount === 'number' && !(b.paid || b.duePassed)).map(b => b.amount)
+    const comeOut = r.bills.filter(b => !b.stopped && !b.skip && !b.oncard && typeof b.amount === 'number' && !(b.paid || b.duePassed)).map(b => b.amount)
       .concat(r.spends.filter(x => x.upcoming).map(x => x.amount));
-    return {updated: nowIso, spare: q(r.leftNow), spent: q(sum(r.spends.filter(x => !x.upcoming).map(x => x.amount))), to_come_out: q(sum(comeOut)),
+    return {updated: nowIso, spare: q(r.leftNow), money_in: q(r.inTotal), spent: q(sum(r.spends.filter(x => !x.upcoming).map(x => x.amount))), to_come_out: q(sum(comeOut)),
             pots: r.pots.map(p => ({name: p.name, budget: p.blank ? null : q(p.amount), used: q(p.spent)})),
             card: {used: q(sum(r.cards.map(c => c.used))), free: q(sum(r.cards.map(c => c.free)))},
             // v0.60b: the bills too (paused ones left out), so Claude can answer 'has my phone been paid?'
             bills: r.bills.filter(b => !b.stopped).map(b => ({name: b.name, amount: b.blank ? null : q(b.amount),
-              day: b.varies ? 'varies' : b.due, paid: !!(b.paid || b.duePassed)})),
+              day: b.varies ? 'varies' : b.due, paid: !b.skip && !!(b.paid || b.duePassed),
+              ...(b.skip ? {skipped: true} : {}), ...(b.oncard ? {on_card: true} : {})})),
             // v0.68: what Claude/Orbit added (has a job id), so Claude can take back its own things by id
             added: [].concat(
               (s.spends || []).filter(x => x.job).map(x => ({id: x.job, kind: 'spend', name: x.name, amount: q(x.amount)})),
+              (s.moneyIn || []).filter(x => x.job).map(x => ({id: x.job, kind: 'money_in', name: x.name, amount: q(x.amount)})),
               (s.bills || []).filter(b => b.job).map(b => ({id: b.job, kind: 'bill', name: b.name, amount: b.amount == null ? null : q(b.amount)})),
               cardsOf(s).flatMap(c => (c.items || []).filter(i => i.job).map(i => ({id: i.job, kind: 'card', name: i.name, amount: q(Math.abs(i.amount))}))))};
   }
@@ -992,7 +1057,7 @@
   const Money = {FAKE, TEMPLATE, CATEGORIES, categories, compute, setUsed, parseMoney, guessCategory, allocate, r2, ordinal, migrate, monthEndSpare,
     jobOrder, applyJob, summary,
     exportBackup, importBackup, backupName,
-    addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill,
+    addSpend, removeSpend, paySpend, setSpendDate, setPay, setLeft, setBill, setStopped, addBill, renameBill, setDue, setPaid, setBillCat, deleteBill, payOnCard, setSkip, addMoneyIn, removeMoneyIn,
     catTotals, setSpendCat, setPotCat, setSpendAmount, renameSpend, setBillsPaid, remindLines, driveName, drivePrune,
     nextPayday, paydayText, setPayDay, paydayDue, setBackupDay, backupText, reminders, clearReminders,
     addPot, setPotAmount, renamePot, deletePot, newPayday, cardAdd, cardRemove, cardLimit, cardBalance,

@@ -65,7 +65,7 @@ export async function handle(m, ctx) {
         serverInfo: {name: ctx.demo ? 'wmm-lite-demo' : 'wmm-lite', title: ctx.demo ? "Where's My Money? (demo)" : "Where's My Money?", version: VERSION},
         instructions: (ctx.demo ? 'DEMO money (fake), safe to try. ' : '') +
           "Darren's Where's My Money? Lite: one bank account, payday to payday. Use money_summary first for any money question. " +
-          'Claude can add spends, bills and credit card lines, and remove only what Claude added (by its c-… id). ' +
+          'Claude can add spends, bills, credit card lines and money in (gifts, refunds), and remove only what Claude added (by its c-… id). ' +
           'Changes are not instant: they show in the app (and in money_summary totals) after Darren next opens the app. Amounts are pounds (£).'});
     }
     case 'ping': return ok({});

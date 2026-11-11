@@ -253,6 +253,20 @@ def sheet(page, answer=True):
 def bill_menu(page, key, item, dialog_answer=None):
     """Open a bill's ⋯ menu and tap one item; answer the sheet it shows (a text, or True for yes)."""
     page.click(f'tr.bill[data-key="{key}"] button.more')
+    if item in ("Mark paid", "Not paid yet"):                # v0.70: with a card the paid button opens Paid / Paid on card / Not paid yet
+        btn = page.locator('.bmenu .brow [role=menuitem]').nth(1)
+        if btn.inner_text().strip() == item and item == "Not paid yet":   # no card: still a simple switch
+            with page.expect_navigation():
+                btn.click()
+        else:
+            btn.click()
+            pick = "✅ Paid" if item == "Mark paid" else "↩️ Not paid yet"
+            box = page.locator(".litesheet").last
+            box.wait_for(state="visible")
+            with page.expect_navigation():
+                box.locator(f'.picklist button:text-is("{pick}")').click()
+        page.wait_for_load_state()
+        return
     if dialog_answer is None:
         with page.expect_navigation():
             page.click(f'.bmenu [role=menuitem]:has-text("{item}")')

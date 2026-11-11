@@ -1,6 +1,6 @@
 // What Claude can do (agreed with Darren, 8 Nov 2026):
 //   ✅ read: spare cash, pots, card used/free, bills (name, amount, day, paid)
-//   ✅ add a spend (paid or upcoming), add a bill, add a card spend or a card payment
+//   ✅ add a spend (paid or upcoming), add a bill, add a card spend or a card payment, add money in (v0.70)
 //   ✅ remove something Claude added (nothing else)
 //   ❌ single spends / past months (scrambled), pay, Left, passcode, deleting your own entries
 // Changes are job files in Drive (Lite's inbox). Lite applies them the next time it opens on your Main device.
@@ -32,8 +32,12 @@ export const TOOLS = [
     description: 'Money paid off the credit card (lowers what is used).',
     inputSchema: {type: 'object', properties: {amount: {type: 'number'}, date: {type: 'string', description: 'YYYY-MM-DD (optional, default today)'}},
       required: ['amount'], additionalProperties: false}},
+  {name: 'add_money_in', title: 'Add money in',
+    description: 'Money coming in that is NOT pay: a gift, a refund, someone paying Darren back. It adds to spare cash this month.',
+    inputSchema: {type: 'object', properties: {amount: {type: 'number'}, name: {type: 'string', description: 'Where it came from, e.g. Mum or Amazon refund'},
+      date: {type: 'string', description: 'YYYY-MM-DD (optional, default today)'}}, required: ['amount', 'name'], additionalProperties: false}},
   {name: 'remove_added', title: 'Remove something Claude added',
-    description: 'Remove a spend, bill or card line that CLAUDE added, by its id (from the add result or money_summary). Cannot remove anything Darren added.',
+    description: 'Remove a spend, bill, card line or money in that CLAUDE added, by its id (from the add result or money_summary). Cannot remove anything Darren added.',
     inputSchema: {type: 'object', properties: {id: {type: 'string', description: 'e.g. c-20261108-101500-ab12'}}, required: ['id'], additionalProperties: false},
     annotations: {destructiveHint: true}},
 ];
@@ -82,6 +86,7 @@ function describe(job) {
   if (job.kind === 'add_bill') return `${money(Number(job.amount))} ${job.name} (monthly bill${job.day ? ', day ' + job.day : ''})`;
   if (job.kind === 'card_spend') return `${money(Number(job.amount))} ${job.name} on the credit card`;
   if (job.kind === 'card_paid_off') return `${money(Number(job.amount))} paid off the credit card`;
+  if (job.kind === 'add_money_in') return `+${money(Number(job.amount))} ${job.name} (money in)`;
   if (job.kind === 'remove_spend') return `remove ${job.target}`;
   return job.kind;
 }
@@ -98,6 +103,8 @@ export async function runTool(d, name, args = {}, now = new Date()) {
   } else if (name === 'add_bill') {
     Object.assign(job, {amount: amountOf(args.amount).toFixed(2), name: nameOf(args.name), day: dayOf(args.day)});
   } else if (name === 'card_spend') {
+    Object.assign(job, {amount: amountOf(args.amount).toFixed(2), name: nameOf(args.name), date: dateOf(args.date)});
+  } else if (name === 'add_money_in') {
     Object.assign(job, {amount: amountOf(args.amount).toFixed(2), name: nameOf(args.name), date: dateOf(args.date)});
   } else if (name === 'card_paid_off') {
     Object.assign(job, {amount: amountOf(args.amount).toFixed(2), name: '', date: dateOf(args.date)});
@@ -131,6 +138,7 @@ async function summaryText(d) {
   const L = [];
   L.push(`Where's My Money? (app last saved ${s.updated || f.modifiedTime || 'unknown'}). This is a guide; the bank app is the real number.`);
   L.push(`Spare cash left: ${money(s.spare)} · Spent so far: ${money(s.spent)} · Still to come out: ${money(s.to_come_out)}`);
+  if (s.money_in) L.push(`Money in this month (not pay): ${money(s.money_in)}`);
   if (s.card) L.push(`Credit card: ${money(s.card.used)} used, ${money(s.card.free)} free`);
   const pots = Array.isArray(s.pots) ? s.pots : [];
   if (pots.length) {
@@ -140,7 +148,7 @@ async function summaryText(d) {
   const bills = Array.isArray(s.bills) ? s.bills : [];
   if (bills.length) {
     L.push('', 'Bills:');
-    bills.forEach(b => L.push(`- ${b.name}: ${money(b.amount)}, day ${b.day == null ? 'not set' : b.day}, ${b.paid ? 'paid' : 'not paid yet'}`));
+    bills.forEach(b => L.push(`- ${b.name}: ${money(b.amount)}, day ${b.day == null ? 'not set' : b.day}, ${b.skipped ? 'skipped this month (counts £0)' : b.on_card ? 'paid on the credit card' : b.paid ? 'paid' : 'not paid yet'}`));
   }
   const added = Array.isArray(s.added) ? s.added.filter(a => ID.test(String(a.id))) : [];
   if (added.length) {

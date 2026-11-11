@@ -234,7 +234,7 @@ test('a job survives a backup and a new month (jobsDone + job ids are kept)', ()
 test('summary = totals only: spare, spent, to come out, pots, card', () => {
   const s = M.FAKE(), r = M.compute(s, TODAY);
   const sum = M.summary(s, TODAY, '2024-11-08T10:00:00.000Z');
-  assert.deepStrictEqual(Object.keys(sum).sort(), ['added', 'bills', 'card', 'pots', 'spare', 'spent', 'to_come_out', 'updated']);
+  assert.deepStrictEqual(Object.keys(sum).sort(), ['added', 'bills', 'card', 'money_in', 'pots', 'spare', 'spent', 'to_come_out', 'updated']);   // v0.70: + money_in
   assert.strictEqual(sum.updated, '2024-11-08T10:00:00.000Z');
   near(sum.spare, r.leftNow, 'spare = Actual spare');
   near(sum.spent, 106.7, 'spent = spends paid so far');

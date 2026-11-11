@@ -111,7 +111,7 @@ test('connect with Google: the token never shows the Google refresh token', asyn
   const init = await rpc(tok, 'initialize', {protocolVersion: '2025-06-18'});
   assert.equal(init.result.serverInfo.name, 'wmm-lite');
   const list = await rpc(tok, 'tools/list');
-  assert.deepEqual(list.result.tools.map(t => t.name), ['money_summary', 'add_spend', 'add_bill', 'card_spend', 'card_paid_off', 'remove_added']);
+  assert.deepEqual(list.result.tools.map(t => t.name), ['money_summary', 'add_spend', 'add_bill', 'card_spend', 'card_paid_off', 'add_money_in', 'remove_added']);
   const again = await (await call('/token', {method: 'POST', body: new URLSearchParams({grant_type: 'refresh_token', refresh_token: tok.refresh_token}).toString()})).json();
   assert.ok(again.access_token);
 });
@@ -175,9 +175,10 @@ test('every add kind works in the real app, and remove takes it back', async () 
   await tool(tok, 'add_bill', {amount: '9.99', name: 'Netflix', day: 15});
   await tool(tok, 'card_spend', {amount: 30, name: 'Amazon'});
   await tool(tok, 'card_paid_off', {amount: 50});
+  await tool(tok, 'add_money_in', {amount: 20, name: 'Mum'});      // v0.70
   const s = M.FAKE ? M.FAKE() : M.TEMPLATE();
   const js = jobs().map(f => JSON.parse(f.body)).sort((a, b) => a.id.localeCompare(b.id));
-  assert.equal(js.length, 4);
+  assert.equal(js.length, 5);
   for (const j of js) {
     const r = M.applyJob(s, j, '2026-11-08');
     assert.equal(r.done, true, j.kind + ': ' + JSON.stringify(r));

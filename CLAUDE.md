@@ -390,3 +390,14 @@
      for df-ai-lab.github.io on this device' (Use a different device / OK) on open. The app thinks fingerprint is on here, but this phone
      has no passkey (removed, or made on another device / synced record). Look at: Passport fingerprint check before asking (only ask if
      this device made the passkey), and on 'no passkey' turn fingerprint off for this device quietly + offer 'Set up fingerprint' again.
+- **11 Nov v0.70 (demo only; live still v0.69; mock https://claude.ai/artifact/9TV6jdTmuRTFTF5KinGxnT round 2, Darren: "1 yes, 2 yes, 3 later"):**
+  1) MONEY IN card (data-id moneyin, right under Add a spend; applyLayout puts it after 'spend' in an old saved order): s.moneyIn [{id,date,
+  name,amount,job?}], /in/add (M.addMoneyIn, error 'moneyin'), ⋯ Remove (/in/remove). compute inTotal adds like Left (moneyForSpending, ring,
+  monthEndSpare); top card '+ Money in' line (#st-in) only when > 0; LITE_PAGE.left = left + inTotal. Folded while empty. Payday: month keeps
+  `in` + moneyIn, list cleared. Job kind add_money_in + Worker tool add_money_in; remove_spend/remove_added take it back; summary money_in.
+  2) BILL ⋯: min-width 290px. Paid button = Sheet.pick(..., plain) '✅ Paid' / '💳 Paid on <card>' each card / '↩️ Not paid yet' (no card = old
+  switch). /bill/oncard (M.payOnCard: card line made, b.oncard {card,item,amount}, paid, used 0 = not from bank; Paid/Not paid/Skip take the
+  line off, amount change moves it). '⏭ Skip this month' / '↩️ Count it this month' (/bill/skip, b.skip: used 0, not paid, not in bell).
+  Payday clears skip + oncard (card line stays: the card owes it); history bill skipped:true (monthBills/avg ignore it). Chips .bchip.
+  3) Spend straight on a card: LATER idea (Darren: "not now").
+  Tests 156 node + 288 browser (test_v070.py; bill_menu helper answers the paid sheet; v050/v060 changed on purpose).
