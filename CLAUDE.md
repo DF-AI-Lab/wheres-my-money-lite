@@ -385,3 +385,8 @@
      resets next month (maybe a setting 'always pay on card').
   4) BANK NAME on each bill (what the bank statement calls it), so checking against the bank app is easier.
   (Darren's real amounts/payee names stay OUT of this public repo.)
+- **🐞 ISSUE LIST (Darren, 11 Nov: "add to the list"; fix when he says):**
+  1) MAIN PHONE lock screen ('Welcome back, Darren', passcode box) pops Google's 'No passkeys available - There aren't any passkeys
+     for df-ai-lab.github.io on this device' (Use a different device / OK) on open. The app thinks fingerprint is on here, but this phone
+     has no passkey (removed, or made on another device / synced record). Look at: Passport fingerprint check before asking (only ask if
+     this device made the passkey), and on 'no passkey' turn fingerprint off for this device quietly + offer 'Set up fingerprint' again.
