@@ -107,7 +107,8 @@
   }
 
   function spendCard(r, err) {
-    const up = r.spends.filter(s => s.upcoming), done = r.spends.filter(s => !s.upcoming);
+    // v0.73 (Darren): newest at the top
+    const up = r.spends.filter(s => s.upcoming).reverse(), done = r.spends.filter(s => !s.upcoming).reverse();
     const upTotal = up.reduce((a, s) => a + s.amount, 0);          // v0.59: the bottom box splits Paid so far / Still to come
     const head = (text, list) => `<tr class="sgrp"><td colspan="3">${text} · ${money(list.reduce((a, s) => a + s.amount, 0))}</td></tr>`;
     const rows = up.length ? head('Still to come', up) + up.map(spendRow).join('') + head('Paid', done) + done.map(spendRow).join('')
@@ -176,7 +177,7 @@
 
   function cardCard(c, first, err, title) {
     const key = `<input type="hidden" name="card" value="${esc(c.key)}">`;
-    const rows = c.rows.map(x => `
+    const rows = c.rows.slice().reverse().map(x => `
 
           <tr class="drow ${x.status === 'paid' ? 'crossed' : ''}"><td><b>${esc(x.name)}</b><span class="labels">${F.day(x.date)}${x.status === 'part' ? ' · ' + money(x.left) + ' left' : ''}</span></td>
               <td class="n ${x.amount < 0 ? 'good' : ''}">${money(x.amount)}</td>
