@@ -53,8 +53,6 @@ input.badval { border-color: var(--bad); }
 @media (max-width: 700px) { .q-drop { border-top: 1px solid var(--border); padding-top: 14px; } }
 
 /* pots as rows in Bills (not tr.bill) */
-tr.potbill td:first-child .bbase { color: var(--pot); }
-@media (max-width: 640px) { [data-card] table tr.potbill td:empty { display: none; } }
 
 /* top card: Starting spare */
 .st-rows .r.start { font-weight: 700; }
@@ -459,14 +457,6 @@ body.editing .setmenu[hidden] { display: none; }
 .catkid .labels, .catname .labels, .catbar .labels { display: inline; margin: 0; }
 /* v0.52 (mock https://claude.ai/artifact/1zmePagXQfUQeVn8QTFX5S) */
 /* pots in Bills count down: spent / amount, blue under, red over, a thin bar */
-tr.potbill .potbar { display: block; height: 5px; margin-top: 6px; border-radius: 5px; background: var(--row); max-width: 220px; }
-tr.potbill .potbar i { display: block; height: 5px; border-radius: 5px; background: var(--bill); }
-tr.potbill .potspent { color: var(--bill); font-weight: 800; }
-tr.potbill .potof { color: var(--muted); font-weight: 700; }
-.demo [data-card="bills"] tr.potbill td.bamt button.link { color: var(--muted); font-weight: 700; }
-tr.potbill.over .potspent, tr.potbill.over .bsub { color: var(--bad); }
-tr.potbill.over .bsub { font-weight: 700; }
-tr.potbill.over .potbar i { background: var(--bad); }
 /* Settings + bell squared up: one block, bell under Settings on the left, version on the right */
 .demohead .settings { display: grid; grid-template-columns: max-content; gap: 12px; }
 .demo #setbtn { display: flex; align-items: center; justify-content: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 10px; font-weight: 700; }

@@ -280,19 +280,6 @@
     `;
   }
 
-  // a pot is also a row in Bills (not tr.bill: the page's bill maths ignores it); tap the amount to change the pot
-  function potBill(p) {
-    return `
-      <tr class="potbill${!p.blank && p.over > 0 ? ' over' : ''}" data-pot="${esc(p.key)}" data-name="${esc(p.name)}" data-amount="${p.blank ? '' : f2(p.amount)}">
-        <td><b class="bbase">${esc(p.name)}</b><span class="bsub">${p.blank ? 'Pots · monthly amount'
-          : p.over > 0 ? `Pots · ${money(p.over)} over` : `Pots · ${money(p.left)} left`}</span>${p.blank ? ''
-          : `<span class="potbar" aria-hidden="true"><i style="width:${Math.max(1, p.pct)}%"></i></span>`}</td>
-        <td class="n bavg">${p.blank ? '' : money(p.amount)}</td>
-        <td class="n bamt">${p.blank ? '' : `<span class="potspent">${money(p.spent)}</span><span class="potof"> / </span>`}<button type="button" class="link ${p.blank ? 'muted' : ''}" title="Change the pot amount">${p.blank ? 'Add' : money(p.amount)}</button></td>
-        <td colspan="2"></td></tr>
-    `;
-  }
-
   // v0.37 (Darren, 24 Oct): ⏸ Pause takes a bill out of the list into ONE folded line at the bottom (Bills stays clean);
   // open it for each paused bill and ▶ Resume (the same /stopped switch as before)
   function pausedRows(list) {
@@ -317,13 +304,11 @@
     ${r.bills.filter(b => !b.stopped).map(billRow).join('')}
     </tbody>
 
-    <tbody>${r.pots.map(potBill).join('')}</tbody>
-
-    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg ${money(r.billsAvg + r.potsSet)}</span></td><td class="n bavg">${money(r.billsAvg + r.potsSet)}</td><td class="n bamt" id="btotal">${money(r.billsTotal + r.potsSet)}</td>
+    <tbody><tr class="total"><td><b class="bbase">Total</b><span class="bsub">avg ${money(r.billsAvg)}</span></td><td class="n bavg">${money(r.billsAvg)}</td><td class="n bamt" id="btotal">${money(r.billsTotal)}</td>
       <td class="n diff ${tone}" id="bdiff">${F.diff(bd)}</td><td></td></tr></tbody>
     ${pausedRows(r.bills.filter(b => b.stopped))}
   </table>
-  ${catView(r.billCats, r.billsTotal + r.potsSet, g => g.name === 'Pots' ? 'pot' : 'bill', x => x.dueText ? esc(x.dueText) : '')}
+  ${catView(r.billCats, r.billsTotal, () => 'bill', x => x.dueText ? esc(x.dueText) : '')}
   <form class="inline" method="post" action="/bill/add" style="margin-top:12px">
     <input class="amount" type="text" name="amount" inputmode="decimal" placeholder="12.99" aria-label="Amount">
     <input class="name" type="text" name="name" placeholder="New bill" aria-label="Bill name">

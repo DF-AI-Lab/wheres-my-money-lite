@@ -348,8 +348,8 @@
     return {pay, left, moneyIn, inTotal, startSpare: moneyForSpending, bills, billsTotal, billsAll, billsAvg, billsDiff: billsTotal - billsAvg, spends: shown, spendsTotal,
             pots, potsSet, potsOver, potsTotal, potsSpent, potsLeft, potBills, spendsAll, moneyForSpending, leftNow, spare: leftNow, pct, cards, card: cards[0] || null,
             spendCats: catTotals(shown),
-            billCats: catTotals(own.map(b => ({name: b.name, cat: b.cat, amount: b.used, dueText: b.dueText}))
-              .concat(pots.filter(p => !p.blank).map(p => ({name: p.name, cat: 'Pots', amount: p.amount})))),
+            // v0.74 (Darren, 28 Nov): pots live in the Pots card only, not in Bills (not spent yet = not a bill)
+            billCats: catTotals(own.map(b => ({name: b.name, cat: b.cat, amount: b.used, dueText: b.dueText}))),
             anyEstimated: bills.some(b => b.estimated), cycles, lastMonth, cats, periods, hasHistory: history.length > 0};
   }
 
@@ -391,7 +391,7 @@
   }
 
   // ---------- the backup file ----------
-  const APP = 'wheres-my-money-lite', VERSION = '0.73';
+  const APP = 'wheres-my-money-lite', VERSION = '0.74';
   const exportBackup = (s, day) => ({app: APP, version: VERSION, saved: day, state: clone(s)});
   function importBackup(file) {                                  // the state (a copy, migrated) or null for anything wrong
     if (!file || typeof file !== 'object' || file.app !== APP) return null;
