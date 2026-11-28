@@ -428,3 +428,6 @@
   Lock screen: 'Enter your passcode', .ps-pad of .ps-key[data-n] buttons + #del (+ #fp fingerprint key bottom left), opens by itself after
   6 numbers (no #pc / #go on the lock screen; theme 'button' text unused). Making a passcode = pad, then 'Type it again'. Lockout text
   'Locked: too many wrong tries…'. Tests: conftest pad(page, pin) / new_pin(page, pin). Tests 134 node + 283 browser (v064 flake passes alone).
+- **28 Nov v0.77 MOVED TO LIVE (Darren: pad keys showed as square mint buttons): look.css '.demo button' + lite.css '#wmmlock .ps-screen button'
+  restyled Passport's .ps-key. lite.css now sets #wmmlock .ps-screen .ps-key round (50%, --ps-field, border), .ps-key-icon clear, .ps-key-fp accent.
+  Passport v0.4.0 css: .ps-key rules are '.ps-pad .ps-key' (stronger). Fingerprint key shows only when fingerprint is on for THIS device + app.

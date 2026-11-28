@@ -110,6 +110,10 @@ html.lockon .wrap { display: none; }
 #wmmlock .ps-screen .ps-switch { border-radius: 99px; background: var(--ps-bg, transparent); border: 1px solid var(--ps-fieldBorder); }
 #wmmlock .ps-screen .ps-switch[aria-checked="true"] { background: var(--ps-accent); border-color: var(--ps-accent); }
 #wmmlock .ps-screen .ps-ghost.ps-out { color: var(--ps-error); }
+#wmmlock .ps-screen .ps-key { border-radius: 50%; background: var(--ps-field); color: var(--ps-text); border: 1px solid var(--ps-fieldBorder); font-weight: 600; }   /* v0.77: Passport number pad = round keys */
+#wmmlock .ps-screen .ps-key-icon { background: transparent; border-color: transparent; }
+#wmmlock .ps-screen .ps-key-fp { color: var(--ps-accent); }
+#wmmlock .ps-screen .ps-key:active:not(:disabled) { background: var(--ps-fieldBorder); }
 .box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
        width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; margin: auto; }
 .box img { width: 64px; height: 64px; border-radius: 16px; }
