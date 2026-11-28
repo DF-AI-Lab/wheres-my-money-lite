@@ -37,48 +37,32 @@ def test_back_also_leaves_move_and_rename(page, base):
 
 # ---------- 2. 🟠 pots in Bills, counted once ----------
 
-def test_every_pot_is_a_row_in_bills(page, base):
+def test_pots_are_not_in_bills(page, base):
+    """v0.74 (Darren, 28 Nov): pots live in the Pots card only; not spent yet = not a bill."""
     page.goto(base + DEMO)
-    rows = page.locator('[data-card="bills"] tr.potbill')
-    assert rows.count() == 3
-    assert rows.evaluate_all("els => els.map(e => e.dataset.pot)") == ["Shopping", "Fuel", "Going out"]
-    shop = page.locator('tr.potbill[data-pot="Shopping"]')
-    text = shop.inner_text()
-    assert "Shopping" in text and "Pots" in text and "£400.00" in text
-    assert page.locator('tr.potbill[data-pot="Going out"]').locator("button.link").inner_text() == "Add"
-    assert page.locator('tr.bill[data-key="Shopping"]').count() == 0     # not a real bill
+    assert page.locator('[data-card="bills"] tr.potbill').count() == 0
+    assert page.locator('[data-card="bills"]').inner_text().count("Pots ·") == 0
+    assert page.locator('[data-card="pots"] .pot[data-key="Shopping"]').count() == 1   # still in the Pots card
 
 
 def test_pots_are_counted_once(page, base):
     page.goto(base + DEMO)
-    assert page.locator("#btotal").inner_text() == "£1,733.73"        # bills 1,183.73 + pots 550 (the card adds up)
+    assert page.locator("#btotal").inner_text() == "£1,183.73"        # v0.74: bills only, no pots
     assert page.locator("#st-bills").inner_text() == "£1,183.73"      # the top card: bills alone
     assert page.locator("#st-pots").count() == 0                      # one pot line only: Pots left (22 Oct)
     assert page.locator("#spare-big").inner_text() == "£1,209.57"     # real money left: not taken off twice
 
 
-def test_typing_a_bill_keeps_the_pots_in_the_total(page, base):
+def test_typing_a_bill_changes_the_total(page, base):
     page.goto(base + DEMO)
     row = 'tr.bill[data-key="Rent"]'
     page.click(f"{row} button.link")
     page.fill(f"{row} input.billbox", "600")
     page.wait_for_timeout(100)
-    assert page.locator("#btotal").inner_text() == "£1,783.73"
+    assert page.locator("#btotal").inner_text() == "£1,233.73"
     assert page.locator("#st-start").inner_text() == "£716.27"
     assert page.locator("#st-spare").inner_text() == "£1,159.57"
 
-
-def test_a_pot_row_amount_changes_the_pot(page, base):
-    page.goto(base + TODAY)
-    page.click('tr.potbill[data-pot="Shopping"] button.link')
-    with page.expect_navigation():
-        sheet(page, "450")
-    page.wait_for_load_state()
-    pot = [p for p in stored(page)["pots"] if p["key"] == "Shopping"][0]
-    assert pot["amount"] == 450
-
-
-# ---------- 3. 💰 Starting spare and Actual spare ----------
 
 def test_top_card_shows_starting_and_actual_spare(page, base):
     page.goto(base + DEMO)

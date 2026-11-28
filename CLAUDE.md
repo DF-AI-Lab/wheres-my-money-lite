@@ -415,3 +415,7 @@
 - **20 Nov v0.73 MOVED TO LIVE (Darren: "send it straight to live"): live = demo = v0.73.** Add a spend + Credit card lists show the NEWEST at the top (render.js reverses
   the display only: spends in each group (Still to come / Paid), card rows; stored order unchanged). Tests 134 node + 284 browser
   (flakes under -n 4, pass alone: test_v064 follows main, test_v041 back in place).
+- **28 Nov v0.74 (demo only; live still v0.73): POTS OUT OF BILLS (Darren: pots aren't spent yet, not guaranteed to go out).** No tr.potbill rows in
+  Bills; Bills Total (#btotal) + avg = own bills only (no + potsSet), live-typing total too; billCats has no 'Pots' group. Pots stay in the Pots
+  card; top card unchanged (Starting spare still takes off pots set, Pots left line). Tests changed on purpose: step10/step11 totals, v052 pot-row
+  tests removed, v051 node. Tests 134 node + 279 browser.

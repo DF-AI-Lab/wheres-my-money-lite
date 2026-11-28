@@ -26,12 +26,11 @@ test('compute gives spendCats that add up to every spend', () => {
   assert.strictEqual(sum(r.spendCats.map(c => c.items.length)), r.spends.length);
 });
 
-test('compute gives billCats that add up to the Bills total (pots as one group, paused bills left out)', () => {
+test('compute gives billCats that add up to the Bills total (v0.74: no pots, paused bills left out)', () => {
   const s = M.FAKE();
   s.bills[0].stopped = true;
   const r = M.compute(s, '2024-11-08');
-  near(sum(r.billCats.map(c => c.total)), r.billsTotal + r.potsSet, 'bills');
-  const pots = r.billCats.find(c => c.name === 'Pots');
-  assert.ok(pots && pots.items.length === r.pots.filter(p => !p.blank).length);
+  near(sum(r.billCats.map(c => c.total)), r.billsTotal, 'bills');
+  assert.ok(!r.billCats.some(c => c.name === 'Pots'));
   assert.ok(!r.billCats.some(c => c.items.some(i => i.name === s.bills[0].name)));
 });

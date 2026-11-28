@@ -71,7 +71,7 @@ def test_a_fuel_bill_comes_out_of_the_fuel_pot(page, base):
     assert "£110.00 of £150.00" in fuel.inner_text()
     assert "£40.00 left" in fuel.inner_text()
     assert "Fuel pot" in page.locator('tr.bill[data-key="Fuel card"] .bsub').inner_text()
-    assert page.locator("#btotal").inner_text() == "£1,733.73"        # the Bills card still adds up (pot rows hold it)
+    assert page.locator("#btotal").inner_text() == "£1,183.73"        # v0.74: Bills total = own bills (the pot bill is in the pot)
 
 
 def test_a_fuel_spend_takes_actual_spare_down(page, base):

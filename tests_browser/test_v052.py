@@ -9,33 +9,6 @@ def _money(t):
     return float(t.replace("£", "").replace(",", ""))
 
 
-def test_pot_rows_show_spent_of_amount(page, base):
-    page.goto(base + DEMO)
-    shop = page.locator('tr.potbill[data-pot="Shopping"]')
-    spent = _money(shop.locator(".potspent").inner_text())
-    assert shop.locator("button.link").inner_text() == "£400.00"        # tap the amount = change the pot (as before)
-    assert "/" in shop.locator("td.bamt").inner_text()
-    sub = shop.locator(".bsub").inner_text()
-    left = 400 - spent
-    assert sub.startswith("Pots · ") and (f"£{left:,.2f} left" in sub if left >= 0 else "over" in sub), sub
-    w = shop.locator(".potbar i").evaluate("e => e.style.width")
-    assert w.endswith("%")
-    assert page.locator('tr.potbill[data-pot="Going out"] .potspent').count() == 0   # no amount yet = just 'Add'
-
-
-def test_pot_over_goes_red(page, base):
-    page.goto(base + DEMO)
-    page.evaluate("""() => { const k = 'lite_demo_v1'; const s = JSON.parse(sessionStorage.getItem(k));
-        s.pots.find(p => p.key === 'Fuel').amount = 1; sessionStorage.setItem(k, JSON.stringify(s)); }""")
-    page.reload()
-    fuel = page.locator('tr.potbill[data-pot="Fuel"]')                  # £60 spent of £1
-    assert "over" in (fuel.get_attribute("class") or "")
-    assert "£59.00 over" in fuel.locator(".bsub").inner_text()
-    red = fuel.locator(".potspent").evaluate("e => getComputedStyle(e).color")
-    blue = page.locator('tr.potbill[data-pot="Shopping"] .potspent').evaluate("e => getComputedStyle(e).color")
-    assert red != blue
-
-
 def test_bell_sits_under_settings_squared(page, base):
     page.set_viewport_size({"width": 390, "height": 800})
     page.goto(base + DEMO)
