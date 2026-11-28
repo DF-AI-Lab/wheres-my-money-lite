@@ -419,7 +419,7 @@
   Bills; Bills Total (#btotal) + avg = own bills only (no + potsSet), live-typing total too; billCats has no 'Pots' group. Pots stay in the Pots
   card; top card unchanged (Starting spare still takes off pots set, Pots left line). Tests changed on purpose: step10/step11 totals, v052 pot-row
   tests removed, v051 node. Tests 134 node + 279 browser.
-- **28 Nov v0.75 (demo only; live still v0.74): 'This month' box STAYS OPEN after a Pay / Left change** (Darren: it shut on every save).
+- **28 Nov v0.75 MOVED TO LIVE (Darren: "move to live"; live = demo = v0.75): 'This month' box STAYS OPEN after a Pay / Left change** (Darren: it shut on every save).
   index.html stayOpen() sets sessionStorage lite_quickopen before the /pay (#nmpayedit, 'just the pay') and /left posts; on load the flag opens
   #quick (no animation) once. A new month shuts it; the tab shuts it by hand. test_v064 pay/left no longer re-tap the tab. Tests 134 node + 283
   browser (test_v075.py).
