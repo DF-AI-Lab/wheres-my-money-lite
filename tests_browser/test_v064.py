@@ -214,7 +214,7 @@ def test_pay_can_be_changed_any_time(page, base):
         page.locator(".litesheet button.ok").last.click()
     page.wait_for_load_state()
     assert page.evaluate("Lite.state().pay") == 2750
-    page.click("#quicktab")
+    assert page.locator("#quick").is_visible()        # v0.75: stays open after the save (was: tap the tab again)
     assert page.locator("#nm-pay").inner_text().strip() == "£2,750.00"
     assert not page.errors
 
@@ -228,7 +228,7 @@ def test_left_from_last_month_can_be_fixed_any_time(page, base):
         page.locator(".litesheet button.pri").last.click()
     page.wait_for_load_state()
     assert page.evaluate("Lite.state().left") == 123.45
-    page.click("#quicktab")
+    assert page.locator("#quick").is_visible()        # v0.75: stays open after the save
     assert page.locator("#nm-left").inner_text().strip() == "£123.45"
     sofar = page.evaluate("Money.monthEndSpare(Lite.state())")
     assert page.locator("#nm-sofar").inner_text().strip() == "£{:,.2f}".format(sofar)
