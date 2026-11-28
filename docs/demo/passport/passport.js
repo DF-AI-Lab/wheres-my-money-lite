@@ -5,7 +5,7 @@
 // No client ID in config.js = pretend mode (this phone only, no Google).
 
 const Passport = (() => {
-  const VERSION = '0.4.0';
+  const VERSION = '0.4.1';
   const cloud = typeof PassportCloud !== 'undefined' && PassportCloud.enabled;
   const KEY = cloud ? 'passport-v2' : 'passport-demo-v2';
   const MAX_TRIES = 5;          // wrong passcodes before lock
@@ -239,10 +239,58 @@ const Passport = (() => {
   function appPref(app, k) { return load().apps[app]?.[k]; }
   function setAppPref(app, k, v) { const db = load(); db.apps[app] = { ...(db.apps[app] || {}), [k]: v }; save(db); }
 
-  // unlocked = this tab only, until closed or "Lock now"
+  // ---------- security levels (v0.4.1) ----------
+  // open     = no lock screen (Google sign-in once). Private stuff still asks for the passcode.
+  // remember = unlock once, this device stays unlocked for 7 days (a token in localStorage, never the hidden key)
+  // locked   = ask every time (unlock lasts for this tab only)
+  // The app's theme.json picks the default ("security"); the person can change it per app in Settings (saved in the passport).
+  const LEVELS = ['open', 'remember', 'locked'];
+  const REMEMBER_MS = 7 * 24 * 60 * 60 * 1000;
+  const defaults = {};
+  function setDefaultLevel(app, lvl) { if (LEVELS.includes(lvl)) defaults[app] = lvl; }
+  function level(app) {
+    const p = find(appAccount(app));
+    const l = p?.levels?.[app] || defaults[app];
+    return LEVELS.includes(l) ? l : 'locked';
+  }
+  const tokenKey = (app) => 'passport-remember-' + app;
+  const readToken = (app) => { try { return JSON.parse(localStorage.getItem(tokenKey(app))); } catch { return null; } };
+  function remember(app) {
+    const now = Date.now();
+    try { localStorage.setItem(tokenKey(app), JSON.stringify({ email: appAccount(app), at: now, exp: now + REMEMBER_MS })); } catch {}
+  }
+  function forgetToken(app) { try { localStorage.removeItem(tokenKey(app)); } catch {} }
+  // 'remember' only: when this device's 7 days run out (0 = not remembered)
+  function rememberedUntil(app) {
+    const t = readToken(app), p = find(appAccount(app));
+    if (!t || !p || level(app) !== 'remember') return 0;
+    if (norm(t.email) !== p.email || !(t.exp > Date.now()) || t.at < (p.lockAllAt || 0)) return 0; // lockAllAt: v0.4 'Lock all devices'
+    return t.exp;
+  }
+  function setLevel(app, lvl) {
+    if (!LEVELS.includes(lvl)) return;
+    const db = load(); const p = db.passports[norm(appAccount(app))];
+    if (!p) return;
+    p.levels = { ...(p.levels || {}), [app]: lvl };
+    changed(db, p);
+    if (lvl !== 'remember') forgetToken(app);
+    else if (tabOn(app)) remember(app); // already unlocked: the 7 days start now
+  }
+
+  // unlocked: this tab (passcode/fingerprint), or remembered for 7 days, or the app is 'open'
   const unlockKey = (app) => 'passport-unlocked-' + app;
-  function isUnlocked(app) { try { return sessionStorage.getItem(unlockKey(app)) === '1'; } catch { return false; } }
-  function setUnlocked(app, on) { if (!on) forget(); try { on ? sessionStorage.setItem(unlockKey(app), '1') : sessionStorage.removeItem(unlockKey(app)); } catch {} }
+  function tabOn(app) { try { return sessionStorage.getItem(unlockKey(app)) === '1'; } catch { return false; } }
+  function isUnlocked(app) {
+    if (tabOn(app)) return true;
+    const lvl = level(app);
+    if (lvl === 'open') return !!find(appAccount(app));
+    return lvl === 'remember' && rememberedUntil(app) > 0;
+  }
+  function setUnlocked(app, on) {
+    if (!on) { forget(); forgetToken(app); }
+    else if (level(app) === 'remember') remember(app);
+    try { on ? sessionStorage.setItem(unlockKey(app), '1') : sessionStorage.removeItem(unlockKey(app)); } catch {}
+  }
 
   // ---------- fingerprint (passkeys / WebAuthn) ----------
   // The fingerprint never leaves the phone. Linked to this phone + this web address.
@@ -290,13 +338,13 @@ const Passport = (() => {
 
   // only clears this phone. Your Drive copy stays.
   function resetAll() {
-    try { localStorage.removeItem(KEY); sessionStorage.clear(); } catch {}
+    try { localStorage.removeItem(KEY); Object.keys(localStorage).filter((k) => k.startsWith('passport-remember-')).forEach((k) => localStorage.removeItem(k)); sessionStorage.clear(); } catch {}
   }
 
   return {
     VERSION, MAX_TRIES, cloud, key, sync, pull, needsSync, find, create, lockedFor, checkPasscode, useBackupCode, backupLeft,
     setPasscode, newBackupCodes, appAccount, setAppAccount, signOut, appPref, setAppPref,
-    isUnlocked, setUnlocked, fingerprintAvailable, enrollFingerprint, verifyFingerprint,
+    isUnlocked, setUnlocked, level, setLevel, setDefaultLevel, rememberedUntil, LEVELS, fingerprintAvailable, enrollFingerprint, verifyFingerprint,
     removeFingerprint, resetAll, isPasscode,
   };
 })();

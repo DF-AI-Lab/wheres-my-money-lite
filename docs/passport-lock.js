@@ -39,7 +39,9 @@
   // ---------- the "used at" stamp (5 minutes without use = lock) ----------
   function stamp() { try { return Number(root.sessionStorage.getItem(STAMP_KEY)) || 0; } catch (e) { return 0; } }
   function setStamp(on) { try { if (on) root.sessionStorage.setItem(STAMP_KEY, String(Date.now())); else root.sessionStorage.removeItem(STAMP_KEY); } catch (e) { /* ignore */ } }
-  const stale = () => !stamp() || Date.now() - stamp() > IDLE_MS;
+  // v0.78: the 5-minute idle lock only when Passport's level is 'Every time' (7 days / Open = Passport decides)
+  const idleLock = () => !PP() || !PP().level || PP().level(APP) === 'locked';
+  const stale = () => idleLock() && (!stamp() || Date.now() - stamp() > IDLE_MS);
 
   // ---------- after the passcode: WMM's own key for this tab (never the hidden key); gone on lock, sign out, tab close ----------
   const b64 = u => btoa(String.fromCharCode(...u)), unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));

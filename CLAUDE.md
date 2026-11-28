@@ -431,3 +431,8 @@
 - **28 Nov v0.77 MOVED TO LIVE (Darren: pad keys showed as square mint buttons): look.css '.demo button' + lite.css '#wmmlock .ps-screen button'
   restyled Passport's .ps-key. lite.css now sets #wmmlock .ps-screen .ps-key round (50%, --ps-field, border), .ps-key-icon clear, .ps-key-fp accent.
   Passport v0.4.0 css: .ps-key rules are '.ps-pad .ps-key' (stronger). Fingerprint key shows only when fingerprint is on for THIS device + app.
+- **28 Nov v0.78 MOVED TO LIVE (Darren: "just put it in the apps"; live = demo = v0.78): Passport v0.4.1 SECURITY LEVELS.** Passport settings
+  'Ask for passcode' .ps-seg [data-lv] Open | 7 days | Every time (saved in the passport `levels`, every device follows). passport/theme.json
+  "security": "locked" = WMM default (as before). passport-lock.js: idleLock() = the 5-minute idle lock ONLY when level is 'locked'; 7 days =
+  localStorage passport-remember-wmm token (Lock now / Sign out delete it), Open = no lock screen. Opening backups still needs the passcode
+  (no tab key after a remembered open). lite.css #wmmlock .ps-seg button overrides. Tests 134 node + 289 browser (test_v078.py).

@@ -1,6 +1,7 @@
 {
   "name": "Where's My Money?",
   "tagline": "Payday to payday · Lite",
+  "security": "locked",
   "button": "Open my money",
   "drive": "WMM",
   "font": "Manrope",

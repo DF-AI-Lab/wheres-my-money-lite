@@ -156,7 +156,7 @@ def screen(pg, words=None):
 
 
 def type_passcode(pg, pin=PIN):
-    pad(pg, pin)                                        # v0.76: Passport v0.4.0 number pad
+    pad(pg, pin)                                        # v0.76: Passport v0.4.1 number pad
 
 
 def phone(browser, d, **kw):
@@ -220,7 +220,7 @@ def test_the_old_lock_files_are_gone_and_passport_files_are_copied_untouched():
             assert (demo / "passport" / f).read_text() == (master / f).read_text(), f
     theme = json.loads((demo / "passport" / "theme.json").read_text())
     assert theme["drive"] == "WMM" and theme["font"] == "Manrope" and "lite-192.png" in theme["logo"]["value"]
-    assert "Passport v0.4.0" in (demo / "passport" / "PASSPORT.md").read_text()
+    assert "Passport v0.4.1" in (demo / "passport" / "PASSPORT.md").read_text()
     html = (demo / "index.html").read_text()
     order = [html.index(s) for s in ['src="lite.js', 'src="passport/config.js', 'src="passport/google.js', 'src="passport/passport.js',
                                      'src="passport/ui.js', 'src="passport-lock.js']]

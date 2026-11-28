@@ -376,6 +376,23 @@ const PassportUI = (() => {
     welcome();
   }
 
+  // v0.4.1 security level: how often this app asks (saved in the passport, so every device follows it)
+  const LEVEL = {
+    open: ['Open', 'Opens straight in. Private stuff still asks for your passcode.'],
+    remember: ['7 days', 'Asks once a week on this device.'],
+    locked: ['Every time', 'Asks every time you open it.'],
+  };
+  const day = (ms) => new Date(ms).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  function levelPicker() {
+    const lv = Passport.level(APP), until = Passport.rememberedUntil(APP);
+    return `<div class="ps-lv">
+        <p class="ps-lv-h" id="lvlbl">Ask for passcode</p>
+        <div class="ps-seg" role="radiogroup" aria-labelledby="lvlbl">${Passport.LEVELS.map((k) =>
+          `<button type="button" role="radio" aria-checked="${k === lv}" data-lv="${k}">${LEVEL[k][0]}</button>`).join('')}</div>
+        <p class="ps-lv-note">${LEVEL[lv][1]}${lv === 'remember' && until ? ` Unlocked here until ${esc(day(until))}.` : ''}</p>
+      </div>`;
+  }
+
   async function settings() {
     const email = Passport.appAccount(APP); const p = Passport.find(email);
     const can = await Passport.fingerprintAvailable();
@@ -397,16 +414,19 @@ const PassportUI = (() => {
           ? `<button class="ps-switch" id="fpt" role="switch" aria-checked="${fp ? 'true' : 'false'}" aria-labelledby="fplbl" title="${fp ? 'Turn fingerprint off' : 'Turn fingerprint on'}"></button>`
           : 'Not on this device'}</dd></div>
       </dl>
+      ${levelPicker()}
       <div id="msg"></div>
       ${CLOUD && p.dirty ? '<button class="ps-btn" id="sv">Save to Drive now</button>' : ''}
       <div class="ps-row">
         <button class="ps-btn ps-ghost" id="cpw">Change passcode</button>
         <button class="ps-btn ps-ghost" id="nb">New backup codes</button>
       </div>
-      <div class="ps-row">
+      ${Passport.level(APP) === 'open'
+        ? '<button class="ps-btn ps-ghost ps-out" id="out">Sign out</button>'
+        : `<div class="ps-row">
         <button class="ps-btn ps-ghost" id="lock">🔒 Lock now</button>
         <button class="ps-btn ps-ghost ps-out" id="out">Sign out</button>
-      </div>
+      </div>`}
       <p class="ps-small">Sign out to use another Google account. Your passport stays safe in Drive.</p>
       </div>`);
     on('#sv', 'click', async () => {
@@ -417,6 +437,7 @@ const PassportUI = (() => {
     on('#back', 'click', route);
     on('#cpw', 'click', () => needKey(() => newPasscode(Passport.backupLeft(Passport.find(email))), settings));
     on('#lock', 'click', () => { Passport.setUnlocked(APP, false); login(); });
+    root.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { Passport.setLevel(APP, b.dataset.lv); settings(); }));
     on('#out', 'click', signOut);
     on('#nb', 'click', () => needKey(async () => backupCodes(await Passport.newBackupCodes(email), settings), settings));
     on('#fpt', 'click', async () => {
@@ -439,6 +460,7 @@ const PassportUI = (() => {
 
   function start(opts) {
     APP = opts.app; T = opts.theme; root = opts.mount; onUnlocked = opts.onUnlocked; onSignOut = opts.onSignOut;
+    Passport.setDefaultLevel(APP, T.security); // theme.json "security": open | remember | locked (none = locked)
     applyTheme(T);
     route();
   }

@@ -128,3 +128,14 @@
 .ps-pad .ps-key-icon svg { width: 30px; height: 30px; }
 .ps-pad .ps-key-fp { color: var(--ps-accent); }
 @media (prefers-reduced-motion: reduce) { .ps-dots.bad { animation: none; } .ps-dot { transition: none; } }
+
+/* v0.4.1 security level picker in settings */
+.ps-lv { display: flex; flex-direction: column; gap: 6px; }
+.ps-lv-h { margin: 0; font-size: 13px; font-weight: 700; color: var(--ps-muted); }
+.ps-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px;
+  background: var(--ps-field); border: 1px solid var(--ps-fieldBorder); }
+.ps-seg button { min-height: 40px; border: none; border-radius: 9px; background: transparent; color: var(--ps-text);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; padding: 0 4px; }
+.ps-seg button[aria-checked="true"] { background: var(--ps-accent); color: var(--ps-accentText); }
+.ps-seg button:focus-visible { outline: 2px solid var(--ps-accent); outline-offset: 1px; }
+.ps-lv-note { margin: 0; font-size: 13px; line-height: 1.4; color: var(--ps-muted); }

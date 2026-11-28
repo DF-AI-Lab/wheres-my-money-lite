@@ -114,6 +114,8 @@ html.lockon .wrap { display: none; }
 #wmmlock .ps-screen .ps-key-icon { background: transparent; border-color: transparent; }
 #wmmlock .ps-screen .ps-key-fp { color: var(--ps-accent); }
 #wmmlock .ps-screen .ps-key:active:not(:disabled) { background: var(--ps-fieldBorder); }
+#wmmlock .ps-screen .ps-seg button { background: transparent; color: var(--ps-text); border: none; border-radius: 9px; font-weight: 600; }   /* v0.78: Ask for passcode picker */
+#wmmlock .ps-screen .ps-seg button[aria-checked="true"] { background: var(--ps-accent); color: var(--ps-accentText); }
 .box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px 24px;
        width: 100%; max-width: 380px; box-sizing: border-box; text-align: center; margin: auto; }
 .box img { width: 64px; height: 64px; border-radius: 16px; }
