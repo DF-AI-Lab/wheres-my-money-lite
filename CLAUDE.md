@@ -436,3 +436,5 @@
   "security": "locked" = WMM default (as before). passport-lock.js: idleLock() = the 5-minute idle lock ONLY when level is 'locked'; 7 days =
   localStorage passport-remember-wmm token (Lock now / Sign out delete it), Open = no lock screen. Opening backups still needs the passcode
   (no tab key after a remembered open). lite.css #wmmlock .ps-seg button overrides. Tests 134 node + 289 browser (test_v078.py).
+- **NEXT (Darren, 28 Nov "wrap up"):** Passport 'Lock all devices' (to-do in Passport-ID passport-id.md; token already checks lockAllAt), then the
+  🐞 fingerprint 'No passkeys available' issue above. No app version change for this note.
