@@ -2,7 +2,7 @@
 Google Drive permission back (no 'tick the Drive box' every sign-in)."""
 import json
 
-from conftest import _context, _page, post, PIN
+from conftest import _context, _page, post, PIN, new_pin
 from test_v045 import TODAY, CONFIG
 from test_v061 import PDrive, screen, type_passcode, shown
 from test_livedemo import site  # noqa: F401
@@ -21,9 +21,8 @@ def new_person(pg, site):  # noqa: F811
     pg.click("#passport #g")
     screen(pg)
     pg.fill("#passport #nm", "Sam Test")
-    pg.fill("#passport #pc", PIN)
-    pg.fill("#passport #pc2", PIN)
     pg.click("#passport button[type=submit]")
+    new_pin(pg, PIN)                                    # v0.76: Passport v0.4.0 number pad
     pg.wait_for_selector("#passport .ps-codes")
     pg.click("#passport #ok")
     pg.wait_for_selector("#wmmlock", state="hidden", timeout=15000)

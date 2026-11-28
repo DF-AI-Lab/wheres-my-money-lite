@@ -12,7 +12,7 @@ from urllib.parse import urlparse, parse_qs, unquote
 
 import pytest
 
-from conftest import (_context, _page, post, sheet, stored, make_lock, open_scrambled, open_v2, unb64, wk, passport_db,
+from conftest import (pad, new_pin, _context, _page, post, sheet, stored, make_lock, open_scrambled, open_v2, unb64, wk, passport_db,
                       make_passport, PIN, CODES, KEYREC, MK, PP_EMAIL, PP_ID, PP_NAME, PP_CODES)
 from test_v045 import Drive, TODAY, CONFIG, spends
 from test_livedemo import site  # noqa: F401  (the whole Pages site: live at /, demo at /demo/)
@@ -156,9 +156,7 @@ def screen(pg, words=None):
 
 
 def type_passcode(pg, pin=PIN):
-    pg.wait_for_selector("#passport #pc")
-    pg.fill("#passport #pc", pin)
-    pg.click("#passport #go")
+    pad(pg, pin)                                        # v0.76: Passport v0.4.0 number pad
 
 
 def phone(browser, d, **kw):
@@ -222,7 +220,7 @@ def test_the_old_lock_files_are_gone_and_passport_files_are_copied_untouched():
             assert (demo / "passport" / f).read_text() == (master / f).read_text(), f
     theme = json.loads((demo / "passport" / "theme.json").read_text())
     assert theme["drive"] == "WMM" and theme["font"] == "Manrope" and "lite-192.png" in theme["logo"]["value"]
-    assert "Passport v0.3.5" in (demo / "passport" / "PASSPORT.md").read_text()
+    assert "Passport v0.4.0" in (demo / "passport" / "PASSPORT.md").read_text()
     html = (demo / "index.html").read_text()
     order = [html.index(s) for s in ['src="lite.js', 'src="passport/config.js', 'src="passport/google.js', 'src="passport/passport.js',
                                      'src="passport/ui.js', 'src="passport-lock.js']]
@@ -253,12 +251,12 @@ def test_lock_now_and_5_minutes_idle_show_the_passport_lock(browser, base):
     pg.goto(base + TODAY)
     pg.click("#setbtn")
     pg.click("#locknow")
-    assert "Your passcode" in screen(pg)
+    assert "your passcode" in screen(pg)
     type_passcode(pg)
     pg.wait_for_selector("#wmmlock", state="hidden")
     pg.evaluate("""() => { sessionStorage.setItem('lite_unlock', String(Date.now() - 6 * 60 * 1000));
         document.dispatchEvent(new Event('visibilitychange')); }""")
-    assert "Your passcode" in screen(pg)
+    assert "your passcode" in screen(pg)
     assert not pg.errors
     ctx.close()
 
@@ -543,9 +541,8 @@ def test_a_new_person_signs_up_and_starts_with_drive_on(browser, base):
     pg.click("#passport #g")
     screen(pg)
     pg.fill("#passport #nm", "Sam Test")
-    pg.fill("#passport #pc", PIN)
-    pg.fill("#passport #pc2", PIN)
     pg.click("#passport button[type=submit]")
+    new_pin(pg, PIN)
     pg.wait_for_selector("#passport .ps-codes")
     pg.click("#passport #ok")
     pg.wait_for_selector("#wmmlock", state="hidden", timeout=15000)
@@ -580,9 +577,8 @@ def test_demo_lock_1_is_pretend_passport_with_its_own_keys(browser, site):  # no
     pg.fill("#passport #em", "try@example.com")
     pg.click("#passport button[type=submit]")
     pg.fill("#passport #nm", "Try Person")
-    pg.fill("#passport #pc", PIN)
-    pg.fill("#passport #pc2", PIN)
     pg.click("#passport button[type=submit]")
+    new_pin(pg, PIN)
     pg.wait_for_selector("#passport .ps-codes")
     pg.click("#passport #ok")
     pg.wait_for_selector("#wmmlock", state="hidden", timeout=15000)

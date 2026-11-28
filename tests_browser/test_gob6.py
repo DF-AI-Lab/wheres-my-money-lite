@@ -3,7 +3,7 @@
 A real browser at phone width. Fake data only. Fixtures: page (set up + unlocked), locked (set up), fresh (new person)."""
 import json
 
-from conftest import DEMO, PIN, PP_CODES, stored, post, open_scrambled, sheet
+from conftest import DEMO, PIN, PP_CODES, stored, post, open_scrambled, sheet, pad, new_pin
 
 TODAY = "?today=2024-11-08"
 
@@ -32,9 +32,7 @@ def app_shown(page):
 
 
 def type_pin(page, pin):
-    page.wait_for_selector("#passport #pc:not([disabled])")
-    page.fill("#passport #pc", pin)
-    page.click("#passport #go")
+    pad(page, pin)                                                  # v0.76: Passport v0.4.0 number pad
 
 
 def unlock(page, pin=PIN):
@@ -52,7 +50,7 @@ def test_the_demo_has_no_lock(fresh, base):
 
 def test_opening_asks_for_the_passcode(locked, base):
     locked.goto(base + TODAY)
-    assert "Your passcode" in step(locked)
+    assert "your passcode" in step(locked)
     assert locked.locator(".wrap").is_hidden()
     type_pin(locked, "000000")
     assert "Wrong passcode" in step(locked, "Wrong passcode")
@@ -68,7 +66,7 @@ def test_five_wrong_tries_lock_it_for_a_while(locked, base):
         if n < 4:
             step(locked, "Wrong passcode")
     assert "Locked" in step(locked, "Locked")
-    assert locked.locator("#passport #pc").is_disabled()            # even the right one waits
+    assert locked.locator('#passport .ps-key[data-n="1"]').is_disabled()            # even the right one waits
     assert passport(locked)["lockUntil"] > 0
 
 
@@ -77,7 +75,7 @@ def test_it_locks_again_after_5_minutes_without_use(locked, base):
     unlock(locked)
     locked.evaluate("sessionStorage.setItem('lite_unlock', String(Date.now() - 6 * 60 * 1000))")
     locked.reload()
-    assert "Your passcode" in step(locked)
+    assert "your passcode" in step(locked)
 
 
 def test_coming_back_after_5_minutes_locks_without_a_reload(locked, base):
@@ -85,7 +83,7 @@ def test_coming_back_after_5_minutes_locks_without_a_reload(locked, base):
     unlock(locked)
     locked.evaluate("""() => { sessionStorage.setItem('lite_unlock', String(Date.now() - 6 * 60 * 1000));
         document.dispatchEvent(new Event('visibilitychange')); }""")
-    assert "Your passcode" in step(locked)
+    assert "your passcode" in step(locked)
 
 
 def test_lock_now_in_settings(page, base):
@@ -93,7 +91,7 @@ def test_lock_now_in_settings(page, base):
     assert app_shown(page)
     page.click("#setbtn")
     page.click("#locknow")
-    assert "Your passcode" in step(page)
+    assert "your passcode" in step(page)
 
 
 # ---------- forgot passcode: a backup code, then a new passcode (the hidden key stays the same) ----------
@@ -109,8 +107,7 @@ def test_forgot_passcode_use_a_backup_code_then_choose_a_new_one(locked, base):
     locked.fill("#passport #bc", PP_CODES[2])
     locked.click("#passport #go")
     step(locked, "Make a new passcode")
-    locked.fill("#passport #pc", "246813"); locked.fill("#passport #pc2", "246813")
-    locked.click("#passport #go")
+    new_pin(locked, "246813")
     locked.wait_for_selector("#wmmlock", state="hidden")
     assert passport(locked)["backup"][2]["used"] is True
     rec = lock_rec(locked)
@@ -129,8 +126,7 @@ def test_new_backup_codes_in_passport_settings(page, base):
     step(page, "New backup codes")
     page.click("#passport #nb")
     step(page, "needs your passcode")                               # after a reload the hidden key is closed
-    page.fill("#passport #pc", PIN)
-    page.click("#passport #go")
+    pad(page, PIN)
     page.wait_for_selector("#passport .ps-codes")
     new = page.locator("#passport .ps-codes code").all_inner_texts()
     assert len(new) == 10 and not set(new) & set(PP_CODES)

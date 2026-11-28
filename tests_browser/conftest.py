@@ -263,3 +263,15 @@ def bill_menu(page, key, item, dialog_answer=None):
     page.wait_for_load_state()
 
 
+def pad(page, pin):
+    """Passport v0.4.0: tap the on-screen number pad (no passcode box any more)."""
+    page.wait_for_selector("#passport .ps-key[data-n]:not([disabled])")
+    for n in pin:
+        page.click(f'#passport .ps-key[data-n="{n}"]')
+
+
+def new_pin(page, pin):
+    """Passport v0.4.0: make a passcode = the pad twice ('Type it again' in between)."""
+    pad(page, pin)
+    page.wait_for_function("() => (document.querySelector('#passport .ps-pad-label') || {}).textContent === 'Type it again'")
+    pad(page, pin)

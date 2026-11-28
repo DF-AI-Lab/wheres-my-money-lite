@@ -423,3 +423,8 @@
   index.html stayOpen() sets sessionStorage lite_quickopen before the /pay (#nmpayedit, 'just the pay') and /left posts; on load the flag opens
   #quick (no animation) once. A new month shuts it; the tab shuts it by hand. test_v064 pay/left no longer re-tap the tab. Tests 134 node + 283
   browser (test_v075.py).
+- **28 Nov v0.76 MOVED TO LIVE (Darren: "just merge it to the apps"; live = demo = v0.76): Passport v0.4.0 = on-screen NUMBER PAD** (no passcode
+  text box, so phones can't pop up saved passwords). passport/ui.js, passport.js, passport.css copied from Passport-ID (live + demo).
+  Lock screen: 'Enter your passcode', .ps-pad of .ps-key[data-n] buttons + #del (+ #fp fingerprint key bottom left), opens by itself after
+  6 numbers (no #pc / #go on the lock screen; theme 'button' text unused). Making a passcode = pad, then 'Type it again'. Lockout text
+  'Locked: too many wrong tries…'. Tests: conftest pad(page, pin) / new_pin(page, pin). Tests 134 node + 283 browser (v064 flake passes alone).

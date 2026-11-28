@@ -9,6 +9,7 @@ const PassportUI = (() => {
   const icon = {
     folder: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
     finger: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11a5 5 0 0 1 10 0v2a9 9 0 0 1-1.2 4.5"/><path d="M12 11v3a6 6 0 0 1-2 4.5"/><path d="M4.5 15A8 8 0 0 1 4 12a8 8 0 0 1 14-5.3"/><path d="M9.5 11a2.5 2.5 0 0 1 5 0v2"/></svg>',
+    back: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></svg>',
     google: '<svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.6a4.8 4.8 0 0 1-2.1 3.1v2.6h3.4c2-1.8 3.1-4.5 3.1-7.6z"/><path fill="#34A853" d="M12 22c2.8 0 5.2-.9 6.9-2.5l-3.4-2.6c-.9.6-2.1 1-3.5 1-2.7 0-5-1.8-5.8-4.3H2.7v2.7A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.2 13.6a6 6 0 0 1 0-3.8V7.1H2.7a10 10 0 0 0 0 9.2z"/><path fill="#EA4335" d="M12 6c1.5 0 2.9.5 4 1.5l3-3A10 10 0 0 0 2.7 7.1l3.5 2.7C7 7.8 9.3 6 12 6z"/></svg>',
   };
 
@@ -23,11 +24,59 @@ const PassportUI = (() => {
   }
   const driveLine = (p) => `<p class="ps-drive">${icon.folder} Saves to Drive: ${esc(PassportCloud.ROOT)} / ${p ? esc(p.id) : 'DF……'} / ${esc(T.drive)}</p>`;
   const err = (msg) => (msg ? `<p class="ps-err" role="alert">${msg}</p>` : '');
-  const passField = (id, label) => `<label class="ps-label" for="${id}">${label}</label>
-    <input class="ps-input ps-code" id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="6" pattern="[0-9]{6}" placeholder="••••••">`;
+
+  // v0.4.0 number pad: on-screen buttons, no text box. So phones can't pop up saved passwords.
+  let keyFn = null; // laptop keyboard typing for the pad on screen now
+  const padHtml = (label, finger) => `<div class="ps-pad-wrap">
+      <p class="ps-pad-label" id="padlbl">${label}</p>
+      <div class="ps-dots" id="dots" role="img" aria-label="0 of 6 numbers typed">${'<span class="ps-dot"></span>'.repeat(6)}</div>
+      <div class="ps-pad-msg" id="msg" aria-live="polite"></div>
+      <div class="ps-pad" role="group" aria-labelledby="padlbl">
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button class="ps-key" type="button" data-n="${n}">${n}</button>`).join('')}
+        ${finger ? `<button class="ps-key ps-key-icon ps-key-fp" type="button" id="fp" aria-label="Use fingerprint">${icon.finger}</button>` : '<span></span>'}
+        <button class="ps-key" type="button" data-n="0">0</button>
+        <button class="ps-key ps-key-icon" type="button" id="del" aria-label="Delete">${icon.back}</button>
+      </div>
+    </div>`;
+
+  // wire up the pad on screen. onDone(passcode) runs after the 6th number.
+  function pad(onDone) {
+    let pin = '', wait = false, locked = false;
+    const box = $('#dots'), dots = [...box.children];
+    const draw = () => {
+      dots.forEach((d, i) => d.classList.toggle('on', i < pin.length));
+      box.setAttribute('aria-label', `${pin.length} of 6 numbers typed`);
+    };
+    const press = (n) => {
+      if (wait || locked || pin.length >= 6) return;
+      if (navigator.vibrate) navigator.vibrate(10);
+      pin += n; box.classList.remove('bad'); $('#msg').innerHTML = ''; draw();
+      if (pin.length === 6) { wait = true; const p = pin; setTimeout(() => onDone(p), 120); }
+    };
+    const del = () => { if (!wait && !locked) { pin = pin.slice(0, -1); draw(); } };
+    root.querySelectorAll('.ps-key[data-n]').forEach((b) => b.addEventListener('click', () => press(b.dataset.n)));
+    on('#del', 'click', del);
+    keyFn = (e) => {
+      if (e.target.closest && e.target.closest('input, textarea')) return;
+      if (/^[0-9]$/.test(e.key)) { e.preventDefault(); press(e.key); }
+      else if (e.key === 'Backspace') { e.preventDefault(); del(); }
+    };
+    document.addEventListener('keydown', keyFn);
+    return {
+      fail(msg) { // wrong code: clear, shake, say why
+        pin = ''; wait = false; draw();
+        box.classList.remove('bad'); void box.offsetWidth; box.classList.add('bad');
+        $('#msg').innerHTML = err(msg);
+        if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+      },
+      lock(v) { locked = v; if (v) { pin = ''; wait = false; draw(); } root.querySelectorAll('.ps-key').forEach((b) => { b.disabled = v; }); },
+      say(html) { $('#msg').innerHTML = html; },
+    };
+  }
 
   function show(html) {
     clearInterval(timer);
+    if (keyFn) { document.removeEventListener('keydown', keyFn); keyFn = null; }
     root.innerHTML = `<main class="ps-screen">${html}</main>`;
     const f = root.querySelector('input:not([readonly])'); if (f) f.focus();
   }
@@ -123,7 +172,23 @@ const PassportUI = (() => {
     on('#go', 'click', login);
   }
 
-  // 2. first time: name + passcode
+  // make a passcode on the pad, then type it again. done(passcode) once both match.
+  function choosePasscode(head, label, done, back, msg) {
+    show(`${head}${padHtml(label)}
+      ${back ? '<button class="ps-link" type="button" id="back">Back</button>' : ''}`);
+    on('#back', 'click', back);
+    const one = pad((a) => {
+      if (!Passport.isPasscode(a)) return one.fail('Passcode must be exactly 6 numbers.');
+      show(`${head}${padHtml('Type it again')}
+        <button class="ps-link" type="button" id="back">Start again</button>`);
+      on('#back', 'click', () => choosePasscode(head, label, done, back));
+      const again = pad((b) => (a === b ? done(a, again)
+        : choosePasscode(head, label, done, back, 'The two passcodes don\'t match. Try again.')));
+    });
+    if (msg) one.say(err(msg));
+  }
+
+  // 2. first time: name, then passcode on the pad
   function setup(email, msg, name) {
     show(`${appSection(true)}
       <p class="ps-kicker">FIRST TIME ONLY</p>
@@ -133,21 +198,20 @@ const PassportUI = (() => {
         <input class="ps-input" id="nm" autocomplete="name" placeholder="Darren Fawcett" value="${esc(name || '')}" required>
         <label class="ps-label" for="em">Email (from Google)</label>
         <input class="ps-input" id="em" value="${esc(email)}" readonly>
-        ${passField('pc', 'Make a 6-digit passcode')}
-        ${passField('pc2', 'Type it again')}
         ${err(msg)}
         <button class="ps-btn" type="submit">Next</button>
       </form>`);
-    on('#f', 'submit', async (e) => {
+    on('#f', 'submit', (e) => {
       e.preventDefault();
-      const name = $('#nm').value.trim(), a = $('#pc').value, b = $('#pc2').value;
-      if (!name) return setup(email, 'Type your name.');
-      if (!Passport.isPasscode(a)) return setup(email, 'Passcode must be exactly 6 numbers.', name);
-      if (a !== b) return setup(email, 'The two passcodes don\'t match.', name);
-      busy(e.submitter || $('button[type=submit]'), 'Making your passport…');
-      const { codes } = await Passport.create({ email, name, passcode: a });
-      if (CLOUD) await Passport.sync(email).catch(() => {}); // save to Drive now (Settings shows if it didn't)
-      backupCodes(codes, fingerOffer);
+      const nm = $('#nm').value.trim();
+      if (!nm) return setup(email, 'Type your name.');
+      const head = `${appSection(true)}<p class="ps-kicker">FIRST TIME ONLY</p>`;
+      choosePasscode(head, 'Make a 6-digit passcode', async (a, p) => {
+        p.say('<p class="ps-sub">Making your passport…</p>');
+        const { codes } = await Passport.create({ email, name: nm, passcode: a });
+        if (CLOUD) await Passport.sync(email).catch(() => {}); // save to Drive now (Settings shows if it didn't)
+        backupCodes(codes, fingerOffer);
+      }, () => setup(email, '', nm));
     });
   }
 
@@ -198,46 +262,40 @@ const PassportUI = (() => {
     const email = Passport.appAccount(APP); const p = Passport.find(email);
     const canFinger = p.fingerprints[APP] && (await Passport.fingerprintAvailable());
     const lockMs = Passport.lockedFor(email);
-    show(`${appSection()}
+    show(`${appSection(true)}
       <h2 class="ps-h ps-center">Welcome back, ${first(p.name)}</h2>
-      <form id="f" class="ps-form">
-        ${passField('pc', 'Your passcode')}
-        <button class="ps-link ps-left" type="button" id="fg">Forgot? Use a backup code</button>
-        <div id="msg">${lockMs ? '' : err(msg)}</div>
-        <button class="ps-btn" type="submit" id="go">${esc(T.button)}</button>
-        ${canFinger ? `<button class="ps-btn ps-ghost" type="button" id="fp">${icon.finger} Use fingerprint</button>` : ''}
-      </form>
+      ${padHtml('Enter your passcode', canFinger)}
+      <button class="ps-link" type="button" id="fg">Forgot? Use a backup code</button>
       ${driveLine(p)}
       <button class="ps-link" id="other">Use another Google account</button>`);
-    on('#fg', 'click', backupLogin);
+    on('#fg', 'click', () => backupLogin());
     on('#other', 'click', signOut);
+    const pd = pad(async (pc) => {
+      const r = await Passport.checkPasscode(email, pc);
+      if (r.ok) return unlock();
+      if (r.lockedMs) return lockCountdown(pd);
+      pd.fail(`Wrong passcode. ${r.triesLeft} ${r.triesLeft === 1 ? 'try' : 'tries'} left.`);
+    });
     const tryFinger = async (quiet) => {
       try { if (await Passport.verifyFingerprint(email, APP)) unlock(); }
-      catch { if (!quiet) $('#msg').innerHTML = err('Fingerprint didn\'t work. Use your passcode.'); }
+      catch { if (!quiet) pd.say(err('Fingerprint didn\'t work. Use your passcode.')); }
     };
     on('#fp', 'click', () => tryFinger(false));
-    on('#f', 'submit', async (e) => {
-      e.preventDefault();
-      const btn = $('#go'); busy(btn, 'Checking…');
-      const r = await Passport.checkPasscode(email, $('#pc').value);
-      if (r.ok) return unlock();
-      login(r.lockedMs ? '' : `Wrong passcode. ${r.triesLeft} ${r.triesLeft === 1 ? 'try' : 'tries'} left.`);
-    });
-    if (lockMs) return lockCountdown();
+    if (lockMs) return lockCountdown(pd);
+    if (msg) pd.say(err(msg));
     // fingerprint on → pop it up straight away (cancel = type passcode instead)
     if (canFinger && autoFinger && !msg) { autoFinger = false; tryFinger(true); }
   }
 
-  function lockCountdown() {
+  // too many wrong tries: pad greyed out with a countdown
+  function lockCountdown(pd) {
     const email = Passport.appAccount(APP);
     const tick = () => {
+      if (!$('#dots')) return clearInterval(timer);
       const ms = Passport.lockedFor(email);
-      const go = $('#go'), pc = $('#pc');
-      if (!go) return clearInterval(timer);
-      if (!ms) { clearInterval(timer); go.disabled = false; go.textContent = T.button; pc.disabled = false; $('#msg').innerHTML = ''; return; }
-      go.disabled = true; pc.disabled = true;
-      go.textContent = `Locked: try again in ${Math.ceil(ms / 1000)}s`;
-      $('#msg').innerHTML = err(`Too many wrong tries. Locked for a while to keep you safe.`);
+      if (!ms) { clearInterval(timer); pd.lock(false); pd.say(''); return; }
+      pd.lock(true);
+      pd.say(err(`Locked: too many wrong tries. Try again in ${Math.ceil(ms / 1000)}s.`));
     };
     tick(); timer = setInterval(tick, 500);
   }
@@ -277,23 +335,13 @@ const PassportUI = (() => {
   }
 
   // left = backup codes left (after a backup code). null = Reset with Google (makes a new hidden key)
-  function newPasscode(left, msg) {
-    show(`<h2 class="ps-h">Make a new passcode</h2>
-      <p class="ps-sub">${left === null
+  function newPasscode(left) {
+    const head = `<h2 class="ps-h ps-center">Make a new passcode</h2>
+      <p class="ps-sub ps-center">${left === null
         ? 'You\'ll get new backup codes too. Private stuff locked with the old passcode (like Secrets) can\'t be opened any more.'
-        : `${left} backup codes left.`}</p>
-      <form id="f" class="ps-form">
-        ${passField('pc', 'New 6-digit passcode')}
-        ${passField('pc2', 'Type it again')}
-        ${err(msg)}
-        <button class="ps-btn" type="submit" id="go">Save</button>
-      </form>`);
-    on('#f', 'submit', async (e) => {
-      e.preventDefault();
-      const a = $('#pc').value, b = $('#pc2').value;
-      if (!Passport.isPasscode(a)) return newPasscode(left, 'Passcode must be exactly 6 numbers.');
-      if (a !== b) return newPasscode(left, 'The two passcodes don\'t match.');
-      busy($('#go'), 'Saving…');
+        : `${left} backup codes left.`}</p>`;
+    choosePasscode(head, 'New 6-digit passcode', async (a, p) => {
+      p.say('<p class="ps-sub">Saving…</p>');
       const codes = await Passport.setPasscode(Passport.appAccount(APP), a);
       codes ? backupCodes(codes, unlock) : unlock();
     });
@@ -304,21 +352,19 @@ const PassportUI = (() => {
     const email = Passport.appAccount(APP);
     if (Passport.key(email)) return next();
     show(`${appSection(true)}
-      <h2 class="ps-h">Type your passcode</h2>
-      <p class="ps-sub">This needs your passcode, not just your fingerprint.</p>
-      <form id="f" class="ps-form">
-        ${passField('pc', 'Your passcode')}
-        ${err(msg)}
-        <button class="ps-btn" type="submit" id="go">Continue</button>
-        <button class="ps-link" type="button" id="back">Back</button>
-      </form>`);
+      <h2 class="ps-h ps-center">Type your passcode</h2>
+      <p class="ps-sub ps-center">This needs your passcode, not just your fingerprint.</p>
+      ${padHtml('Your passcode')}
+      <button class="ps-link" type="button" id="back">Back</button>`);
     on('#back', 'click', back);
-    on('#f', 'submit', async (e) => {
-      e.preventDefault(); busy($('#go'), 'Checking…');
-      const r = await Passport.checkPasscode(email, $('#pc').value);
+    const pd = pad(async (pc) => {
+      const r = await Passport.checkPasscode(email, pc);
       if (r.ok) return next();
-      needKey(next, back, r.lockedMs ? `Locked: try again in ${Math.ceil(r.lockedMs / 1000)}s.` : `Wrong passcode. ${r.triesLeft} tries left.`);
+      if (r.lockedMs) return lockCountdown(pd);
+      pd.fail(`Wrong passcode. ${r.triesLeft} ${r.triesLeft === 1 ? 'try' : 'tries'} left.`);
     });
+    if (Passport.lockedFor(email)) return lockCountdown(pd);
+    if (msg) pd.say(err(msg));
   }
 
   // settings (where the ID lives)

@@ -1,6 +1,6 @@
 """v0.44 (Darren, 25 Oct): the backup codes screen copies all 10 codes in one paste. v0.61 (on purpose): the codes are
 🛂 Passport's now (Settings → Passport → Make new backup codes; Passport's own 'Copy' button). Fake data only."""
-from conftest import PIN
+from conftest import PIN, pad
 from test_gob6 import step
 
 TODAY = "?today=2024-11-08"
@@ -12,8 +12,7 @@ def test_copy_all_backup_codes(page, base):
     page.click("#setbtn"); page.click("#passportbtn")
     step(page, "New backup codes")
     page.click("#passport #nb")
-    page.fill("#passport #pc", PIN)
-    page.click("#passport #go")
+    pad(page, PIN)
     page.wait_for_selector("#passport .ps-codes")
     page.evaluate(GRAB)
     page.click("#passport #cp")
